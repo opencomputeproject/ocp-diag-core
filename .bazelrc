@@ -1,0 +1,20 @@
+build --cxxopt='-std=c++17'
+build --incompatible_enable_cc_toolchain_resolution=true
+
+# Tell googletest to use absl.
+build --define absl=1
+
+# Target the grte-based toolchains
+# Allows c++ binaries on OVSS and google prod machines
+build:grte --host_platform=//toolchain:grte_x86
+build:grte --platforms=//toolchain:grte_x86
+
+# Target the OVSS image.
+build:ovss --host_platform=//toolchain:ovss_x86
+build:ovss --platforms=//toolchain:ovss_x86
+build:ovss --action_env=PYTHON_BIN_PATH=/usr/bin/python3.8
+
+# Target the google prod image.
+build:google --host_platform=//toolchain:google_x86_exec
+build:google --platforms=//toolchain:google_x86_runtime
+build:google --action_env=PYTHON_BIN_PATH=/usr/bin/python3.6

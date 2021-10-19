@@ -1,0 +1,4 @@
+{
+  "foo" : "foo_string",
+  "baz" : "invalid_field"
+}

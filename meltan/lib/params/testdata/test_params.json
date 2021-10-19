@@ -1,0 +1,14 @@
+{
+  "foo" : "foo_string",
+  "bar" : 1893,
+  "msg" : {
+    "sub" : "standalone message",
+    "other" : [1, 2, 3, 4, 5]
+  },
+  "subs" : [
+    {"sub" : "repeated message 0"},
+    {"sub" : "repeated message 1"}
+  ],
+  "strings" : ["foo", "bar", "baz", "gorp"],
+  "b" : true
+}
