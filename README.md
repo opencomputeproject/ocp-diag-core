@@ -173,6 +173,5 @@ document describes how to define and use the OCPDiag Hardware Interface.
 
 ## Contact information
 
-**Team:** ocpdiag-core-team@google.com
+**Team:** ocp-test-validation@OCP-All.groups.io
 
-**Code reviews:** ocpdiag-core-team+reviews@google.com
