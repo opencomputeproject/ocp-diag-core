@@ -1,0 +1,260 @@
+// Copyright 2021 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package ocpdiag.results_pb;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+
+// TestRun
+message ComponentLocation {
+  string devpath = 1;
+  string odata_id = 2;
+  string blockpath = 3;
+  string serial_number = 4;
+}
+
+message HardwareInfo {
+  string hardware_info_id = 1;
+  string arena = 2;
+  string name = 3;
+  // Location info for FRU (Field-Replaceable Unit).
+  ComponentLocation fru_location = 4;
+  string part_number = 5;
+  string manufacturer = 6;
+  string mfg_part_number = 7;
+  string part_type = 8;
+  reserved 9;
+  // Location info for specific component, to which the other metadata in this
+  // HardwareInfo apply; this may be the FRU itself or a subcomponent of the
+  // FRU.
+  ComponentLocation component_location = 10;
+}
+
+message SoftwareInfo {
+  string software_info_id = 1;
+  string arena = 2;
+  string name = 3;
+  string version = 4;
+}
+
+// Test-customized human-readable platform information.
+message PlatformInfo {
+  repeated string info = 1;
+}
+
+message DutInfo {
+  string hostname = 1;
+  PlatformInfo platform_info = 2;
+  // All hardware components diagnosed in this test.
+  repeated HardwareInfo hardware_components = 3;
+  // All software information this test cares about.
+  repeated SoftwareInfo software_infos = 4;
+}
+
+message TestRunStart {
+  string name = 1;
+  string version = 2;
+  google.protobuf.Any parameters = 3;
+  repeated DutInfo dut_info = 4;
+}
+
+enum TestStatus {
+  UNKNOWN = 0;
+  COMPLETE = 1;
+  ERROR = 2;
+  SKIPPED = 3;
+}
+
+// Result should only be used when status = COMPLETE. Otherwise it should be
+// NOT_APPLICABLE (default).
+enum TestResult {
+  NOT_APPLICABLE = 0;
+  PASS = 1;
+  FAIL = 2;
+}
+
+message TestRunEnd {
+  string name = 1;
+  TestStatus status = 2;
+  TestResult result = 3;
+}
+
+// TestStep
+message TestStepStart {
+  string name = 1;
+}
+
+message TestStepEnd {
+  string name = 1;
+  TestStatus status = 2;
+}
+
+// Measurement
+message MeasurementInfo {
+  string name = 1;
+  string unit = 2;
+  // hardware_info_id has a default of "NOT_APPLICABLE" which indicates
+  // this measurement is not attached to a certain HW component.
+  string hardware_info_id = 3;
+}
+
+message MeasurementElement {
+  // index starts from 0 to calculate measurement element count in a measurement
+  // series.
+  int32 index = 1;
+  // measurement_series_id is only needed for elements in a MeasurementSeries
+  // or an aggregated value in a MeasurementSeries
+  // Default should be "NOT_APPLICABLE" which indicates an individual
+  // measurement.
+  string measurement_series_id = 2;
+  google.protobuf.Value value = 3;
+  message Range {
+    google.protobuf.Value maximum = 1;
+    google.protobuf.Value minimum = 2;
+  }
+  message ValidValues {
+    repeated google.protobuf.Value values = 1;
+  }
+  // limit of the "value".
+  // It can be a range or a list of valid values expected for the value.
+  // The limits might be used by test customers to create their PASS/FAIL
+  // criterias.
+  oneof limit {
+    Range range = 4;
+    ValidValues valid_values = 5;
+  }
+  google.protobuf.Timestamp dut_timestamp = 6;
+}
+
+message Measurement {
+  MeasurementInfo info = 1;
+  MeasurementElement element = 2;
+}
+
+// Measurement Series
+message MeasurementSeriesStart {
+  string measurement_series_id = 1;
+  MeasurementInfo info = 2;
+}
+
+message MeasurementSeriesEnd {
+  string measurement_series_id = 1;
+  int32 total_measurement_count = 2;
+}
+
+// Diagnosis for hardware components.
+message Diagnosis {
+  string symptom = 1;
+  enum Type {
+    UNKNOWN = 0;
+    PASS = 1;
+    FAIL = 2;
+  }
+  Type type = 2;
+  string msg = 3;
+  repeated string hardware_info_id = 4;
+}
+
+// Error in software, firmware or diagnostics.
+message Error {
+  string symptom = 1;
+  string msg = 2;
+  repeated string software_info_id = 3;
+}
+
+// Log
+message Log {
+  enum Severity {
+    INFO = 0;  // Default
+    DEBUG = 1;
+    WARNING = 2;
+    ERROR = 3;
+    FATAL = 4;
+  }
+  Severity severity = 1;
+  string text = 2;
+}
+
+// File
+message File {
+  // No guarantee of uniqueness.
+  string upload_as_name = 1;
+  // This is the relative log path on the machine against the test working
+  // directory. We want to avoid the test executive to act on critical files
+  // that may potentially harm the machine.
+  string output_path = 2;
+  string description = 3;
+  string content_type = 4;
+  // is_snapshot is an informative field to indicate if it's the original log
+  // file. If is_snapshot = true, the test will make a copy of the original log
+  // file and the output_path will be the copied path.
+  // Note: The file in the output_path should be safe to delete after the test
+  // executive uploads it.
+  bool is_snapshot = 5;
+  repeated Tag tags = 6;
+}
+
+// Tag
+message Tag {
+  string tag = 1;
+}
+
+// ArtifactExtension
+message ArtifactExtension {
+  string name = 1;
+  google.protobuf.Any extension = 2;
+}
+
+// Output artifacts.
+message TestRunArtifact {
+  oneof artifact {
+    TestRunStart test_run_start = 1;
+    TestRunEnd test_run_end = 2;
+    Log log = 3;
+    Tag tag = 4;
+    Error error = 5;
+  }
+}
+message TestStepArtifact {
+  oneof artifact {
+    TestStepStart test_step_start = 1;
+    TestStepEnd test_step_end = 2;
+    Measurement measurement = 3;
+    MeasurementSeriesStart measurement_series_start = 4;
+    MeasurementSeriesEnd measurement_series_end = 5;
+    MeasurementElement measurement_element = 6;
+    Diagnosis diagnosis = 7;
+    Error error = 8;
+    File file = 9;
+    Log log = 10;
+    ArtifactExtension extension = 11;
+  }
+  string test_step_id = 12;
+}
+
+// OutputArtifact is the top level entry of all result output artifacts.
+message OutputArtifact {
+  oneof artifact {
+    TestRunArtifact test_run_artifact = 1;
+    TestStepArtifact test_step_artifact = 2;
+  }
+  // This is the artifact index number for data loss monitoring.
+  int32 sequence_number = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
