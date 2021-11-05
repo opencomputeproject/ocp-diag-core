@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_COMPAT_STATUS_MACROS_H_
-#define MELTAN_CORE_COMPAT_STATUS_MACROS_H_
+#ifndef OCPDIAG_CORE_COMPAT_STATUS_MACROS_H_
+#define OCPDIAG_CORE_COMPAT_STATUS_MACROS_H_
 
 #include <filesystem>
 
@@ -69,18 +69,18 @@
 //   ValueType value;
 //   ASSIGN_OR_RETURN(value, MaybeGetValue(arg));
 #define ASSIGN_OR_RETURN(var, expr)           \
-  MELTAN_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL( \
-      MELTAN_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), var, expr)
+  OCPDIAG_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL( \
+      OCPDIAG_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), var, expr)
 
-#define MELTAN_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL(c, v, s) \
+#define OCPDIAG_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL(c, v, s) \
   auto c = (s);                                             \
   if (!c.ok()) return c.status();                           \
   v = std::move(c.value());
 
 // Helpers for concatenating values, needed to construct "unique" name
-#define MELTAN_STATUS_MACROS_CONCAT(x, y) \
-  MELTAN_STATUS_MACROS_CONCAT_INNER(x, y)
-#define MELTAN_STATUS_MACROS_CONCAT_INNER(x, y) x##y
+#define OCPDIAG_STATUS_MACROS_CONCAT(x, y) \
+  OCPDIAG_STATUS_MACROS_CONCAT_INNER(x, y)
+#define OCPDIAG_STATUS_MACROS_CONCAT_INNER(x, y) x##y
 
 // `ASSIGN_OR_RETURN_WITH_MESSAGE` behave the same with ASSIGN_OR_RETURN in
 // addition with a message.
@@ -96,10 +96,10 @@
 //   Returns a status: "INTERNAL: Failed to parse field.
 //   [ocpdiag/LoadConfig/main.cc#25='Failed to load config.']"
 #define ASSIGN_OR_RETURN_WITH_MESSAGE(var, expr, msg)       \
-  MELTAN_STATUS_MACROS_ASSIGN_OR_RETURN__WITH_MESSAGE_IMPL( \
-      MELTAN_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), var, expr, msg)
+  OCPDIAG_STATUS_MACROS_ASSIGN_OR_RETURN__WITH_MESSAGE_IMPL( \
+      OCPDIAG_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), var, expr, msg)
 
-#define MELTAN_STATUS_MACROS_ASSIGN_OR_RETURN__WITH_MESSAGE_IMPL(c, v, s, msg) \
+#define OCPDIAG_STATUS_MACROS_ASSIGN_OR_RETURN__WITH_MESSAGE_IMPL(c, v, s, msg) \
   auto c = (s);                                                                \
   if (!c.ok()) {                                                               \
     absl::Status r(c.status());                                                \
@@ -112,4 +112,4 @@
   }                                                                            \
   v = std::move(c.value());
 
-#endif  // MELTAN_CORE_COMPAT_STATUS_MACROS_H_
+#endif  // OCPDIAG_CORE_COMPAT_STATUS_MACROS_H_

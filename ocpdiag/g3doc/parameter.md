@@ -1,4 +1,4 @@
-# Meltan parameter model
+# OCPDiag parameter model
 
 
 
@@ -6,7 +6,7 @@
 freshness: { owner: 'yuanlinw' reviewed: '2021-09-23' }
 *-->
 
-This page describes how to define and use the Meltan parameter model.
+This page describes how to define and use the OCPDiag parameter model.
 
 ## Overview
 
@@ -16,7 +16,7 @@ Test developers sometimes encounter situations in which they need to:
 *   work with complex parameters such as nested-types or lists of values.
 *   perform execution-time overrides.
 
-To accommodate these situations, the Meltan framework provides options for:
+To accommodate these situations, the OCPDiag framework provides options for:
 
 *  providing a simple help to show parameter flags and defaults.
 *  adding a flag to override default values at execution time.
@@ -28,7 +28,7 @@ To accommodate these situations, the Meltan framework provides options for:
 
 ## Parameter definition
 
-Meltan uses
+OCPDiag uses
 [protocol buffers](https://developers.google.com/protocol-buffers/docs/overview)
 for parameter definition. Both proto2 and proto3 are supported although proto3
 is preferred for its canonical JSON support.
@@ -144,7 +144,7 @@ Parameters defined in
 in the test as flags for overrides. These are called parameter flags.
 
 A `--help` flag is supported. The flag can dump non-parameter flags, parameter
-flags, Meltan environment variables, and the JSON-formatted default parameter
+flags, OCPDiag environment variables, and the JSON-formatted default parameter
 values.
 
 The following diagram shows how the different components in parameter flags maps
@@ -152,7 +152,7 @@ to the different compile-time parameter recipes.
 
 ![parameter_help_flag](parameter_help_flag.png)
 
-**Note:** Parameter descriptions are available only when the Meltan executable
+**Note:** Parameter descriptions are available only when the OCPDiag executable
 is built with the flag `--protocopt=--include_source_info`.
 
 **Example:** `--help` dumps of the `simple` test when no
@@ -198,7 +198,7 @@ path.
     --map[#].value (); type: string;
 
   Environment Variables:
-    MELTAN_STDIN (By default, only read JSON params from redirected stdin in an
+    OCPDIAG_STDIN (By default, only read JSON params from redirected stdin in an
       interactive terminal environment. When set, always block reading JSON
       params from stdin.);
 
@@ -337,13 +337,13 @@ It would be passed the parameters via stdin.
 ```
 
 **Note:** Standard input override is disabled by default when it is not running
-from terminal. Be sure to set the environment variable `MELTAN_STDIN=true` to
+from terminal. Be sure to set the environment variable `OCPDIAG_STDIN=true` to
 enable standard input override when executing remotely.
 
 **Example**
 
 ```shell
-$: <custom_params.json 2>/dev/null ssh root@localhost MELTAN_STDIN=1 ./simple | grep foo
+$: <custom_params.json 2>/dev/null ssh root@localhost OCPDIAG_STDIN=1 ./simple | grep foo
 "foo": "custom_json_override"
 ```
 
@@ -381,4 +381,4 @@ It would be passed the parameters via stdin.
 ```
 
 For additional details on overrides, see
-[Meltan parameter unit tests](/ocpdiag/core/params/ocpdiag_parameter_parser_test.cc).
+[OCPDiag parameter unit tests](/ocpdiag/core/params/ocpdiag_parameter_parser_test.cc).

@@ -1,4 +1,4 @@
-# Meltan hardware interface
+# OCPDiag hardware interface
 
 
 
@@ -6,7 +6,7 @@
 freshness: { owner: 'yuanlinw' reviewed: '2021-09-20' }
 *-->
 
-This page describes how to define and use the Meltan Hardware Interface.
+This page describes how to define and use the OCPDiag Hardware Interface.
 
 ## Overview
 
@@ -16,7 +16,7 @@ to the execution environment of a diagnostic or a requirement for a diagnostic
 to reference a unique hardware identifier to interface with shop-floor control
 systems or workflow systems for operations.
 
-The Meltan framework includes an optional hardware interface that provides a
+The OCPDiag framework includes an optional hardware interface that provides a
 communication abstraction layer for a device under test. Using the interface may
 not always be necessary particularly in cases where the diagnostic can
 communicate to the hardware directly. In some scenarios, the use of a shim can

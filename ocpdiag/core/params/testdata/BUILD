@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Contains definitions for testing Meltan parameter parsing.
+# Contains definitions for testing OCPDiag parameter parsing.
 
 # This rule will need to be substituted depending on the OSS build system.
 # We can make a stripped-down copy for bazel, or a direct protoc flag

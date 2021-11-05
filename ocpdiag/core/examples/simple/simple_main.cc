@@ -74,7 +74,7 @@ void FillHwInfo(HardwareInfo* hw_info, const bool has_component) {
 std::string CreateTextFile() {
   const char* path = "simple_ocpdiag_test_file.txt";
   std::ofstream file(path);
-  file << "Simple Meltan test file content.\n";
+  file << "Simple OCPDiag test file content.\n";
   file.close();
   return path;
 }

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_LIB_RESULTS_INTERNAL_LOGGING_H_
-#define MELTAN_LIB_RESULTS_INTERNAL_LOGGING_H_
+#ifndef OCPDIAG_LIB_RESULTS_INTERNAL_LOGGING_H_
+#define OCPDIAG_LIB_RESULTS_INTERNAL_LOGGING_H_
 
 #include <iostream>
 #include <memory>
@@ -46,7 +46,7 @@ absl::StatusOr<int> OpenAndGetDescriptor(const char* filepath);
 // Returns a globally cached TypeResolver for the generated pool.
 google::protobuf::util::TypeResolver* GeneratedResolver();
 
-// Handles emission of OutputArtifacts for Meltan tests.
+// Handles emission of OutputArtifacts for OCPDiag tests.
 class ArtifactWriter {
  public:
   ArtifactWriter() = default;
@@ -141,4 +141,4 @@ class LoggerInterface {
 }  // namespace results
 }  // namespace ocpdiag
 
-#endif  // MELTAN_LIB_RESULTS_INTERNAL_LOGGING_H_
+#endif  // OCPDIAG_LIB_RESULTS_INTERNAL_LOGGING_H_

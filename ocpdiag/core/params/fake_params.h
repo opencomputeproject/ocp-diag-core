@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_PARAMS_FAKE_PARAMS_H_
-#define MELTAN_CORE_PARAMS_FAKE_PARAMS_H_
+#ifndef OCPDIAG_CORE_PARAMS_FAKE_PARAMS_H_
+#define OCPDIAG_CORE_PARAMS_FAKE_PARAMS_H_
 
 #include "google/protobuf/message.h"
 #include "absl/status/statusor.h"
@@ -40,4 +40,4 @@ absl::StatusOr<ParamsCleanup> FakeParams(const google::protobuf::Message& params
 }  // namespace params
 }  // namespace ocpdiag
 
-#endif  // MELTAN_CORE_PARAMS_FAKE_PARAMS_H_
+#endif  // OCPDIAG_CORE_PARAMS_FAKE_PARAMS_H_

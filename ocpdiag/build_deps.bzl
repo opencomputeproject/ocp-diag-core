@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Load dependencies needed to compile the Meltan project.
+"""Load dependencies needed to compile the OCPDiag project.
 
 Typical usage in a WORKSPACE file:
 load("@ocpdiag//ocpdiag:build_deps.bzl", "load_deps")
@@ -31,7 +31,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 def load_deps(ocpdiag_package_name = "ocpdiag"):
     """Loads common dependencies needed to compile the protobuf library.
 
-    Normally, users will pull in the Meltan package via
+    Normally, users will pull in the OCPDiag package via
 
     git_repository(
           name = "ocpdiag",
@@ -42,7 +42,7 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     patches that need to be applied.
 
     Args:
-      ocpdiag_package_name: The name of the Meltan external package.
+      ocpdiag_package_name: The name of the OCPDiag external package.
     """
     if not native.existing_rule("com_google_absl"):
         http_archive(

@@ -46,7 +46,7 @@ PYBIND11_MODULE(_results, m) {
 
   m.def("SetResultsLibFlags", &SetFlags);
 
-  m.doc() = "Bindings for the Meltan results library";
+  m.doc() = "Bindings for the OCPDiag results library";
   m.def("InitTestRun", &TestRun::Init);
   pybind11::class_<TestRun>(m, "TestRun")
       .def("StartAndRegisterInfos",

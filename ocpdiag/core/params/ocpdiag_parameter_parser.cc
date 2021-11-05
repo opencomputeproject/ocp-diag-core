@@ -50,7 +50,7 @@ namespace ocpdiag {
 namespace {
 
 constexpr absl::string_view kEnvironmentHelp[] = {
-    "MELTAN_STDIN ("
+    "OCPDIAG_STDIN ("
     "By default, only read JSON params from redirected stdin in an interactive "
     "terminal environment. When set, always block reading JSON params from "
     "stdin.);",
@@ -355,7 +355,7 @@ absl::StatusOr<const google::protobuf::Descriptor*> GetParamsDescriptor(
   param_type = pool->FindMessageTypeByName(ocpdiag_options.params_message());
   if (param_type == nullptr) {
     return absl::InvalidArgumentError(
-        absl::StrCat("Meltan file option (ocpdiag.options).params_message=\"",
+        absl::StrCat("OCPDiag file option (ocpdiag.options).params_message=\"",
                      ocpdiag_options.params_message(),
                      "\" is not a fully-qualified message "
                      "name."));
@@ -369,9 +369,9 @@ absl::StatusOr<const google::protobuf::Descriptor*> GetParamsDescriptor(
 // vector, so the caller can emit them in case the remaining flags are invalid.
 std::vector<absl::Status> OverrideFlagParams(
     google::protobuf::Message* params,
-    std::vector<MeltanParameterParser::FlagArg>& flags) {
+    std::vector<OCPDiagParameterParser::FlagArg>& flags) {
   std::vector<absl::Status> errors;
-  std::vector<MeltanParameterParser::FlagArg>::iterator end = flags.begin();
+  std::vector<OCPDiagParameterParser::FlagArg>::iterator end = flags.begin();
   for (auto i = flags.begin(); i != flags.end(); ++i) {
     if (absl::Status err = AssignPath(params, i->key, i->value); !err.ok()) {
       std::swap(*end, *i);
@@ -553,18 +553,18 @@ absl::Cord GenerateMessageOverrideHelp(const google::protobuf::Descriptor* param
 
 // Packs arguments into the ExecArgs output.
 // Assumes that the 1st positional argument is the executable name.
-void PackExecArgs(const MeltanParameterParser::Arguments& args,
-                  MeltanParameterParser::ExecArgs& output) {
+void PackExecArgs(const OCPDiagParameterParser::Arguments& args,
+                  OCPDiagParameterParser::ExecArgs& output) {
   size_t extra_args = 0;
-  for (const MeltanParameterParser::FlagArg& flag : args.flags) {
+  for (const OCPDiagParameterParser::FlagArg& flag : args.flags) {
     extra_args += flag.sources.size();
   }
   output.execv.reserve(args.passthrough.size() + extra_args + 2);
-  output.execv.push_back(args.unparsed[MeltanParameterParser::kTestExecutable]);
+  output.execv.push_back(args.unparsed[OCPDiagParameterParser::kTestExecutable]);
   for (const char* const arg : args.passthrough) {
     output.execv.push_back(arg);
   }
-  for (const MeltanParameterParser::FlagArg& arg : args.flags) {
+  for (const OCPDiagParameterParser::FlagArg& arg : args.flags) {
     for (const char* const charg : arg.sources) {
       output.execv.push_back(charg);
     }
@@ -574,8 +574,8 @@ void PackExecArgs(const MeltanParameterParser::Arguments& args,
 
 }  // namespace
 
-absl::StatusOr<MeltanParameterParser::ExecArgs>
-MeltanParameterParser::PrepareExec(Arguments args,
+absl::StatusOr<OCPDiagParameterParser::ExecArgs>
+OCPDiagParameterParser::PrepareExec(Arguments args,
                                    google::protobuf::io::ZeroCopyInputStream* json_stream,
                                    bool json_newlines) {
   absl::Span<const char* const> pos_args = args.unparsed;
@@ -624,7 +624,7 @@ MeltanParameterParser::PrepareExec(Arguments args,
   // to exec the test with only the '--help' argument.
   for (const FlagArg& flag : args.flags) {
     if (flag.key == "help" || flag.key == "helpfull") {
-      MeltanParameterParser::ExecArgs help;
+      OCPDiagParameterParser::ExecArgs help;
       help.execv.resize(3);
       help.execv[0] = pos_args[kTestExecutable];
       help.execv[1] = flag.sources[0];
@@ -648,7 +648,7 @@ MeltanParameterParser::PrepareExec(Arguments args,
       OverrideFlagParams(params.get(), args.flags);
 
   // Realize the completely-merged parameters.
-  MeltanParameterParser::ExecArgs output;
+  OCPDiagParameterParser::ExecArgs output;
   google::protobuf::util::JsonPrintOptions print_options;
   print_options.add_whitespace = json_newlines;
   print_options.preserve_proto_field_names = true;
@@ -664,7 +664,7 @@ MeltanParameterParser::PrepareExec(Arguments args,
   return output;
 }
 
-MeltanParameterParser::Arguments MeltanParameterParser::ParseArgs(
+OCPDiagParameterParser::Arguments OCPDiagParameterParser::ParseArgs(
     int argc, const char* argv[]) {
   Arguments out;
   int nonflags = 0;

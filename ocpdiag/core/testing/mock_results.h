@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_MOCK_RESULTS_H_
-#define MELTAN_CORE_TESTING_MOCK_RESULTS_H_
+#ifndef OCPDIAG_CORE_TESTING_MOCK_RESULTS_H_
+#define OCPDIAG_CORE_TESTING_MOCK_RESULTS_H_
 
 #include <fcntl.h>
 
@@ -274,4 +274,4 @@ class MockMeasurementSeries : public MeasurementSeries {
 }  // namespace results
 }  // namespace ocpdiag
 
-#endif  // MELTAN_CORE_TESTING_MOCK_RESULTS_H_
+#endif  // OCPDIAG_CORE_TESTING_MOCK_RESULTS_H_

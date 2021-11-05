@@ -1,4 +1,4 @@
-# Meltan results model
+# OCPDiag results model
 
 
 
@@ -8,7 +8,7 @@ freshness: { owner: 'yuanlinw' reviewed: '2021-09-20' } *-->
 
 ## Overview
 
-The Meltan result model was first proposed and used inside Google to accommodate
+The OCPDiag result model was first proposed and used inside Google to accommodate
 different execution environments and requirements and to improve integration
 with vendors during the development of diagnostics for specific hardware. The
 model was later introduced to the OCP group as a compliant implementation of a
@@ -24,8 +24,8 @@ and best use practices.
 
 ![test_run](test_run.png)
 
-`TestRun` is a single run of a Meltan Diagnostic. It is the top-level result
-object in the Meltan Results Model. In the `TestRun` object, test developers can
+`TestRun` is a single run of a OCPDiag Diagnostic. It is the top-level result
+object in the OCPDiag Results Model. In the `TestRun` object, test developers can
 report generic information including test name, version, start/end timestamp,
 [test status](#test-status-vs-test-result),
 [test result](#test-status-vs-test-result), parameters, hostname, hardware
@@ -436,7 +436,7 @@ message ArtifactExtension {
 
 ## Reference APIs
 
-To learn more, run through the [Meltan Result Generation API Codelab](results_reference_api.md).
+To learn more, run through the [OCPDiag Result Generation API Codelab](results_reference_api.md).
 
 ## Best practices
 

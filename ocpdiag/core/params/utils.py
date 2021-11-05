@@ -29,6 +29,6 @@ def GetParams(params_msg: message.Message):
     Instance of passed message type with populated fields.
   """
   # Don't support interactive input.
-  if sys.stdin.isatty() and not os.getenv('MELTAN_STDIN'):
+  if sys.stdin.isatty() and not os.getenv('OCPDIAG_STDIN'):
     return params_msg
   return json_format.Parse(sys.stdin.read(), params_msg)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Contains bazel rules for ocpdiag_test_pkg and other Meltan helpers.
+# Contains bazel rules for ocpdiag_test_pkg and other OCPDiag helpers.
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 

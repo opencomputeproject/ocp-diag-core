@@ -172,7 +172,7 @@ absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
   static bool initialized = false;
   if (initialized) {
     static constexpr absl::string_view kMessage =
-        "Meltan TestRun already initialized.";
+        "OCPDiag TestRun already initialized.";
     std::cerr << kMessage << std::endl;
     return absl::AlreadyExistsError(kMessage);
   }
@@ -273,7 +273,7 @@ absl::StatusOr<TestRun> TestRun::Init(std::string name) {
                    internal::ArtifactWriter(fd.value(), stream));
   }
   static constexpr absl::string_view kMessage =
-      "Meltan Test already initialized.";
+      "OCPDiag Test already initialized.";
   std::cerr << kMessage << std::endl;
   return absl::AlreadyExistsError(kMessage);
 }

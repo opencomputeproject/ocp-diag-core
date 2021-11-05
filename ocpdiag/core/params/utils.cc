@@ -80,7 +80,7 @@ absl::Status JsonFileToMessage(const char* file_path, google::protobuf::Message*
 }
 
 absl::Status GetParams(google::protobuf::Message* params) {
-  if (isatty(STDIN_FILENO) && !getenv("MELTAN_STDIN")) {
+  if (isatty(STDIN_FILENO) && !getenv("OCPDIAG_STDIN")) {
     return absl::OkStatus();
   }
   params->Clear();

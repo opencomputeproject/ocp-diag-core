@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_LIB_RESULTS_INTERNAL_UTILS_H_
-#define MELTAN_LIB_RESULTS_INTERNAL_UTILS_H_
+#ifndef OCPDIAG_LIB_RESULTS_INTERNAL_UTILS_H_
+#define OCPDIAG_LIB_RESULTS_INTERNAL_UTILS_H_
 
 #include "absl/synchronization/mutex.h"
 
@@ -54,4 +54,4 @@ class IntIncrementer {
 }  // namespace results
 }  // namespace ocpdiag
 
-#endif  // MELTAN_LIB_RESULTS_INTERNAL_UTILS_H_
+#endif  // OCPDIAG_LIB_RESULTS_INTERNAL_UTILS_H_

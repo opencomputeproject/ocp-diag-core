@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_FAKE_TEST_RUN_H_
-#define MELTAN_CORE_TESTING_FAKE_TEST_RUN_H_
+#ifndef OCPDIAG_CORE_TESTING_FAKE_TEST_RUN_H_
+#define OCPDIAG_CORE_TESTING_FAKE_TEST_RUN_H_
 
 #include <fcntl.h>
 
@@ -62,4 +62,4 @@ class TestRunResultHandler {
 
 }  // namespace ocpdiag
 
-#endif  // MELTAN_CORE_TESTING_FAKE_TEST_RUN_H_
+#endif  // OCPDIAG_CORE_TESTING_FAKE_TEST_RUN_H_

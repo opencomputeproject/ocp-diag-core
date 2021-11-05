@@ -1,4 +1,4 @@
-# Meltan result generation API codelab
+# OCPDiag result generation API codelab
 
 <!--*
 freshness: { owner: 'viel' reviewed: '2021-09-20' }
@@ -9,14 +9,14 @@ freshness: { owner: 'viel' reviewed: '2021-09-20' }
 ## Overview
 
 This document introduces a reference API that can dump
-[Meltan result artifacts](results.md#data-schema) and provides a walk-through
-of using the API for a simple Meltan diagnostic test.
+[OCPDiag result artifacts](results.md#data-schema) and provides a walk-through
+of using the API for a simple OCPDiag diagnostic test.
 
 ## API structure and semantics
 
 This section provides a quick primer on how to use the Result API.
 
-See also [Results](results.md) for details of the Meltan data model and schema.
+See also [Results](results.md) for details of the OCPDiag data model and schema.
 
 ### Main classes
 
@@ -45,13 +45,13 @@ precursor to the next.
 1.  `ResultApi::BeginTestStep` requires a valid `TestRun` object.
 1.  `ResultApi::BeginMeasurementSeries` requires a valid `TestStep` object.
 
-![results_api_classes](results_api_classes.png) ***Figure 1: Meltan result API,
+![results_api_classes](results_api_classes.png) ***Figure 1: OCPDiag result API,
 main classes: How they relate and how artifacts are written***
 
 ### Info registration classes
 
 There are three helper classes for managing and registering machine and software
-metadata, such as host info, hardware info (gathered using the Meltan hardware
+metadata, such as host info, hardware info (gathered using the OCPDiag hardware
 interface), and software info.
 
 *   `DutInfo`: Organizes machine metadata for consumption by the TestRun.
@@ -76,7 +76,7 @@ Performing a diagnosis without any associated hardware info is not useful.
 **Question**: Why can’t I just gather the hardware information when I actually
 need it for a Diagnosis? \
 **Answer**: In order to diagnose machines that panic, shut down, or are left in
-a bad-state during testing, you need to inform the Meltan Data Schema what
+a bad-state during testing, you need to inform the OCPDiag Data Schema what
 hardware and software components you intend to validate before the test starts.
 This information cannot be gathered after the test is run.
 
@@ -84,13 +84,13 @@ You can think of Records as read-only `HardwareInfo` and `SoftwareInfo` protos
 that are used for associating a Diagnosis or Error artifact with that
 information.
 
-![results_api_hw_record](results_api_hw_record.png) ***Figure 2: Meltan result
+![results_api_hw_record](results_api_hw_record.png) ***Figure 2: OCPDiag result
 API - Info registration classes and their use (SwRecord behaves in the same way
 as HwRecord)***
 
 ### Test status and result
 
-The Meltan Data Model separates **Status** and **Result**. These are always
+The OCPDiag Data Model separates **Status** and **Result**. These are always
 displayed in the final TestRunEnd artifact, which provides a precise way to
 interpret the test run.
 
@@ -130,7 +130,7 @@ provide a better understanding of what the semantics look like in practice.
 
 ### Chunk 1: Test setup phase
 
-A Meltan diagnostic test should always begin with initialization and parameter
+A OCPDiag diagnostic test should always begin with initialization and parameter
 parsing.
 
 ```c++
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 2.  **Initialize the TestRun:** State this immediately after InitGoogle(). Use
     the TestRun object for emitting Error artifacts in case anything goes wrong
     before the code reaches the diagnostic phase.
-3.  **Parse the input parameters:** These define how your Meltan test is
+3.  **Parse the input parameters:** These define how your OCPDiag test is
     customized at runtime. Parsing should happen *after* TestRun initialization
     in case there is a problem parsing the parameters; you can see this with
     `test_run->AddError`. The Error artifact is superior to writing a generic
@@ -225,7 +225,7 @@ DutInfos to separate the data, as shown:
 ```
 
 NOTE: The generic strings added to the proto fields would normally be info
-gathered through the Meltan Hardware Interface.
+gathered through the OCPDiag Hardware Interface.
 
 **Question:**: Why do we handle DutInfos with `unique_ptr`? \
 **Answer:** So you know that once they are registered with the TestRun, you lose
@@ -260,7 +260,7 @@ WARNING: Don't forget to register your `DutInfos`!
 ```
 
 *   `test_run->Start...` marks the beginning of the "diagnostic" phase of the
-    Meltan test. This is where you register the 1st DutInfo that you built in
+    OCPDiag test. This is where you register the 1st DutInfo that you built in
     the previous chunk.
 *   Once TestRun starts you can create your first TestStep using
     `TestStep::Begin(...)`.

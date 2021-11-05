@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_PROTO_MATCHERS_H_
-#define MELTAN_CORE_TESTING_PROTO_MATCHERS_H_
+#ifndef OCPDIAG_CORE_TESTING_PROTO_MATCHERS_H_
+#define OCPDIAG_CORE_TESTING_PROTO_MATCHERS_H_
 
 #include <iterator>
 #include <memory>
@@ -551,4 +551,4 @@ inline InnerProtoMatcher Partially(InnerProtoMatcher inner_proto_matcher) {
 
 }  // namespace ocpdiag::testing
 
-#endif  // MELTAN_CORE_TESTING_PROTO_MATCHERS_H_
+#endif  // OCPDIAG_CORE_TESTING_PROTO_MATCHERS_H_

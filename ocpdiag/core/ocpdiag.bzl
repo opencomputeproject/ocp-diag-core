@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bazel rules for building and packaging Meltan tests"""
+"""Bazel rules for building and packaging OCPDiag tests"""
 
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@rules_pkg//:providers.bzl", "PackageFilegroupInfo", "PackageFilesInfo", "PackageSymlinkInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
-_MELTAN_WORKSPACE = "ocpdiag"
+_OCPDIAG_WORKSPACE = "ocpdiag"
 
 def _parse_label(label):
     """Parse a label into (package, name).

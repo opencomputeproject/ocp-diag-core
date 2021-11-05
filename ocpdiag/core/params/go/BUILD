@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Contains Go language libraries for Meltan test parameter handling.
+# Contains Go language libraries for OCPDiag test parameter handling.
 
 licenses(["notice"])

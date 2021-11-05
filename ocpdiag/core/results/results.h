@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_LIB_RESULTS_RESULTS_H_
-#define MELTAN_LIB_RESULTS_RESULTS_H_
+#ifndef OCPDIAG_LIB_RESULTS_RESULTS_H_
+#define OCPDIAG_LIB_RESULTS_RESULTS_H_
 
 #include <memory>
 #include <string>
@@ -102,7 +102,7 @@ class ResultApi {
 };
 
 // The class from which all result generation takes root.
-// Intended use is to have one TestRun object per Meltan Test.
+// Intended use is to have one TestRun object per OCPDiag Test.
 class TestRun : public internal::LoggerInterface {
  public:
 #ifndef SWIG
@@ -487,4 +487,4 @@ class MeasurementSeries {
 }  // namespace results
 }  // namespace ocpdiag
 
-#endif  // MELTAN_LIB_RESULTS_RESULTS_H_
+#endif  // OCPDIAG_LIB_RESULTS_RESULTS_H_

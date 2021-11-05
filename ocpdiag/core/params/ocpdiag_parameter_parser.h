@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_PARAMS_MELTAN_PARAMETER_PARSER_H_
-#define MELTAN_CORE_PARAMS_MELTAN_PARAMETER_PARSER_H_
+#ifndef OCPDIAG_CORE_PARAMS_OCPDIAG_PARAMETER_PARSER_H_
+#define OCPDIAG_CORE_PARAMS_OCPDIAG_PARAMETER_PARSER_H_
 
 #include <string>
 #include <vector>
@@ -27,10 +27,10 @@ namespace ocpdiag {
 
 // This class wraps parameter parsing functions, mostly for unit testing.
 // The actual use is as a standalone binary.
-class MeltanParameterParser {
+class OCPDiagParameterParser {
  public:
   // The positional arguments expected by the parameter parser.
-  enum MeltanArgs {
+  enum OCPDiagArgs {
     kLauncherName = 0,
     kTestExecutable,
     kFileDescriptors,
@@ -86,4 +86,4 @@ class MeltanParameterParser {
 
 }  // namespace ocpdiag
 
-#endif  // MELTAN_CORE_PARAMS_MELTAN_PARAMETER_PARSER_H_
+#endif  // OCPDIAG_CORE_PARAMS_OCPDIAG_PARAMETER_PARSER_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_STATUS_MATCHERS_H_
-#define MELTAN_CORE_TESTING_STATUS_MATCHERS_H_
+#ifndef OCPDIAG_CORE_TESTING_STATUS_MATCHERS_H_
+#define OCPDIAG_CORE_TESTING_STATUS_MATCHERS_H_
 
 // Testing utilities for working with absl::Status, absl::StatusOr.
 //
@@ -329,15 +329,15 @@ class IsOkMatcher {
 //   ValueType value;
 //   ASSERT_OK_AND_ASSIGN(value, MaybeGetValue(arg));
 #define ASSERT_OK_AND_ASSIGN(lhs, expr)           \
-  MELTAN_STATUS_MACROS_ASSERT_OK_AND_ASSIGN_IMPL( \
-      MELTAN_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), lhs, expr)
+  OCPDIAG_STATUS_MACROS_ASSERT_OK_AND_ASSIGN_IMPL( \
+      OCPDIAG_STATUS_MACROS_CONCAT(_status_or_expr, __LINE__), lhs, expr)
 
 // Helpers for concatenating values, needed to construct "unique" name
-#define MELTAN_STATUS_MACROS_CONCAT(x, y) \
-  MELTAN_STATUS_MACROS_CONCAT_INNER(x, y)
-#define MELTAN_STATUS_MACROS_CONCAT_INNER(x, y) x##y
+#define OCPDIAG_STATUS_MACROS_CONCAT(x, y) \
+  OCPDIAG_STATUS_MACROS_CONCAT_INNER(x, y)
+#define OCPDIAG_STATUS_MACROS_CONCAT_INNER(x, y) x##y
 
-#define MELTAN_STATUS_MACROS_ASSERT_OK_AND_ASSIGN_IMPL(c, v, s) \
+#define OCPDIAG_STATUS_MACROS_ASSERT_OK_AND_ASSIGN_IMPL(c, v, s) \
   auto c = (s);                                                 \
   ASSERT_OK(c.status());                                        \
   v = *std::move(c);
@@ -378,4 +378,4 @@ inline internal_status::IsOkMatcher IsOk() {
 
 }  // namespace ocpdiag::testing
 
-#endif  // MELTAN_CORE_TESTING_STATUS_MATCHERS_H_
+#endif  // OCPDIAG_CORE_TESTING_STATUS_MATCHERS_H_

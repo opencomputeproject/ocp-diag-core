@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_FILE_UTILS_H_
-#define MELTAN_CORE_TESTING_FILE_UTILS_H_
+#ifndef OCPDIAG_CORE_TESTING_FILE_UTILS_H_
+#define OCPDIAG_CORE_TESTING_FILE_UTILS_H_
 
 #include "google/protobuf/message.h"
 #include "absl/strings/string_view.h"
@@ -32,4 +32,4 @@ void WriteProtoTextDebugFile(const google::protobuf::Message& msg,
 
 }  // namespace ocpdiag::testutils
 
-#endif  // MELTAN_CORE_TESTING_FILE_UTILS_H_
+#endif  // OCPDIAG_CORE_TESTING_FILE_UTILS_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_
-#define MELTAN_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_
+#ifndef OCPDIAG_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_
+#define OCPDIAG_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_
 
 #include "google/protobuf/struct.pb.h"
 #include "absl/types/span.h"
@@ -44,4 +44,4 @@ void AddAllMeasurementTypes(ocpdiag::results::TestStep* step,
 }  // namespace example
 }  // namespace ocpdiag
 
-#endif  // MELTAN_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_
+#endif  // OCPDIAG_CORE_EXAMPLES_SIMPLE_SIMPLE_LIB_H_

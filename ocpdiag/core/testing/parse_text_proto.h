@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_TESTING_PARSE_TEXT_PROTO_H_
-#define MELTAN_CORE_TESTING_PARSE_TEXT_PROTO_H_
+#ifndef OCPDIAG_CORE_TESTING_PARSE_TEXT_PROTO_H_
+#define OCPDIAG_CORE_TESTING_PARSE_TEXT_PROTO_H_
 
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
@@ -47,4 +47,4 @@ class ParseTextProtoOrDie {
 
 }  // namespace ocpdiag::testing
 
-#endif  // MELTAN_CORE_TESTING_PARSE_TEXT_PROTO_H_
+#endif  // OCPDIAG_CORE_TESTING_PARSE_TEXT_PROTO_H_

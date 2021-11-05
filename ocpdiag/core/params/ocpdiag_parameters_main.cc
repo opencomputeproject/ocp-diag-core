@@ -75,8 +75,8 @@ absl::Status ExecAndFeed(absl::Span<const char* const> exec_args,
 
 absl::StatusOr<bool> GetBooleanFlag(
     absl::string_view name, bool default_value,
-    const ocpdiag::MeltanParameterParser::Arguments& args) {
-  for (const ocpdiag::MeltanParameterParser::FlagArg& flag : args.flags) {
+    const ocpdiag::OCPDiagParameterParser::Arguments& args) {
+  for (const ocpdiag::OCPDiagParameterParser::FlagArg& flag : args.flags) {
     if (flag.key == name) {
       bool value = default_value;
       if (flag.value.empty()) {
@@ -115,11 +115,11 @@ int main(int argc, const char* argv[]) {
       std::make_unique<google::protobuf::io::ArrayInputStream>("", 0);
   // Read from stdin if running in a terminal but stdin has been replaced,
   // or stdin was explicitly requested.
-  if ((!isatty(STDIN_FILENO) && !DumbTerm()) || getenv("MELTAN_STDIN")) {
+  if ((!isatty(STDIN_FILENO) && !DumbTerm()) || getenv("OCPDIAG_STDIN")) {
     json_stream = std::make_unique<google::protobuf::io::FileInputStream>(STDIN_FILENO);
   }
-  ocpdiag::MeltanParameterParser::Arguments args =
-      ocpdiag::MeltanParameterParser::ParseArgs(argc, argv);
+  ocpdiag::OCPDiagParameterParser::Arguments args =
+      ocpdiag::OCPDiagParameterParser::ParseArgs(argc, argv);
   absl::StatusOr<bool> dry_run = GetBooleanFlag("dry_run", false, args);
   if (!dry_run.ok()) {
     std::cerr << dry_run.status();
@@ -134,8 +134,8 @@ int main(int argc, const char* argv[]) {
     std::cout << "Version: " << ocpdiag::params::GetVersion() << std::endl;
     return 2;
   }
-  absl::StatusOr<ocpdiag::MeltanParameterParser::ExecArgs> exec_args =
-      ocpdiag::MeltanParameterParser::PrepareExec(std::move(args),
+  absl::StatusOr<ocpdiag::OCPDiagParameterParser::ExecArgs> exec_args =
+      ocpdiag::OCPDiagParameterParser::PrepareExec(std::move(args),
                                                  json_stream.get(), *dry_run);
   if (!exec_args.ok()) {
     std::cerr << exec_args.status() << std::endl;

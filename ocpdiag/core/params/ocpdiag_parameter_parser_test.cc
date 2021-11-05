@@ -102,9 +102,9 @@ ocpdiag::core::params::testdata::Params GetTestParams() {
   return *ParseParams(GetTestJson());
 }
 
-class MeltanParameterParserUnitTest : public ::testing::Test {
+class OCPDiagParameterParserUnitTest : public ::testing::Test {
  public:
-  MeltanParameterParserUnitTest()
+  OCPDiagParameterParserUnitTest()
       : e2e_launcher_(ocpdiag::testutils::GetDataDependencyFilepath(
             "ocpdiag/core/params/ocpdiag_launcher")),
         e2e_binary_(ocpdiag::testutils::GetDataDependencyFilepath(
@@ -130,7 +130,7 @@ class MeltanParameterParserUnitTest : public ::testing::Test {
   int E2EReturnCode() const { return e2e_rc_; }
 
   // Runs the test by invoking the actual ocpdiag_launcher.
-  absl::StatusOr<MeltanParameterParser::ExecArgs> RunEndToEnd(
+  absl::StatusOr<OCPDiagParameterParser::ExecArgs> RunEndToEnd(
       absl::Span<const char*> argv, absl::string_view json_params) {
     std::vector<const char*> args{argv.begin(), argv.end()};
     args.push_back(nullptr);
@@ -176,7 +176,7 @@ class MeltanParameterParserUnitTest : public ::testing::Test {
     }
     pid_t pid = fork();
     if (pid == 0) {
-      setenv("MELTAN_STDIN", "", /*replace=*/false);
+      setenv("OCPDIAG_STDIN", "", /*replace=*/false);
       dup2(fileno(stdin), STDIN_FILENO);
       dup2(fileno(stdout), STDOUT_FILENO);
       dup2(fileno(argout), 3);
@@ -215,7 +215,7 @@ class MeltanParameterParserUnitTest : public ::testing::Test {
       return execv_raw.status();
     }
     execv_e2e_ = *std::move(execv_raw);
-    MeltanParameterParser::ExecArgs out;
+    OCPDiagParameterParser::ExecArgs out;
     for (absl::string_view execv_entry = execv_e2e_; !execv_entry.empty();) {
       out.execv.push_back(execv_entry.data());
       size_t end = execv_entry.find_first_of('\0');
@@ -242,22 +242,22 @@ class MeltanParameterParserUnitTest : public ::testing::Test {
   }
 
   // Tests parsing args, and then using them to construct the arguments to exec.
-  absl::StatusOr<MeltanParameterParser::ExecArgs> CreateExecArgs(
+  absl::StatusOr<OCPDiagParameterParser::ExecArgs> CreateExecArgs(
       absl::Span<const char*> argv, absl::string_view json_params) {
     if (e2e_) {
       return RunEndToEnd(argv, json_params);
     }
-    MeltanParameterParser::Arguments args =
-        MeltanParameterParser::ParseArgs(argv.size(), argv.data());
+    OCPDiagParameterParser::Arguments args =
+        OCPDiagParameterParser::ParseArgs(argv.size(), argv.data());
     google::protobuf::io::ArrayInputStream json_stream{
         json_params.data(), static_cast<int>(json_params.size())};
-    return MeltanParameterParser::PrepareExec(std::move(args), &json_stream,
+    return OCPDiagParameterParser::PrepareExec(std::move(args), &json_stream,
                                               /*json_newlines=*/false);
   }
 
   // Executes the common case of running with TestParams descriptor,
   // test_params.json as default, and some extra arguments.
-  absl::StatusOr<MeltanParameterParser::ExecArgs> ExecDefaultsWithArgs(
+  absl::StatusOr<OCPDiagParameterParser::ExecArgs> ExecDefaultsWithArgs(
       absl::string_view json_params, absl::Span<const char* const> args) {
     std::string defaults_path = ocpdiag::testutils::GetDataDependencyFilepath(
         "ocpdiag/core/params/testdata/test_params.json");
@@ -283,19 +283,19 @@ class MeltanParameterParserUnitTest : public ::testing::Test {
   std::string execv_e2e_;  // Backing store for 'argv'. Must outlive function.
 };
 
-class MeltanParameterParserTest : public MeltanParameterParserUnitTest,
+class OCPDiagParameterParserTest : public OCPDiagParameterParserUnitTest,
                                   public ::testing::WithParamInterface<bool> {
  public:
-  MeltanParameterParserTest() { EnableE2E(GetParam()); }
+  OCPDiagParameterParserTest() { EnableE2E(GetParam()); }
 };
 
-INSTANTIATE_TEST_SUITE_P(MeltanParameterEndToEndTests,
-                         MeltanParameterParserTest, ::testing::Bool(),
+INSTANTIATE_TEST_SUITE_P(OCPDiagParameterEndToEndTests,
+                         OCPDiagParameterParserTest, ::testing::Bool(),
                          [](const ::testing::TestParamInfo<bool>& info) {
                            return info.param ? "EndToEnd" : "UnitTest";
                          });
 
-TEST_F(MeltanParameterParserUnitTest, ArgsParsedProperly) {
+TEST_F(OCPDiagParameterParserUnitTest, ArgsParsedProperly) {
   EnableE2E(false);
   const char* argv[] = {"binary_name",
                         "positional_argument",
@@ -317,8 +317,8 @@ TEST_F(MeltanParameterParserUnitTest, ArgsParsedProperly) {
                         "--noflag",
                         "--",
                         "moreargs"};
-  MeltanParameterParser::Arguments args =
-      MeltanParameterParser::ParseArgs(ABSL_ARRAYSIZE(argv), argv);
+  OCPDiagParameterParser::Arguments args =
+      OCPDiagParameterParser::ParseArgs(ABSL_ARRAYSIZE(argv), argv);
   EXPECT_THAT(args.unparsed, ElementsAre("binary_name", "positional_argument",
                                          "stranded_positional_argument"));
   EXPECT_THAT(args.passthrough,
@@ -327,45 +327,45 @@ TEST_F(MeltanParameterParserUnitTest, ArgsParsedProperly) {
   EXPECT_THAT(
       args.flags,
       ElementsAre(
-          Field(&MeltanParameterParser::FlagArg::key, "foo"),
-          Field(&MeltanParameterParser::FlagArg::key, "bar"),
-          Field(&MeltanParameterParser::FlagArg::key, "a_really_long_name"),
-          Field(&MeltanParameterParser::FlagArg::key, "a_flag"),
-          Field(&MeltanParameterParser::FlagArg::key, "arg"),
-          Field(&MeltanParameterParser::FlagArg::key, "following_arg"),
-          Field(&MeltanParameterParser::FlagArg::key, "last_arg")));
+          Field(&OCPDiagParameterParser::FlagArg::key, "foo"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "bar"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "a_really_long_name"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "a_flag"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "arg"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "following_arg"),
+          Field(&OCPDiagParameterParser::FlagArg::key, "last_arg")));
   EXPECT_THAT(
       args.flags,
       ElementsAre(
-          Field(&MeltanParameterParser::FlagArg::value, ""),
-          Field(&MeltanParameterParser::FlagArg::value, ""),
-          Field(&MeltanParameterParser::FlagArg::value, "a_really_long_value"),
-          Field(&MeltanParameterParser::FlagArg::value, "a_value"),
-          Field(&MeltanParameterParser::FlagArg::value, ""),
-          Field(&MeltanParameterParser::FlagArg::value, ""),
-          Field(&MeltanParameterParser::FlagArg::value, "final")));
+          Field(&OCPDiagParameterParser::FlagArg::value, ""),
+          Field(&OCPDiagParameterParser::FlagArg::value, ""),
+          Field(&OCPDiagParameterParser::FlagArg::value, "a_really_long_value"),
+          Field(&OCPDiagParameterParser::FlagArg::value, "a_value"),
+          Field(&OCPDiagParameterParser::FlagArg::value, ""),
+          Field(&OCPDiagParameterParser::FlagArg::value, ""),
+          Field(&OCPDiagParameterParser::FlagArg::value, "final")));
 }
 
-TEST_P(MeltanParameterParserTest, SingleMessageDefinitionParses) {
+TEST_P(OCPDiagParameterParserTest, SingleMessageDefinitionParses) {
   const char* argv[3] = {launcher(), e2e_binary(), descriptor()};
   auto exec_or = CreateExecArgs(absl::MakeSpan(argv), "");
   EXPECT_OK(exec_or);
 }
 
-TEST_P(MeltanParameterParserTest, MultiMessageDefinitionParses) {
+TEST_P(OCPDiagParameterParserTest, MultiMessageDefinitionParses) {
   const char* argv[3] = {launcher(), e2e_binary(), descriptor()};
   auto exec_or = CreateExecArgs(absl::MakeSpan(argv), "");
   EXPECT_OK(exec_or);
 }
 
-TEST_P(MeltanParameterParserTest, TestBinaryIsExecArg) {
+TEST_P(OCPDiagParameterParserTest, TestBinaryIsExecArg) {
   const char* argv[3] = {launcher(), e2e_binary(), descriptor()};
   auto exec_or = CreateExecArgs(absl::MakeSpan(argv), "");
   ASSERT_OK(exec_or);
   EXPECT_THAT(std::string{exec_or->execv[0]}, Eq(argv[1]));
 }
 
-TEST_P(MeltanParameterParserTest, ParamsUnchangedWithoutDefaults) {
+TEST_P(OCPDiagParameterParserTest, ParamsUnchangedWithoutDefaults) {
   const char* argv[3] = {launcher(), e2e_binary(), descriptor()};
   auto exec_or = CreateExecArgs(absl::MakeSpan(argv), GetTestJson());
   ASSERT_OK(exec_or);
@@ -374,7 +374,7 @@ TEST_P(MeltanParameterParserTest, ParamsUnchangedWithoutDefaults) {
   EXPECT_THAT(*output_or, EqualsProto(GetTestParams()));
 }
 
-TEST_P(MeltanParameterParserTest, DefaultsProvidedWithoutInput) {
+TEST_P(OCPDiagParameterParserTest, DefaultsProvidedWithoutInput) {
   auto exec_or = ExecDefaultsWithArgs("", absl::Span<const char*>());
   ASSERT_OK(exec_or);
   auto output_or = ParseParams(exec_or->json_params);
@@ -382,7 +382,7 @@ TEST_P(MeltanParameterParserTest, DefaultsProvidedWithoutInput) {
   EXPECT_THAT(*output_or, EqualsProto(GetTestParams()));
 }
 
-TEST_P(MeltanParameterParserTest, ParamsOverrideDefaults) {
+TEST_P(OCPDiagParameterParserTest, ParamsOverrideDefaults) {
   auto exec_or =
       ExecDefaultsWithArgs("{\"foo\" : \"ABCD\"}", absl::Span<const char*>());
   ASSERT_OK(exec_or);
@@ -393,7 +393,7 @@ TEST_P(MeltanParameterParserTest, ParamsOverrideDefaults) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, ArgsOverrideDefaults) {
+TEST_P(OCPDiagParameterParserTest, ArgsOverrideDefaults) {
   static constexpr const char* args[] = {"--foo=ABCD"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -404,7 +404,7 @@ TEST_P(MeltanParameterParserTest, ArgsOverrideDefaults) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, ArgsOverrideParamsOverrideDefaults) {
+TEST_P(OCPDiagParameterParserTest, ArgsOverrideParamsOverrideDefaults) {
   static constexpr const char* args[] = {"--foo=WXYZ"};
   auto exec_or =
       ExecDefaultsWithArgs("{\"foo\" : \"ABCD\"}", absl::MakeSpan(args));
@@ -416,7 +416,7 @@ TEST_P(MeltanParameterParserTest, ArgsOverrideParamsOverrideDefaults) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, SingularNumberOverride) {
+TEST_P(OCPDiagParameterParserTest, SingularNumberOverride) {
   static constexpr const char* args[] = {"--bar=9999999"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -427,7 +427,7 @@ TEST_P(MeltanParameterParserTest, SingularNumberOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, ArrayEntryOverride) {
+TEST_P(OCPDiagParameterParserTest, ArrayEntryOverride) {
   static constexpr const char* args[] = {"--strings[1]=injected"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -438,7 +438,7 @@ TEST_P(MeltanParameterParserTest, ArrayEntryOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, ArrayAssignment) {
+TEST_P(OCPDiagParameterParserTest, ArrayAssignment) {
   static constexpr const char* args[] = {"--strings=[\"injected\", \"value\"]"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -451,7 +451,7 @@ TEST_P(MeltanParameterParserTest, ArrayAssignment) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, MapAssignment) {
+TEST_P(OCPDiagParameterParserTest, MapAssignment) {
   static constexpr const char* args[] = {"--map={\"key\":\"value\"}"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -462,7 +462,7 @@ TEST_P(MeltanParameterParserTest, MapAssignment) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, TopLevelMessageArrayAssignment) {
+TEST_P(OCPDiagParameterParserTest, TopLevelMessageArrayAssignment) {
   static constexpr const char* args[] = {
       R"(--subs=[{"sub":"A"}, {"sub":"B"}])"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -476,7 +476,7 @@ TEST_P(MeltanParameterParserTest, TopLevelMessageArrayAssignment) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, NotReallyArrayAssignment) {
+TEST_P(OCPDiagParameterParserTest, NotReallyArrayAssignment) {
   static constexpr const char* args[] = {
       "--strings[1]=[\"injected\", \"value\"]"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -488,7 +488,7 @@ TEST_P(MeltanParameterParserTest, NotReallyArrayAssignment) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, MessageAssignment) {
+TEST_P(OCPDiagParameterParserTest, MessageAssignment) {
   static constexpr const char* args[] = {"--msg={ \"sub\" : \"test\" }"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -501,7 +501,7 @@ TEST_P(MeltanParameterParserTest, MessageAssignment) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, NestedEntryOverride) {
+TEST_P(OCPDiagParameterParserTest, NestedEntryOverride) {
   static constexpr const char* args[] = {"--msg.other[3]=54321"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -512,7 +512,7 @@ TEST_P(MeltanParameterParserTest, NestedEntryOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, NestedArrayOverride) {
+TEST_P(OCPDiagParameterParserTest, NestedArrayOverride) {
   static constexpr const char* args[] = {"--subs[1].sub=bogus"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -523,7 +523,7 @@ TEST_P(MeltanParameterParserTest, NestedArrayOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, EnumNameOverride) {
+TEST_P(OCPDiagParameterParserTest, EnumNameOverride) {
   static constexpr const char* args[] = {"--enumerated=BAR"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -535,7 +535,7 @@ TEST_P(MeltanParameterParserTest, EnumNameOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, EnumNumOverride) {
+TEST_P(OCPDiagParameterParserTest, EnumNumOverride) {
   static constexpr const char* args[] = {"--enumerated=2"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -547,7 +547,7 @@ TEST_P(MeltanParameterParserTest, EnumNumOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, NameBoolOverride) {
+TEST_P(OCPDiagParameterParserTest, NameBoolOverride) {
   static constexpr const char* args[] = {"--b=true"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -558,7 +558,7 @@ TEST_P(MeltanParameterParserTest, NameBoolOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, NumericBoolOverride) {
+TEST_P(OCPDiagParameterParserTest, NumericBoolOverride) {
   static constexpr const char* args[] = {"--b=1"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -569,7 +569,7 @@ TEST_P(MeltanParameterParserTest, NumericBoolOverride) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, SignedInt32Override) {
+TEST_P(OCPDiagParameterParserTest, SignedInt32Override) {
   static constexpr const char* args[] = {"--i32=-12"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -580,7 +580,7 @@ TEST_P(MeltanParameterParserTest, SignedInt32Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, UnsignedInt32Override) {
+TEST_P(OCPDiagParameterParserTest, UnsignedInt32Override) {
   static constexpr const char* args[] = {"--u32=12"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -591,7 +591,7 @@ TEST_P(MeltanParameterParserTest, UnsignedInt32Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, SignedInt64Override) {
+TEST_P(OCPDiagParameterParserTest, SignedInt64Override) {
   static constexpr const char* args[] = {"--i64=-12"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -602,7 +602,7 @@ TEST_P(MeltanParameterParserTest, SignedInt64Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, UnsignedInt64Override) {
+TEST_P(OCPDiagParameterParserTest, UnsignedInt64Override) {
   static constexpr const char* args[] = {"--u64=12"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -613,7 +613,7 @@ TEST_P(MeltanParameterParserTest, UnsignedInt64Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, Float32Override) {
+TEST_P(OCPDiagParameterParserTest, Float32Override) {
   static constexpr const char* args[] = {"--f32=123.456"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -624,7 +624,7 @@ TEST_P(MeltanParameterParserTest, Float32Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, Float64Override) {
+TEST_P(OCPDiagParameterParserTest, Float64Override) {
   static constexpr const char* args[] = {"--f64=123.456"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
   ASSERT_OK(exec_or);
@@ -635,7 +635,7 @@ TEST_P(MeltanParameterParserTest, Float64Override) {
   EXPECT_THAT(*output_or, EqualsProto(merged));
 }
 
-TEST_P(MeltanParameterParserTest, HelpTextHasSubstrFields) {
+TEST_P(OCPDiagParameterParserTest, HelpTextHasSubstrFields) {
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--help"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -652,7 +652,7 @@ TEST_P(MeltanParameterParserTest, HelpTextHasSubstrFields) {
   EXPECT_THAT(exec_or->post_output, HasSubstr("--recursive.recursive "));
 }
 
-TEST_P(MeltanParameterParserTest, HelpFullTextHasSubstrFields) {
+TEST_P(OCPDiagParameterParserTest, HelpFullTextHasSubstrFields) {
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--helpfull"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -669,7 +669,7 @@ TEST_P(MeltanParameterParserTest, HelpFullTextHasSubstrFields) {
   EXPECT_THAT(exec_or->post_output, HasSubstr("--recursive.recursive "));
 }
 
-TEST_P(MeltanParameterParserTest, HelpTextIndentation) {
+TEST_P(OCPDiagParameterParserTest, HelpTextIndentation) {
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--help"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -708,7 +708,7 @@ TEST_P(MeltanParameterParserTest, HelpTextIndentation) {
   EXPECT_THAT(exec_or->post_output.back(), Eq('\n'));
 }
 
-TEST_P(MeltanParameterParserTest, DefaultsValidJson) {
+TEST_P(OCPDiagParameterParserTest, DefaultsValidJson) {
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--help"};
   auto exec_or = ExecDefaultsWithArgs("", absl::MakeSpan(args));
@@ -720,7 +720,7 @@ TEST_P(MeltanParameterParserTest, DefaultsValidJson) {
   EXPECT_OK(ParseParams(defaults));
 }
 
-TEST_F(MeltanParameterParserUnitTest, DryRunStdOutContainsOverrides) {
+TEST_F(OCPDiagParameterParserUnitTest, DryRunStdOutContainsOverrides) {
   EnableE2E(true);
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--dry_run", "--i64=-124"};
@@ -734,7 +734,7 @@ TEST_F(MeltanParameterParserUnitTest, DryRunStdOutContainsOverrides) {
   EXPECT_THAT(*dry_run_or, EqualsProto(merged));
 }
 
-TEST_F(MeltanParameterParserUnitTest, VersionArgOutputs) {
+TEST_F(OCPDiagParameterParserUnitTest, VersionArgOutputs) {
   EnableE2E(true);
   E2EIgnoreReturn(true);
   static constexpr const char* args[] = {"--version"};
@@ -743,7 +743,7 @@ TEST_F(MeltanParameterParserUnitTest, VersionArgOutputs) {
   EXPECT_TRUE(absl::StartsWith(exec_or->post_output, "Version:"));
 }
 
-TEST_P(MeltanParameterParserTest, UserParamsZeroValueMergesOverNonZeroDefault) {
+TEST_P(OCPDiagParameterParserTest, UserParamsZeroValueMergesOverNonZeroDefault) {
   auto exec_or =
       ExecDefaultsWithArgs("{\"b\" : false}", absl::Span<const char*>());
   ASSERT_OK(exec_or);

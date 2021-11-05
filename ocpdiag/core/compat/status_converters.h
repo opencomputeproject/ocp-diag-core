@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MELTAN_CORE_COMPAT_STATUS_CONVERTERS_H_
-#define MELTAN_CORE_COMPAT_STATUS_CONVERTERS_H_
+#ifndef OCPDIAG_CORE_COMPAT_STATUS_CONVERTERS_H_
+#define OCPDIAG_CORE_COMPAT_STATUS_CONVERTERS_H_
 
 #include "grpcpp/impl/codegen/status.h"
 #include "absl/status/status.h"
@@ -51,4 +51,4 @@ inline absl::Status AsAbslStatus<absl::Status>(const absl::Status& status) {
 }
 
 }  // namespace ocpdiag
-#endif  // MELTAN_CORE_COMPAT_STATUS_CONVERTERS_H_
+#endif  // OCPDIAG_CORE_COMPAT_STATUS_CONVERTERS_H_
