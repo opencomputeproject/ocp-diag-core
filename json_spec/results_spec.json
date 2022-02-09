@@ -1,0 +1,489 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/ocp",
+  "description": "OCP Hardware Validation Output Specs",
+  "title": "Output Artifact",
+  "type": "object",
+  "properties": {
+    "sequenceNumber": {
+      "description": "Output artifact index number for data loss monitoring",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "timestamp": {
+      "description": "Timestamp, see date-time in RFC 3339 section 5.6, Z-normalized",
+      "type": "string",
+      "format": "date-time"
+    },
+    "testRunArtifact": {
+      "description": "Test run artifact",
+      "$ref": "#/$defs/testRunArtifact"
+    },
+    "testStepArtifact": {
+      "description": "Test step artifact",
+      "$ref": "#/$defs/testStepArtifact"
+    }
+  },
+  "allOf": [
+    {
+      "required": [
+        "sequenceNumber",
+        "timestamp"
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "required": [
+            "testRunArtifact"
+          ]
+        },
+        {
+          "required": [
+            "testStepArtifact"
+          ]
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "testRunArtifact": {
+      "properties": {
+        "testRunStart": {
+          "description": "Test run start",
+          "$ref": "#/$defs/testRunStart"
+        },
+        "testRunEnd": {
+          "description": "Test run end",
+          "$ref": "#/$defs/testRunEnd"
+        },
+        "log": {
+          "description": "Test run log output",
+          "$ref": "#/$defs/log"
+        },
+        "error": {
+          "description": "Test run error",
+          "$ref": "#/$defs/error"
+        },
+        "meta": {
+          "description": "Output meta info. Expected to be the first message",
+          "$ref": "#/$defs/meta"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "testRunStart"
+          ]
+        },
+        {
+          "required": [
+            "testRunEnd"
+          ]
+        },
+        {
+          "required": [
+            "log"
+          ]
+        },
+        {
+          "required": [
+            "error"
+          ]
+        }
+      ]
+    },
+    "testStepArtifact": {
+      "properties": {
+        "testStepId": {
+          "description": "...",
+          "type": "string"
+        },
+        "testStepStart": {
+          "$ref": "#/$defs/testStepStart"
+        },
+        "testStepEnd": {
+          "$ref": "#/$defs/testStepEnd"
+        },
+        "error": {
+          "$ref": "#/$defs/error"
+        },
+        "log": {
+          "$ref": "#/$defs/log"
+        },
+        "measurement": {
+          "$ref": "/extensions/measurements#/$defs/measurement"
+        },
+        "measurementSeriesStart": {
+          "$ref": "/extensions/measurements#/$defs/measurementSeriesStart"
+        },
+        "measurementSeriesEnd": {
+          "$ref": "/extensions/measurements#/$defs/measurementSeriesEnd"
+        },
+        "measurementElement": {
+          "$ref": "/extensions/measurements#/$defs/measurementElement"
+        },
+        "diagnosis": {
+          "$ref": "/extensions/diagnosis#/$defs/diagnosis"
+        },
+        "file": {
+          "$ref": "/extensions/files#/$defs/file"
+        },
+        "artifactExtension": {
+          "$ref": "/extensions/artifact_extensions#/$defs/artifactExtension"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "testStepId",
+            "testStepStart"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "testStepEnd"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "error"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "log"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "measurement"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "measurementSeriesStart"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "measurementSeriesEnd"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "measurementElement"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "diagnosis"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "file"
+          ]
+        },
+        {
+          "required": [
+            "testStepId",
+            "artifactExtension"
+          ]
+        }
+      ]
+    },
+    "log": {
+      "properties": {
+        "text": {
+          "description": "Log message",
+          "type": "string"
+        },
+        "timestampMs": {
+          "description": "Log timestamp",
+          "type": "integer"
+        },
+        "severity": {
+          "description": "Log level/severity",
+          "type": "string",
+          "enum": [
+            "INFO",
+            "DEBUG",
+            "WARNING",
+            "ERROR",
+            "FATAL"
+          ]
+        }
+      },
+      "required": [
+        "text",
+        "severity"
+      ]
+    },
+    "error": {
+      "properties": {
+        "source": {
+          "description": "Software that raise the error",
+          "type": "string"
+        },
+        "message": {
+          "description": "Error messages",
+          "type": "string"
+        },
+        "symptom": {
+          "description": "...",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "testRunStart": {
+      "properties": {
+        "name": {
+          "description": "Name of this test",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version of this test",
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Test parameters",
+          "type": "object"
+        },
+        "dutsInfo": {
+          "description": "DUT hardware information",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dutInfo"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "parameters"
+      ]
+    },
+    "testRunEnd": {
+      "properties": {
+        "name": {
+          "description": "Name of this test",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status of this test",
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "COMPLETE",
+            "ERROR",
+            "SKIPPED"
+          ]
+        },
+        "result": {
+          "description": "Result of this test",
+          "type": "string",
+          "enum": [
+            "NOT_APPLICABLE",
+            "PASS",
+            "FAIL",
+            "CONFIGURABLE"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "result"
+      ]
+    },
+    "meta": {
+      "properties": {
+        "version": {
+          "description": "Which OCP T&V Schema Version this test output follows",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "version"
+      ]
+    },
+    "testStepStart": {
+      "properties": {
+        "name": {
+          "description": "Name of this test step",
+          "type": "string"
+        }
+      },
+      "timestampMs": {
+        "description": "Timestamp, ms precision",
+        "type": "string",
+        "format": "date-time"
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "testStepEnd": {
+      "properties": {
+        "name": {
+          "description": "Name of this test step",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status of this test",
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "COMPLETE",
+            "ERROR",
+            "SKIPPED"
+          ]
+        },
+        "timestampMs": {
+          "description": "Timestamp, ms precision",
+          "type": "string",
+          "format": "date-time"
+        },
+        "additionalDetails": {
+          "$ref": "/extensions/step_details#/$defs/stepDetails"
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ]
+    },
+    "dutInfo": {
+      "properties": {
+        "hostname": {
+          "description": "Host Name",
+          "type": "string"
+        },
+        "platformInfo": {
+          "descrption": "...",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "componentsInfo": {
+          "description": "Hardware info about components",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hardwareComponentInfo"
+          }
+        },
+        "softwaresInfo": {
+          "description": "Components software info",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/softwareInfo"
+          }
+        }
+      },
+      "required": [
+        "hostname"
+      ]
+    },
+    "hardwareComponentInfo": {
+      "properties": {
+        "id": {
+          "description": "Incremental ID",
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "description": "Component Name",
+          "type": "string"
+        },
+        "location": {
+          "description": "Harware component location",
+          "$ref": "#/$defs/hardwareComponentLocation"
+        },
+        "partNumber": {
+          "description": "Component part number",
+          "type": "string"
+        },
+        "manufacturer": {
+          "description": "manufacturer",
+          "type": "string"
+        },
+        "additionalInfo": {
+          "description": "Others meaningful component information",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "hardwareComponentLocation": {
+      "properties": {
+        "UPI": {
+          "description": "Unique Part Identifier",
+          "type": "string"
+        },
+        "serialNumber": {
+          "description": "Component Serial Number",
+          "type": "string"
+        },
+        "additionalInfo": {
+          "description": "Other useful information for component location, like devpath, blockpath, and so on",
+          "type": "object"
+        }
+      },
+      "required": [
+        "UPI",
+        "serialNumbers"
+      ]
+    },
+    "softwareInfo": {
+      "properties": {
+        "id": {
+          "description": "Incremental ID",
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "description": "Software Name",
+          "type": "string"
+        },
+        "version": {
+          "description": "Software Version",
+          "type": "string"
+        },
+        "additionalInfo": {
+          "description": "Other useful information about software",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version"
+      ]
+    }
+  }
+}

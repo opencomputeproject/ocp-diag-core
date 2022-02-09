@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/extensions/step_details",
+  "title": "Step Details",
+  "description": "Additional details for testStepEnd",
+  "$defs": {
+    "stepDetails": {
+      "properties": {
+        "summary": {
+          "description": "Human readable summary of test output",
+          "type": "string"
+        },
+        "result": {
+          "description": "Test result",
+          "type": "string"
+        },
+        "expected": {
+          "description": "Expected result",
+          "type": "string"
+        },
+        "validation": {
+          "descrption": "Which kind of validation the step ran",
+          "type": "string"
+        },
+        "msg": {
+          "descrption": "Output message from step",
+          "type": "string"
+        },
+        "testIdentifier": {
+          "description": "Useful information to locate the test",
+          "type": "object"
+        }
+      },
+      "required": [
+        "result",
+        "expected",
+        "validation",
+        "msg"
+      ]
+    }
+  }
+}
