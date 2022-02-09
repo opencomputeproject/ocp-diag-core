@@ -1,5 +1,7 @@
 build --cxxopt='-std=c++17'
 build --incompatible_enable_cc_toolchain_resolution=true
+# fix for gcc11, https://github.com/abseil/abseil-cpp/issues/948
+build --copt='-Wno-array-parameter'
 
 # Tell googletest to use absl.
 build --define absl=1
