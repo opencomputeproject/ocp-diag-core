@@ -1,0 +1,243 @@
+{"testRunArtifact":{"log":{"severity":"INFO","text":"test run started"}},"sequenceNumber":0,"timestamp":"2021-07-02T01:20:23.974361887Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"/phys/FAN0 does not have partInformation."}},"sequenceNumber":1,"timestamp":"2021-07-02T01:20:23.992184855Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"/phys/FAN1 does not have partInformation."}},"sequenceNumber":2,"timestamp":"2021-07-02T01:20:23.994587433Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"/phys/FAN2 does not have partInformation."}},"sequenceNumber":3,"timestamp":"2021-07-02T01:20:23.997034896Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"/phys/FAN3 does not have partInformation."}},"sequenceNumber":4,"timestamp":"2021-07-02T01:20:23.999481479Z"}
+{"testRunArtifact":{"testRunStart":{"name":"fan_speed","version":"382526885","parameters":{"@type":"type.googleapis.com/google.protobuf.Empty"},"dutInfo":[{"hostname":"mvcs28","hardwareComponents":[{"hardwareInfoId":"0","arena":"","name":"BigGulp","fruLocation":{"devpath":"/phys/BIGGULP","odataId":"","blockpath":"","serialNumber":"IPBQTW210500071"},"partNumber":"1092350-02","manufacturer":"Quanta","mfgPartNumber":"","partType":"4","componentLocation":{"devpath":"/phys/BIGGULP:device:fan0","odataId":"","blockpath":"","serialNumber":""}},{"hardwareInfoId":"1","arena":"","name":"BigGulp","fruLocation":{"devpath":"/phys/BIGGULP","odataId":"","blockpath":"","serialNumber":"IPBQTW210500071"},"partNumber":"1092350-02","manufacturer":"Quanta","mfgPartNumber":"","partType":"4","componentLocation":{"devpath":"/phys/BIGGULP:device:fan1","odataId":"","blockpath":"","serialNumber":""}},{"hardwareInfoId":"2","arena":"","name":"fan","fruLocation":{"devpath":"/phys/FAN0","odataId":"","blockpath":"","serialNumber":""},"partNumber":"","manufacturer":"","mfgPartNumber":"","partType":""},{"hardwareInfoId":"3","arena":"","name":"fan","fruLocation":{"devpath":"/phys/FAN1","odataId":"","blockpath":"","serialNumber":""},"partNumber":"","manufacturer":"","mfgPartNumber":"","partType":""},{"hardwareInfoId":"4","arena":"","name":"fan","fruLocation":{"devpath":"/phys/FAN2","odataId":"","blockpath":"","serialNumber":""},"partNumber":"","manufacturer":"","mfgPartNumber":"","partType":""},{"hardwareInfoId":"5","arena":"","name":"fan","fruLocation":{"devpath":"/phys/FAN3","odataId":"","blockpath":"","serialNumber":""},"partNumber":"","manufacturer":"","mfgPartNumber":"","partType":""}],"softwareInfos":[{"softwareInfoId":"0","arena":"","name":"FanSpeed Diag","version":""},{"softwareInfoId":"1","arena":"","name":"gsys","version":"(unknown)"}]}]}},"sequenceNumber":5,"timestamp":"2021-07-02T01:20:24.006942375Z"}
+{"testStepArtifact":{"testStepStart":{"name":"fan_speed-process-ecfailsafe-mode"},"testStepId":"0"},"sequenceNumber":6,"timestamp":"2021-07-02T01:20:24.007581829Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"fan_speed-process-ecfailsafe-mode","status":"COMPLETE"},"testStepId":"0"},"sequenceNumber":7,"timestamp":"2021-07-02T01:20:24.007711524Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Fans detected ['/phys/BIGGULP:device:fan0', '/phys/BIGGULP:device:fan1', '/phys/FAN0', '/phys/FAN1', '/phys/FAN2', '/phys/FAN3']"}},"sequenceNumber":8,"timestamp":"2021-07-02T01:20:24.007769716Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-list"},"testStepId":"1"},"sequenceNumber":9,"timestamp":"2021-07-02T01:20:24.007801287Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-list","status":"COMPLETE"},"testStepId":"1"},"sequenceNumber":10,"timestamp":"2021-07-02T01:20:24.007831472Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"2"},"sequenceNumber":11,"timestamp":"2021-07-02T01:20:24.007864959Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"2"},"sequenceNumber":12,"timestamp":"2021-07-02T01:20:24.010007130Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"3"},"sequenceNumber":13,"timestamp":"2021-07-02T01:20:24.010057592Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 18550, max_speed 23850 for /phys/BIGGULP:device:fan0"},"testStepId":"3"},"sequenceNumber":14,"timestamp":"2021-07-02T01:20:24.010390156Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":15,"timestamp":"2021-07-02T01:20:24.010428415Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying computer-model_40MM fan: /phys/BIGGULP:device:fan0"}},"sequenceNumber":16,"timestamp":"2021-07-02T01:20:24.010454583Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"4"},"sequenceNumber":17,"timestamp":"2021-07-02T01:20:24.010476263Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"5"},"sequenceNumber":18,"timestamp":"2021-07-02T01:20:52.286820482Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/BIGGULP:device:fan0"},"testStepId":"5"},"sequenceNumber":19,"timestamp":"2021-07-02T01:22:05.657080580Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"5"},"sequenceNumber":20,"timestamp":"2021-07-02T01:22:37.031695818Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"4"},"sequenceNumber":21,"timestamp":"2021-07-02T01:23:05.356084148Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"4"},"sequenceNumber":22,"timestamp":"2021-07-02T01:23:05.356260414Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"6"},"sequenceNumber":23,"timestamp":"2021-07-02T01:23:05.356322111Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"6"},"sequenceNumber":24,"timestamp":"2021-07-02T01:23:05.356377149Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"0"}},"testStepId":"6"},"sequenceNumber":25,"timestamp":"2021-07-02T01:23:05.356865268Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":23850,"minimum":18550},"value":23364,"dutTimestamp":"2021-07-02T01:23:05.357025326Z"},"testStepId":"6"},"sequenceNumber":26,"timestamp":"2021-07-02T01:23:05.357026029Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"computer-model_40MM fan /phys/BIGGULP:device:fan0 measured 23364 RPM at 100% duty cycle (minimum=18550, maximum=23850)"},"testStepId":"6"},"sequenceNumber":27,"timestamp":"2021-07-02T01:23:05.357114880Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"6"},"sequenceNumber":28,"timestamp":"2021-07-02T01:23:05.357149095Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"computer-model_40MM fan /phys/BIGGULP:device:fan0 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["0"]},"testStepId":"6"},"sequenceNumber":29,"timestamp":"2021-07-02T01:23:05.357196860Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"6"},"sequenceNumber":30,"timestamp":"2021-07-02T01:23:05.357242312Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 7155, max_speed 12455 for /phys/BIGGULP:device:fan0"},"testStepId":"3"},"sequenceNumber":31,"timestamp":"2021-07-02T01:23:05.357293558Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":32,"timestamp":"2021-07-02T01:23:05.357328806Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying computer-model_40MM fan: /phys/BIGGULP:device:fan0"}},"sequenceNumber":33,"timestamp":"2021-07-02T01:23:05.357380623Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"7"},"sequenceNumber":34,"timestamp":"2021-07-02T01:23:05.357428020Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"8"},"sequenceNumber":35,"timestamp":"2021-07-02T01:23:33.759051350Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/BIGGULP:device:fan0"},"testStepId":"8"},"sequenceNumber":36,"timestamp":"2021-07-02T01:24:47.145463947Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"8"},"sequenceNumber":37,"timestamp":"2021-07-02T01:25:18.605176648Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"7"},"sequenceNumber":38,"timestamp":"2021-07-02T01:25:46.928008991Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"7"},"sequenceNumber":39,"timestamp":"2021-07-02T01:25:46.928225374Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"9"},"sequenceNumber":40,"timestamp":"2021-07-02T01:25:46.928287229Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"9"},"sequenceNumber":41,"timestamp":"2021-07-02T01:25:46.928333605Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"0"}},"testStepId":"9"},"sequenceNumber":42,"timestamp":"2021-07-02T01:25:46.928735965Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":12455,"minimum":7155},"value":11210,"dutTimestamp":"2021-07-02T01:25:46.928884448Z"},"testStepId":"9"},"sequenceNumber":43,"timestamp":"2021-07-02T01:25:46.928885136Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"computer-model_40MM fan /phys/BIGGULP:device:fan0 measured 11210 RPM at 50% duty cycle (minimum=7155, maximum=12455)"},"testStepId":"9"},"sequenceNumber":44,"timestamp":"2021-07-02T01:25:46.928981879Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"9"},"sequenceNumber":45,"timestamp":"2021-07-02T01:25:46.929015543Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"computer-model_40MM fan /phys/BIGGULP:device:fan0 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["0"]},"testStepId":"9"},"sequenceNumber":46,"timestamp":"2021-07-02T01:25:46.929062028Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"9"},"sequenceNumber":47,"timestamp":"2021-07-02T01:25:46.929105277Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"3"},"sequenceNumber":48,"timestamp":"2021-07-02T01:25:46.929137508Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"10"},"sequenceNumber":49,"timestamp":"2021-07-02T01:25:46.929170523Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"10"},"sequenceNumber":50,"timestamp":"2021-07-02T01:25:46.929331736Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"11"},"sequenceNumber":51,"timestamp":"2021-07-02T01:25:46.929369354Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 18550, max_speed 23850 for /phys/BIGGULP:device:fan1"},"testStepId":"11"},"sequenceNumber":52,"timestamp":"2021-07-02T01:25:46.929516191Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":53,"timestamp":"2021-07-02T01:25:46.929553102Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying computer-model_40MM fan: /phys/BIGGULP:device:fan1"}},"sequenceNumber":54,"timestamp":"2021-07-02T01:25:46.929583268Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"12"},"sequenceNumber":55,"timestamp":"2021-07-02T01:25:46.929607163Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"13"},"sequenceNumber":56,"timestamp":"2021-07-02T01:26:15.299406910Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/BIGGULP:device:fan1"},"testStepId":"13"},"sequenceNumber":57,"timestamp":"2021-07-02T01:27:28.591225910Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"13"},"sequenceNumber":58,"timestamp":"2021-07-02T01:27:59.862572115Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"12"},"sequenceNumber":59,"timestamp":"2021-07-02T01:28:28.276571105Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"12"},"sequenceNumber":60,"timestamp":"2021-07-02T01:28:28.276786793Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"14"},"sequenceNumber":61,"timestamp":"2021-07-02T01:28:28.276849831Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"14"},"sequenceNumber":62,"timestamp":"2021-07-02T01:28:28.276895342Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"1"}},"testStepId":"14"},"sequenceNumber":63,"timestamp":"2021-07-02T01:28:28.277282645Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":23850,"minimum":18550},"value":22302,"dutTimestamp":"2021-07-02T01:28:28.277443213Z"},"testStepId":"14"},"sequenceNumber":64,"timestamp":"2021-07-02T01:28:28.277444026Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"computer-model_40MM fan /phys/BIGGULP:device:fan1 measured 22302 RPM at 100% duty cycle (minimum=18550, maximum=23850)"},"testStepId":"14"},"sequenceNumber":65,"timestamp":"2021-07-02T01:28:28.277534022Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"14"},"sequenceNumber":66,"timestamp":"2021-07-02T01:28:28.277568782Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"computer-model_40MM fan /phys/BIGGULP:device:fan1 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["1"]},"testStepId":"14"},"sequenceNumber":67,"timestamp":"2021-07-02T01:28:28.277616353Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"14"},"sequenceNumber":68,"timestamp":"2021-07-02T01:28:28.277661668Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 7155, max_speed 12455 for /phys/BIGGULP:device:fan1"},"testStepId":"11"},"sequenceNumber":69,"timestamp":"2021-07-02T01:28:28.277701359Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":70,"timestamp":"2021-07-02T01:28:28.277734551Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying computer-model_40MM fan: /phys/BIGGULP:device:fan1"}},"sequenceNumber":71,"timestamp":"2021-07-02T01:28:28.277761970Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"15"},"sequenceNumber":72,"timestamp":"2021-07-02T01:28:28.277782971Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"16"},"sequenceNumber":73,"timestamp":"2021-07-02T01:28:56.645990363Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/BIGGULP:device:fan1"},"testStepId":"16"},"sequenceNumber":74,"timestamp":"2021-07-02T01:30:10.027277603Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"16"},"sequenceNumber":75,"timestamp":"2021-07-02T01:30:41.390364018Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"15"},"sequenceNumber":76,"timestamp":"2021-07-02T01:31:09.710024600Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"15"},"sequenceNumber":77,"timestamp":"2021-07-02T01:31:09.710197687Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"17"},"sequenceNumber":78,"timestamp":"2021-07-02T01:31:09.710254292Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"17"},"sequenceNumber":79,"timestamp":"2021-07-02T01:31:09.710297298Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"1"}},"testStepId":"17"},"sequenceNumber":80,"timestamp":"2021-07-02T01:31:09.711183190Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":12455,"minimum":7155},"value":10856,"dutTimestamp":"2021-07-02T01:31:09.711357198Z"},"testStepId":"17"},"sequenceNumber":81,"timestamp":"2021-07-02T01:31:09.711357909Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"computer-model_40MM fan /phys/BIGGULP:device:fan1 measured 10856 RPM at 50% duty cycle (minimum=7155, maximum=12455)"},"testStepId":"17"},"sequenceNumber":82,"timestamp":"2021-07-02T01:31:09.711436146Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"17"},"sequenceNumber":83,"timestamp":"2021-07-02T01:31:09.711470955Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"computer-model_40MM fan /phys/BIGGULP:device:fan1 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["1"]},"testStepId":"17"},"sequenceNumber":84,"timestamp":"2021-07-02T01:31:09.711522330Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"17"},"sequenceNumber":85,"timestamp":"2021-07-02T01:31:09.711566114Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"11"},"sequenceNumber":86,"timestamp":"2021-07-02T01:31:09.711599572Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"18"},"sequenceNumber":87,"timestamp":"2021-07-02T01:31:09.711632274Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"18"},"sequenceNumber":88,"timestamp":"2021-07-02T01:31:09.711790003Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"19"},"sequenceNumber":89,"timestamp":"2021-07-02T01:31:09.711824583Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 13104, max_speed 16464 for /phys/FAN0"},"testStepId":"19"},"sequenceNumber":90,"timestamp":"2021-07-02T01:31:09.713710554Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":91,"timestamp":"2021-07-02T01:31:09.713805821Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN0"}},"sequenceNumber":92,"timestamp":"2021-07-02T01:31:09.713838757Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"20"},"sequenceNumber":93,"timestamp":"2021-07-02T01:31:09.713862206Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"21"},"sequenceNumber":94,"timestamp":"2021-07-02T01:31:38.083578344Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN0"},"testStepId":"21"},"sequenceNumber":95,"timestamp":"2021-07-02T01:32:51.465272254Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"21"},"sequenceNumber":96,"timestamp":"2021-07-02T01:33:22.842634567Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"20"},"sequenceNumber":97,"timestamp":"2021-07-02T01:33:51.164769626Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"20"},"sequenceNumber":98,"timestamp":"2021-07-02T01:33:51.164998275Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"22"},"sequenceNumber":99,"timestamp":"2021-07-02T01:33:51.165064060Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"22"},"sequenceNumber":100,"timestamp":"2021-07-02T01:33:51.165109720Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"2"}},"testStepId":"22"},"sequenceNumber":101,"timestamp":"2021-07-02T01:33:51.165505003Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":16464,"minimum":13104},"value":16146,"dutTimestamp":"2021-07-02T01:33:51.165657398Z"},"testStepId":"22"},"sequenceNumber":102,"timestamp":"2021-07-02T01:33:51.165658086Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN0 measured 16146 RPM at 100% duty cycle (minimum=13104, maximum=16464)"},"testStepId":"22"},"sequenceNumber":103,"timestamp":"2021-07-02T01:33:51.165743101Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"22"},"sequenceNumber":104,"timestamp":"2021-07-02T01:33:51.165778592Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN0 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["2"]},"testStepId":"22"},"sequenceNumber":105,"timestamp":"2021-07-02T01:33:51.165852486Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"22"},"sequenceNumber":106,"timestamp":"2021-07-02T01:33:51.165901554Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 6720, max_speed 10080 for /phys/FAN0"},"testStepId":"19"},"sequenceNumber":107,"timestamp":"2021-07-02T01:33:51.165938517Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":108,"timestamp":"2021-07-02T01:33:51.165970535Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN0"}},"sequenceNumber":109,"timestamp":"2021-07-02T01:33:51.166001161Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"23"},"sequenceNumber":110,"timestamp":"2021-07-02T01:33:51.166024241Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"24"},"sequenceNumber":111,"timestamp":"2021-07-02T01:34:19.532454348Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN0"},"testStepId":"24"},"sequenceNumber":112,"timestamp":"2021-07-02T01:35:32.928736624Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"24"},"sequenceNumber":113,"timestamp":"2021-07-02T01:36:04.304082800Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"23"},"sequenceNumber":114,"timestamp":"2021-07-02T01:36:32.620458169Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"23"},"sequenceNumber":115,"timestamp":"2021-07-02T01:36:32.620674534Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"25"},"sequenceNumber":116,"timestamp":"2021-07-02T01:36:32.620739337Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"25"},"sequenceNumber":117,"timestamp":"2021-07-02T01:36:32.620786380Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"2"}},"testStepId":"25"},"sequenceNumber":118,"timestamp":"2021-07-02T01:36:32.621179625Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":10080,"minimum":6720},"value":9750,"dutTimestamp":"2021-07-02T01:36:32.621327997Z"},"testStepId":"25"},"sequenceNumber":119,"timestamp":"2021-07-02T01:36:32.621328635Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN0 measured 9750 RPM at 50% duty cycle (minimum=6720, maximum=10080)"},"testStepId":"25"},"sequenceNumber":120,"timestamp":"2021-07-02T01:36:32.621413185Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"25"},"sequenceNumber":121,"timestamp":"2021-07-02T01:36:32.621446839Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN0 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["2"]},"testStepId":"25"},"sequenceNumber":122,"timestamp":"2021-07-02T01:36:32.621489746Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"25"},"sequenceNumber":123,"timestamp":"2021-07-02T01:36:32.621544791Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"19"},"sequenceNumber":124,"timestamp":"2021-07-02T01:36:32.621579279Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"26"},"sequenceNumber":125,"timestamp":"2021-07-02T01:36:32.621613579Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"26"},"sequenceNumber":126,"timestamp":"2021-07-02T01:36:32.621787980Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"27"},"sequenceNumber":127,"timestamp":"2021-07-02T01:36:32.621823229Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 13104, max_speed 16464 for /phys/FAN1"},"testStepId":"27"},"sequenceNumber":128,"timestamp":"2021-07-02T01:36:32.624034588Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":129,"timestamp":"2021-07-02T01:36:32.624158086Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN1"}},"sequenceNumber":130,"timestamp":"2021-07-02T01:36:32.624191343Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"28"},"sequenceNumber":131,"timestamp":"2021-07-02T01:36:32.624214522Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"29"},"sequenceNumber":132,"timestamp":"2021-07-02T01:37:00.990285363Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN1"},"testStepId":"29"},"sequenceNumber":133,"timestamp":"2021-07-02T01:38:14.375967016Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"29"},"sequenceNumber":134,"timestamp":"2021-07-02T01:38:45.819716572Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"28"},"sequenceNumber":135,"timestamp":"2021-07-02T01:39:14.146862355Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"28"},"sequenceNumber":136,"timestamp":"2021-07-02T01:39:14.147085372Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"30"},"sequenceNumber":137,"timestamp":"2021-07-02T01:39:14.147148938Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"30"},"sequenceNumber":138,"timestamp":"2021-07-02T01:39:14.147197036Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"3"}},"testStepId":"30"},"sequenceNumber":139,"timestamp":"2021-07-02T01:39:14.147615859Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":16464,"minimum":13104},"value":16380,"dutTimestamp":"2021-07-02T01:39:14.147870536Z"},"testStepId":"30"},"sequenceNumber":140,"timestamp":"2021-07-02T01:39:14.147871484Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN1 measured 16380 RPM at 100% duty cycle (minimum=13104, maximum=16464)"},"testStepId":"30"},"sequenceNumber":141,"timestamp":"2021-07-02T01:39:14.148021369Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"30"},"sequenceNumber":142,"timestamp":"2021-07-02T01:39:14.148101846Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN1 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["3"]},"testStepId":"30"},"sequenceNumber":143,"timestamp":"2021-07-02T01:39:14.148194104Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"30"},"sequenceNumber":144,"timestamp":"2021-07-02T01:39:14.148293219Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 6720, max_speed 10080 for /phys/FAN1"},"testStepId":"27"},"sequenceNumber":145,"timestamp":"2021-07-02T01:39:14.148384066Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":146,"timestamp":"2021-07-02T01:39:14.148422522Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN1"}},"sequenceNumber":147,"timestamp":"2021-07-02T01:39:14.148452873Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"31"},"sequenceNumber":148,"timestamp":"2021-07-02T01:39:14.148475832Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"32"},"sequenceNumber":149,"timestamp":"2021-07-02T01:39:42.543166803Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN1"},"testStepId":"32"},"sequenceNumber":150,"timestamp":"2021-07-02T01:40:56.036479560Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"32"},"sequenceNumber":151,"timestamp":"2021-07-02T01:41:27.414093837Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"31"},"sequenceNumber":152,"timestamp":"2021-07-02T01:41:55.635018651Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"31"},"sequenceNumber":153,"timestamp":"2021-07-02T01:41:55.635208969Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"33"},"sequenceNumber":154,"timestamp":"2021-07-02T01:41:55.635265663Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"33"},"sequenceNumber":155,"timestamp":"2021-07-02T01:41:55.635310037Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"3"}},"testStepId":"33"},"sequenceNumber":156,"timestamp":"2021-07-02T01:41:55.635623065Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":10080,"minimum":6720},"value":9750,"dutTimestamp":"2021-07-02T01:41:55.635751201Z"},"testStepId":"33"},"sequenceNumber":157,"timestamp":"2021-07-02T01:41:55.635751905Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN1 measured 9750 RPM at 50% duty cycle (minimum=6720, maximum=10080)"},"testStepId":"33"},"sequenceNumber":158,"timestamp":"2021-07-02T01:41:55.635826286Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"33"},"sequenceNumber":159,"timestamp":"2021-07-02T01:41:55.635859154Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN1 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["3"]},"testStepId":"33"},"sequenceNumber":160,"timestamp":"2021-07-02T01:41:55.635899548Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"33"},"sequenceNumber":161,"timestamp":"2021-07-02T01:41:55.635943174Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"27"},"sequenceNumber":162,"timestamp":"2021-07-02T01:41:55.635974825Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"34"},"sequenceNumber":163,"timestamp":"2021-07-02T01:41:55.636008429Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"34"},"sequenceNumber":164,"timestamp":"2021-07-02T01:41:55.636173045Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"35"},"sequenceNumber":165,"timestamp":"2021-07-02T01:41:55.636207408Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 13104, max_speed 16464 for /phys/FAN2"},"testStepId":"35"},"sequenceNumber":166,"timestamp":"2021-07-02T01:41:55.637727932Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":167,"timestamp":"2021-07-02T01:41:55.637823385Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN2"}},"sequenceNumber":168,"timestamp":"2021-07-02T01:41:55.637854634Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"36"},"sequenceNumber":169,"timestamp":"2021-07-02T01:41:55.637877551Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"37"},"sequenceNumber":170,"timestamp":"2021-07-02T01:42:24.049615917Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN2"},"testStepId":"37"},"sequenceNumber":171,"timestamp":"2021-07-02T01:43:37.428173125Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"37"},"sequenceNumber":172,"timestamp":"2021-07-02T01:44:08.793836772Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"36"},"sequenceNumber":173,"timestamp":"2021-07-02T01:44:37.118690997Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"36"},"sequenceNumber":174,"timestamp":"2021-07-02T01:44:37.118941946Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"38"},"sequenceNumber":175,"timestamp":"2021-07-02T01:44:37.119099006Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"38"},"sequenceNumber":176,"timestamp":"2021-07-02T01:44:37.119248289Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"4"}},"testStepId":"38"},"sequenceNumber":177,"timestamp":"2021-07-02T01:44:37.119706245Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":16464,"minimum":13104},"value":16380,"dutTimestamp":"2021-07-02T01:44:37.119856654Z"},"testStepId":"38"},"sequenceNumber":178,"timestamp":"2021-07-02T01:44:37.119857286Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN2 measured 16380 RPM at 100% duty cycle (minimum=13104, maximum=16464)"},"testStepId":"38"},"sequenceNumber":179,"timestamp":"2021-07-02T01:44:37.119938125Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"38"},"sequenceNumber":180,"timestamp":"2021-07-02T01:44:37.119974985Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN2 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["4"]},"testStepId":"38"},"sequenceNumber":181,"timestamp":"2021-07-02T01:44:37.120017025Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"38"},"sequenceNumber":182,"timestamp":"2021-07-02T01:44:37.120059545Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 6720, max_speed 10080 for /phys/FAN2"},"testStepId":"35"},"sequenceNumber":183,"timestamp":"2021-07-02T01:44:37.120097849Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":184,"timestamp":"2021-07-02T01:44:37.120145869Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN2"}},"sequenceNumber":185,"timestamp":"2021-07-02T01:44:37.120179514Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"39"},"sequenceNumber":186,"timestamp":"2021-07-02T01:44:37.120200243Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"40"},"sequenceNumber":187,"timestamp":"2021-07-02T01:45:05.485218910Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN2"},"testStepId":"40"},"sequenceNumber":188,"timestamp":"2021-07-02T01:46:18.868999626Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"40"},"sequenceNumber":189,"timestamp":"2021-07-02T01:46:50.235730567Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"39"},"sequenceNumber":190,"timestamp":"2021-07-02T01:47:18.565793114Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"39"},"sequenceNumber":191,"timestamp":"2021-07-02T01:47:18.565975481Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"41"},"sequenceNumber":192,"timestamp":"2021-07-02T01:47:18.566036761Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"41"},"sequenceNumber":193,"timestamp":"2021-07-02T01:47:18.566080648Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"4"}},"testStepId":"41"},"sequenceNumber":194,"timestamp":"2021-07-02T01:47:18.566394122Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":10080,"minimum":6720},"value":9750,"dutTimestamp":"2021-07-02T01:47:18.566521131Z"},"testStepId":"41"},"sequenceNumber":195,"timestamp":"2021-07-02T01:47:18.566521771Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN2 measured 9750 RPM at 50% duty cycle (minimum=6720, maximum=10080)"},"testStepId":"41"},"sequenceNumber":196,"timestamp":"2021-07-02T01:47:18.566605513Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"41"},"sequenceNumber":197,"timestamp":"2021-07-02T01:47:18.566639833Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN2 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["4"]},"testStepId":"41"},"sequenceNumber":198,"timestamp":"2021-07-02T01:47:18.566680958Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"41"},"sequenceNumber":199,"timestamp":"2021-07-02T01:47:18.566721368Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"35"},"sequenceNumber":200,"timestamp":"2021-07-02T01:47:18.566753841Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-info"},"testStepId":"42"},"sequenceNumber":201,"timestamp":"2021-07-02T01:47:18.566786141Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-info","status":"COMPLETE"},"testStepId":"42"},"sequenceNumber":202,"timestamp":"2021-07-02T01:47:18.566943808Z"}
+{"testStepArtifact":{"testStepStart":{"name":"get-fan-thresholds"},"testStepId":"43"},"sequenceNumber":203,"timestamp":"2021-07-02T01:47:18.566978075Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 100, min_speed 13104, max_speed 16464 for /phys/FAN3"},"testStepId":"43"},"sequenceNumber":204,"timestamp":"2021-07-02T01:47:18.568697065Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":205,"timestamp":"2021-07-02T01:47:18.568792319Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN3"}},"sequenceNumber":206,"timestamp":"2021-07-02T01:47:18.568823859Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"44"},"sequenceNumber":207,"timestamp":"2021-07-02T01:47:18.568846295Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"45"},"sequenceNumber":208,"timestamp":"2021-07-02T01:47:46.931369777Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN3"},"testStepId":"45"},"sequenceNumber":209,"timestamp":"2021-07-02T01:49:00.317144040Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"45"},"sequenceNumber":210,"timestamp":"2021-07-02T01:49:31.583447626Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"44"},"sequenceNumber":211,"timestamp":"2021-07-02T01:49:59.802038440Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"44"},"sequenceNumber":212,"timestamp":"2021-07-02T01:49:59.802272573Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"46"},"sequenceNumber":213,"timestamp":"2021-07-02T01:49:59.802334659Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"46"},"sequenceNumber":214,"timestamp":"2021-07-02T01:49:59.802383660Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-100","unit":"RPM","hardwareInfoId":"5"}},"testStepId":"46"},"sequenceNumber":215,"timestamp":"2021-07-02T01:49:59.802777419Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":16464,"minimum":13104},"value":16380,"dutTimestamp":"2021-07-02T01:49:59.802931024Z"},"testStepId":"46"},"sequenceNumber":216,"timestamp":"2021-07-02T01:49:59.802931950Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN3 measured 16380 RPM at 100% duty cycle (minimum=13104, maximum=16464)"},"testStepId":"46"},"sequenceNumber":217,"timestamp":"2021-07-02T01:49:59.803020753Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"46"},"sequenceNumber":218,"timestamp":"2021-07-02T01:49:59.803054965Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN3 reported 1 measurements at 100% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["5"]},"testStepId":"46"},"sequenceNumber":219,"timestamp":"2021-07-02T01:49:59.803099611Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"46"},"sequenceNumber":220,"timestamp":"2021-07-02T01:49:59.803144674Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"set_pwm 50, min_speed 6720, max_speed 10080 for /phys/FAN3"},"testStepId":"43"},"sequenceNumber":221,"timestamp":"2021-07-02T01:49:59.803182311Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Starting fan_speed test"}},"sequenceNumber":222,"timestamp":"2021-07-02T01:49:59.803214884Z"}
+{"testRunArtifact":{"log":{"severity":"INFO","text":"Verifying SERVER fan: /phys/FAN3"}},"sequenceNumber":223,"timestamp":"2021-07-02T01:49:59.803244247Z"}
+{"testStepArtifact":{"testStepStart":{"name":"test-fan-speed"},"testStepId":"47"},"sequenceNumber":224,"timestamp":"2021-07-02T01:49:59.803269377Z"}
+{"testStepArtifact":{"testStepStart":{"name":"measure-fan-speed"},"testStepId":"48"},"sequenceNumber":225,"timestamp":"2021-07-02T01:50:28.184295412Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Taking measurement 0 for fan devpath /phys/FAN3"},"testStepId":"48"},"sequenceNumber":226,"timestamp":"2021-07-02T01:51:41.445781965Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"measure-fan-speed","status":"COMPLETE"},"testStepId":"48"},"sequenceNumber":227,"timestamp":"2021-07-02T01:52:12.915147537Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"fan_speed test completed"},"testStepId":"47"},"sequenceNumber":228,"timestamp":"2021-07-02T01:52:41.237746477Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"test-fan-speed","status":"COMPLETE"},"testStepId":"47"},"sequenceNumber":229,"timestamp":"2021-07-02T01:52:41.237925492Z"}
+{"testStepArtifact":{"testStepStart":{"name":"report-results"},"testStepId":"49"},"sequenceNumber":230,"timestamp":"2021-07-02T01:52:41.237985944Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"Analyzing 1 readings per fan and using a max violations of 0."},"testStepId":"49"},"sequenceNumber":231,"timestamp":"2021-07-02T01:52:41.238030547Z"}
+{"testStepArtifact":{"measurementSeriesStart":{"measurementSeriesId":"0","info":{"name":"measured-fan-speed-50","unit":"RPM","hardwareInfoId":"5"}},"testStepId":"49"},"sequenceNumber":232,"timestamp":"2021-07-02T01:52:41.238349412Z"}
+{"testStepArtifact":{"measurementElement":{"index":0,"measurementSeriesId":"0","range":{"maximum":10080,"minimum":6720},"value":9750,"dutTimestamp":"2021-07-02T01:52:41.238478640Z"},"testStepId":"49"},"sequenceNumber":233,"timestamp":"2021-07-02T01:52:41.238479237Z"}
+{"testStepArtifact":{"log":{"severity":"INFO","text":"SERVER fan /phys/FAN3 measured 9750 RPM at 50% duty cycle (minimum=6720, maximum=10080)"},"testStepId":"49"},"sequenceNumber":234,"timestamp":"2021-07-02T01:52:41.238554435Z"}
+{"testStepArtifact":{"measurementSeriesEnd":{"measurementSeriesId":"0","totalMeasurementCount":1},"testStepId":"49"},"sequenceNumber":235,"timestamp":"2021-07-02T01:52:41.238590300Z"}
+{"testStepArtifact":{"diagnosis":{"symptom":"fan_speed-pass","type":"PASS","msg":"SERVER fan /phys/FAN3 reported 1 measurements at 50% duty cycle: actual violations: 0 \u003c= maximum violations: 0","hardwareInfoId":["5"]},"testStepId":"49"},"sequenceNumber":236,"timestamp":"2021-07-02T01:52:41.238633590Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"report-results","status":"COMPLETE"},"testStepId":"49"},"sequenceNumber":237,"timestamp":"2021-07-02T01:52:41.238675327Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"get-fan-thresholds","status":"COMPLETE"},"testStepId":"43"},"sequenceNumber":238,"timestamp":"2021-07-02T01:52:41.238713164Z"}
+{"testStepArtifact":{"testStepStart":{"name":"upload-files"},"testStepId":"50"},"sequenceNumber":239,"timestamp":"2021-07-02T01:52:41.238749687Z"}
+{"testStepArtifact":{"log":{"severity":"WARNING","text":"Could not find hwcontrold.INFO on machine mvcs28"},"testStepId":"50"},"sequenceNumber":240,"timestamp":"2021-07-02T01:52:41.238829007Z"}
+{"testStepArtifact":{"testStepEnd":{"name":"upload-files","status":"COMPLETE"},"testStepId":"50"},"sequenceNumber":241,"timestamp":"2021-07-02T01:52:41.238859990Z"}
+{"testRunArtifact":{"testRunEnd":{"name":"fan_speed","status":"COMPLETE","result":"PASS"}},"sequenceNumber":242,"timestamp":"2021-07-02T01:52:41.340682792Z"}

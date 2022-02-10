@@ -47,9 +47,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     if not native.existing_rule("com_google_absl"):
         http_archive(
             name = "com_google_absl",
-            sha256 = "11d6eea257cc9322cc49924cf9584dbe61922bfffe3e7c42e2bce3abc1694a1a",
-            strip_prefix = "abseil-cpp-20210324.0",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/20210324.0.zip"],
+            sha256 = "a4567ff02faca671b95e31d315bab18b42b6c6f1a60e91c6ea84e5a2142112c2",
+            strip_prefix = "abseil-cpp-20211102.0",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/20211102.0.zip"],
         )
 
     if not native.existing_rule("com_google_absl_py"):
@@ -104,10 +104,12 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
         )
 
     if not native.existing_rule("pybind11_bazel"):
-        http_archive(
+        patch_path = "@{}//external:pybind11_python_config.patch".format(ocpdiag_package_name)
+        git_repository(
             name = "pybind11_bazel",
-            strip_prefix = "pybind11_bazel-26973c0ff320cb4b39e45bc3e4297b82bc3a6c09",
-            urls = ["https://github.com/pybind/pybind11_bazel/archive/26973c0ff320cb4b39e45bc3e4297b82bc3a6c09.zip"],
+            remote = "https://github.com/pybind/pybind11_bazel.git",
+            commit = "26973c0ff320cb4b39e45bc3e4297b82bc3a6c09",
+            patches = [patch_path],
         )
 
     if not native.existing_rule("pybind11"):

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/extensions/artifact_extensions",
+  "title": "ArtifactExtensions",
+  "description": "...",
+  "$defs": {
+    "artifactExtension": {
+      "properties": {
+        "name": {
+          "description": "...",
+          "type": "string"
+        },
+        "extension": {
+          "description": "...",
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "required": []
+    }
+  }
+}
