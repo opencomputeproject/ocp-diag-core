@@ -109,8 +109,8 @@ message TestStepEnd {
 message MeasurementInfo {
   string name = 1;
   string unit = 2;
-  // hardware_info_id has a default of "NOT_APPLICABLE" which indicates
-  // this measurement is not attached to a certain HW component.
+  // hardware_info_id has a default of empty string which indicates this
+  // measurement is not attached to a certain HW component.
   string hardware_info_id = 3;
 }
 
@@ -120,8 +120,7 @@ message MeasurementElement {
   int32 index = 1;
   // measurement_series_id is only needed for elements in a MeasurementSeries
   // or an aggregated value in a MeasurementSeries
-  // Default should be "NOT_APPLICABLE" which indicates an individual
-  // measurement.
+  // Default should be empty string which indicates an individual measurement.
   string measurement_series_id = 2;
   google.protobuf.Value value = 3;
   message Range {
@@ -195,19 +194,23 @@ message Log {
 message File {
   // No guarantee of uniqueness.
   string upload_as_name = 1;
-  // This is the relative log path on the machine against the test working
-  // directory. We want to avoid the test executive to act on critical files
-  // that may potentially harm the machine.
+  // 1. For local output files (on runtime-machine), this is either the relative
+  // path residing under the test working directory or an absolute filepath.
+  // 2. For remote output files (e.g. off-DUT tests), this MUST be the absolute
+  // filepath on the remote machine, AND `node_address` must contain a vaild
+  // node address, otherwise it will fail.
   string output_path = 2;
   string description = 3;
   string content_type = 4;
-  // is_snapshot is an informative field to indicate if it's the original log
-  // file. If is_snapshot = true, the test will make a copy of the original log
-  // file and the output_path will be the copied path.
-  // Note: The file in the output_path should be safe to delete after the test
-  // executive uploads it.
-  bool is_snapshot = 5;
+  reserved 5;
   repeated Tag tags = 6;
+  // The node address the file is on.
+  // When it's empty, the file is considered to be on the same machine where
+  // the test executes (runtime_machine).
+  // For on-DUT tests, runtime_machine = machine_under_test.
+  // For off-DUT tests, runtime_machine is a remote machine running the
+  // diagnostic by communicating with the machine_under_test.
+  string node_address = 7;
 }
 
 // Tag

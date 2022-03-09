@@ -16,4 +16,5 @@ licenses(["NOTICE"])
 
 exports_files([
     "com_google_protobuf_build.patch",
+    "pybind11_python_config.patch",
 ])

@@ -537,6 +537,37 @@ inline internal::PolymorphicProtoMatcher EqualsProto(const std::string& str) {
   return EqualsProto(internal::MakePartialProtoFromAscii<Proto>(str));
 }
 
+// Constructs a matcher that matches the argument if
+// argument.Equivalent(x) or argument->Equivalent(x) returns true.
+inline internal::PolymorphicProtoMatcher EquivToProto(
+    const google::protobuf::Message& x) {
+  internal::ProtoComparison comp;
+  comp.field_comp = internal::kProtoEquiv;
+  return ::testing::MakePolymorphicMatcher(
+      internal::ProtoMatcher(x, internal::kMayBeUninitialized, comp));
+}
+inline ::testing::PolymorphicMatcher<internal::ProtoStringMatcher> EquivToProto(
+    const std::string& x) {
+  internal::ProtoComparison comp;
+  comp.field_comp = internal::kProtoEquiv;
+  return ::testing::MakePolymorphicMatcher(
+      internal::ProtoStringMatcher(x, internal::kMayBeUninitialized, comp));
+}
+template <class Proto>
+inline internal::PolymorphicProtoMatcher EquivToProto(const std::string& str) {
+  return EquivToProto(internal::MakePartialProtoFromAscii<Proto>(str));
+}
+
+// IgnoringRepeatedFieldOrdering(m) returns a matcher that is the same as m,
+// except that it ignores the relative ordering of elements within each repeated
+// field in m. See google::protobuf::MessageDifferencer::TreatAsSet() for more details.
+template <class InnerProtoMatcher>
+inline InnerProtoMatcher IgnoringRepeatedFieldOrdering(
+    InnerProtoMatcher inner_proto_matcher) {
+  inner_proto_matcher.mutable_impl().SetCompareRepeatedFieldsIgnoringOrdering();
+  return inner_proto_matcher;
+}
+
 // Partially(m) returns a matcher that is the same as m, except that
 // only fields present in the expected protobuf are considered (using
 // google::protobuf::util::MessageDifferencer's PARTIAL comparison option).  For

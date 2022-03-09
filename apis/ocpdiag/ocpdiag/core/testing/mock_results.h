@@ -18,11 +18,16 @@
 #include <fcntl.h>
 
 #include <memory>
+#include <ostream>
+#include <string>
 
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
+#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
+#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/mock_remote.h"
 #include "ocpdiag/core/results/internal/logging.h"
+#include "ocpdiag/core/results/internal/mock_file_handler.h"
 #include "ocpdiag/core/results/results.h"
 #include "ocpdiag/core/results/results.pb.h"
 
@@ -49,7 +54,7 @@ class FakeResultApi : public ResultApi {
 };
 
 // Can be used for interaction testing and injecting failure scenarios.
-class MockResultApi : public ResultApi {
+class MockResultApi : public FakeResultApi {
  public:
   MockResultApi() = default;
 
@@ -63,33 +68,46 @@ class MockResultApi : public ResultApi {
                ocpdiag::results_pb::MeasurementInfo),
               (override));
 
-  // Tells mock to use the fake implementation by default. These can be
-  // changed individually later to stub the action if needed.
+  // Tells mock to use the fake implementation by default. The above methods can
+  // still be stubbed individually for customized behavior. This is useful for
+  // injecting behavior in one spot, when otherwise you want it to behave as
+  // normal.
+  // WARNING: this may override any preexisting expectations or stubs on this
+  // mock.
   void DelegateToFake() {
     ON_CALL(*this, InitializeTestRun(_)).WillByDefault([&](std::string s) {
-      return fake_.InitializeTestRun(s);
+      return this->FakeResultApi::InitializeTestRun(s);
     });
     ON_CALL(*this, BeginTestStep(_, _))
         .WillByDefault([&](TestRun* t, std::string s) {
-          return fake_.BeginTestStep(t, s);
+          return this->FakeResultApi::BeginTestStep(t, s);
         });
     ON_CALL(*this, BeginMeasurementSeries(_, _, _))
         .WillByDefault([&](TestStep* t, const HwRecord& h,
                            ocpdiag::results_pb::MeasurementInfo i) {
-          return fake_.BeginMeasurementSeries(t, h, i);
+          return this->FakeResultApi::BeginMeasurementSeries(t, h, i);
         });
   }
-
- private:
-  FakeResultApi fake_;
 };
 
-class MockTestRun : public TestRun {
+// Standalone TestRun that can be created without the use of a ResultApi object.
+class FakeTestRun : public TestRun {
  public:
   // `name`: a descriptive name for your test.
-  // `print_to_stdout`: set to true to see human-readable output artifacts.
-  MockTestRun(std::string name = "mock_test_run", bool print_to_stdout = false)
-      : TestRun(name, internal::ArtifactWriter(-1, print_to_stdout)) {}
+  // `json_out`: you may inject an output stream for artifact validation.
+  FakeTestRun(std::string name, std::ostream* json_out = nullptr)
+      : TestRun(name, internal::ArtifactWriter(-1, json_out)) {}
+};
+
+// Standalone TestRun that can be created without the use of a ResultApi object.
+// Use this for expectations and stubbing.
+class MockTestRun : public FakeTestRun {
+ public:
+  // `name`: a descriptive name for your test.
+  // `json_out`: you may inject an output stream for artifact validation.
+  MockTestRun(std::string name = "mock_test_run",
+              std::ostream* json_out = nullptr)
+      : FakeTestRun(name, json_out) {}
 
   MOCK_METHOD(void, StartAndRegisterInfos,
               (absl::Span<const DutInfo>, const google::protobuf::Message&), (override));
@@ -120,10 +138,14 @@ class MockTestRun : public TestRun {
   MOCK_METHOD(void, LogError, (absl::string_view), (override));
   MOCK_METHOD(void, LogFatal, (absl::string_view), (override));
 
-  // Tells mock to use the real implementation by default. These can be
-  // changed individually later to stub the action if needed.
+  // Tells mock to use the real implementation by default. The above methods can
+  // still be stubbed individually for customized behavior. This is useful for
+  // injecting behavior in one spot, when otherwise you want it to behave as
+  // normal.
   // NOTE: only methods that may have side effects or non-void return types are
   // stubbed.
+  // WARNING: this may override any preexisting expectations or stubs on this
+  // mock.
   void DelegateToReal() {
     ON_CALL(*this, StartAndRegisterInfos(_, _))
         .WillByDefault([&](absl::Span<const DutInfo> dutinfos,
@@ -152,15 +174,28 @@ class MockTestRun : public TestRun {
 };
 
 // Standalone TestStep that does not require some of the setup required in
-// production code (i.e. TestRun parent)
-class MockTestStep : public TestStep {
+// production code (i.e. TestRun parent). Use in place of a real TestRun in unit
+// tests.
+class FakeTestStep : public TestStep {
  public:
   // `name`: a descriptive name for your step.
-  // `print_to_stdout`: set to true to see human-readable output artifacts.
+  // `json_out`: you may inject an output stream for artifact validation.
+  FakeTestStep(std::string name = "mock_test_step",
+               std::ostream* json_out = nullptr)
+      : TestStep(nullptr, kFakeId, name, internal::ArtifactWriter(-1, json_out),
+                 absl::make_unique<internal::MockFileHandler>()) {}
+};
+
+// Standalone TestStep that does not require some of the setup required in
+// production code (i.e. TestRun parent).
+// Use this for expectations and stubbing.
+class MockTestStep : public FakeTestStep {
+ public:
+  // `name`: a descriptive name for your step.
+  // `json_out`: you may inject an output stream for artifact validation.
   MockTestStep(std::string name = "mock_test_step",
-               bool print_to_stdout = false)
-      : TestStep(nullptr, kFakeId, name,
-                 internal::ArtifactWriter(-1, print_to_stdout)) {}
+               std::ostream* json_out = nullptr)
+      : FakeTestStep(name, json_out) {}
 
   MOCK_METHOD(void, AddDiagnosis,
               (ocpdiag::results_pb::Diagnosis::Type, std::string,
@@ -194,10 +229,14 @@ class MockTestStep : public TestStep {
   MOCK_METHOD(void, LogError, (absl::string_view), (override));
   MOCK_METHOD(void, LogFatal, (absl::string_view), (override));
 
-  // Tells mock to use the real implementation by default. These can be
-  // changed individually later to stub the action if needed.
+  // Tells mock to use the real implementation by default. The above methods can
+  // still be stubbed individually for customized behavior. This is useful for
+  // injecting behavior in one spot, when otherwise you want it to behave as
+  // normal.
   // NOTE: only methods that may have side effects or non-void return types are
   // stubbed.
+  // WARNING: this may override any preexisting expectations or stubs on this
+  // mock.
   void DelegateToReal() {
     ON_CALL(*this, AddError(_, _, _))
         .WillByDefault([&](absl::string_view s, absl::string_view msg,
@@ -218,17 +257,30 @@ class MockTestStep : public TestStep {
 
 // Standalone MeasurementSeries that does not require some of the setup required
 // in production code (i.e. TestStep parent)
-class MockMeasurementSeries : public MeasurementSeries {
+class FakeMeasurementSeries : public MeasurementSeries {
  public:
-  // `print_to_stdout`: set to true to see human-readable output artifacts.
+  // `json_out`: you may inject an output stream for artifact validation.
   // `info`: optional MeasurementInfo used to interpret the series.
-  MockMeasurementSeries(TestStep* parent = nullptr,
-                        bool print_to_stdout = false,
+  FakeMeasurementSeries(TestStep* parent = nullptr,
+                        std::ostream* json_out = nullptr,
                         ocpdiag::results_pb::MeasurementInfo info =
                             ocpdiag::results_pb::MeasurementInfo{})
       : MeasurementSeries(parent, kFakeId, kFakeId,
-                          internal::ArtifactWriter(-1, print_to_stdout), info) {
-  }
+                          internal::ArtifactWriter(-1, json_out), info) {}
+};
+
+// Standalone MeasurementSeries that does not require some of the setup required
+// in production code (i.e. TestStep parent).
+// Use this for expectations and stubbing.
+class MockMeasurementSeries : public FakeMeasurementSeries {
+ public:
+  // `json_out`: you may inject an output stream for artifact validation.
+  // `info`: optional MeasurementInfo used to interpret the series.
+  MockMeasurementSeries(TestStep* parent = nullptr,
+                        std::ostream* json_out = nullptr,
+                        ocpdiag::results_pb::MeasurementInfo info =
+                            ocpdiag::results_pb::MeasurementInfo{})
+      : FakeMeasurementSeries(parent, json_out) {}
 
   MOCK_METHOD(void, AddElement, (google::protobuf::Value), (override));
 
@@ -245,10 +297,14 @@ class MockMeasurementSeries : public MeasurementSeries {
   MOCK_METHOD(void, End, (), (override));
   MOCK_METHOD(bool, Ended, (), (override, const));
 
-  // Tells mock to use the real implementation by default. These can be
-  // changed individually later to stub the action if needed.
+  // Tells mock to use the real implementation by default. The above methods can
+  // still be stubbed individually for customized behavior. This is useful for
+  // injecting behavior in one spot, when otherwise you want it to behave as
+  // normal.
   // NOTE: only methods that may have side effects or non-void return types are
   // stubbed.
+  // WARNING: this may override any preexisting expectations or stubs on this
+  // mock.
   void DelegateToReal() {
     ON_CALL(*this, AddElementWithRange(_, _))
         .WillByDefault(

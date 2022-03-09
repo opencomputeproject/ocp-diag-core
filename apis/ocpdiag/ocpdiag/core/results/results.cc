@@ -36,6 +36,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -44,6 +45,7 @@
 #include "absl/types/span.h"
 #include "ocpdiag/core/compat/status_macros.h"
 #include "ocpdiag/core/params/utils.h"
+#include "ocpdiag/core/results/internal/file_handler.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/utils.h"
 #include "ocpdiag/core/results/results.pb.h"
@@ -61,6 +63,11 @@ ABSL_FLAG(
     "Machine under test. If the test binary is running on the same machine as "
     "the machine under test, just keep the default \"local\".");
 
+ABSL_FLAG(
+    std::string, nodes_under_test, "",
+    "Nodes under test. The list of nodes in the target machine to test. The "
+    "default is \"\".");
+
 //
 ABSL_FLAG(bool, ocpdiag_strict_reporting, true,
           "Whether to require a global devpath to be reported in"
@@ -73,6 +80,7 @@ namespace rpb = ::ocpdiag::results_pb;
 using KindCase = google::protobuf::Value::KindCase;
 
 constexpr char kSympProceduralErr[] = "ocpdiag-procedural-error";
+constexpr char kSympInternalErr[] = "ocpdiag-internal-error";
 constexpr char kSympUnregHw[] = "unregistered-hardware-info";
 constexpr char kSympUnregSw[] = "unregistered-software-info";
 
@@ -176,6 +184,7 @@ absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
     std::cerr << kMessage << std::endl;
     return absl::AlreadyExistsError(kMessage);
   }
+  initialized = true;
   absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
       absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
   if (!fd.ok()) {
@@ -526,9 +535,11 @@ absl::StatusOr<TestStep> TestStep::Begin(TestRun* parent, std::string name) {
 }
 
 TestStep::TestStep(TestRun* parent, std::string id, std::string name,
-                   internal::ArtifactWriter writer)
+                   internal::ArtifactWriter writer,
+                   std::unique_ptr<internal::FileHandler> file_handler)
     : parent_(parent),
       writer_(std::move(writer)),
+      file_handler_(std::move(file_handler)),
       name_(std::move(name)),
       id_(std::move(id)),
       status_(rpb::TestStatus::UNKNOWN),
@@ -541,6 +552,7 @@ TestStep& TestStep::operator=(TestStep&& other) ABSL_LOCKS_EXCLUDED(mutex_) {
     absl::MutexLock l(&mutex_);
     parent_ = other.parent_;
     writer_ = std::move(other.writer_);
+    file_handler_ = std::move(other.file_handler_);
     name_ = std::move(other.name_);
     id_ = std::move(other.id_);
     status_ = std::move(other.status_);
@@ -661,9 +673,6 @@ absl::Status TestStep::ValidateMeasElem(const rpb::MeasurementElement& elem) {
 void TestStep::AddMeasurement(rpb::MeasurementInfo info,
                               rpb::MeasurementElement elem,
                               const HwRecord* hwrec) {
-  // Measurement not part of a MeasurementSeries, set default
-  elem.set_measurement_series_id("NOT_APPLICABLE");
-
   if (absl::Status s = ValidateMeasElem(elem); !s.ok()) {
     AddError(kSympProceduralErr, s.message(), {});
     return;
@@ -696,6 +705,40 @@ void TestStep::AddMeasurement(rpb::MeasurementInfo info,
 }
 
 void TestStep::AddFile(rpb::File file) {
+  const std::string& node_addr = file.node_address();
+  if (!node_addr.empty()) {
+    // File is on remote node. Copy to CWD.
+    absl::Status status = file_handler_->CopyRemoteFile(file);
+    if (!status.ok()) {
+      AddError(kSympInternalErr, status.message(), {});
+      return;
+    }
+  } else if (absl::StartsWith(file.output_path(), "../")) {
+    // file is relative and unlikely to be in CWD or subdir. Copy to CWD.
+    absl::Status status = file_handler_->CopyLocalFile(file);
+    if (!status.ok()) {
+      AddError(kSympInternalErr, status.message(), {});
+      return;
+    }
+  } else if (absl::StartsWith(file.output_path(), "/")) {
+    // file is absolute local and might be in CWD. Compare.
+    std::error_code err;
+    std::string cwd = std::filesystem::current_path(err);
+    if (err) {
+      AddError(kSympInternalErr,
+               absl::StrCat("Failed to get working directory: ", err.message()),
+               {});
+      return;
+    }
+    if (!absl::StartsWith(file.output_path(), cwd)) {
+      // file is local and not in CWD or subdirectory. Copy to CWD.
+      absl::Status status = file_handler_->CopyLocalFile(file);
+      if (!status.ok()) {
+        AddError(kSympInternalErr, status.message(), {});
+        return;
+      }
+    }
+  }
   rpb::OutputArtifact out_pb;
   rpb::TestStepArtifact* step_pb = out_pb.mutable_test_step_artifact();
   *step_pb->mutable_file() = std::move(file);

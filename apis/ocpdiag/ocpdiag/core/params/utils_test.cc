@@ -30,7 +30,7 @@ using ::ocpdiag::core::params::testdata::Params;
 TEST(JsonFileToMessageTest, BadFile) {
   Params params;
   EXPECT_THAT(JsonFileToMessage("/not/a/valid/path", &params),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+              StatusIs(absl::StatusCode::kNotFound));
 }
 
 TEST(JsonFileToMessageTest, BadMessage) {

@@ -49,6 +49,35 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "file_handler",
+    srcs = ["file_handler.cc"],
+    hdrs = ["file_handler.h"],
+    deps = [
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_factory_cc",
+        "//ocpdiag/core/results:results_cc_proto",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_library(
+    name = "mock_file_handler",
+    testonly = True,
+    hdrs = ["mock_file_handler.h"],
+    deps = [
+        ":file_handler",
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "logging_test",
     srcs = ["logging_test.cc"],
@@ -64,5 +93,23 @@ cc_test(
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "file_handler_test",
+    srcs = ["file_handler_test.cc"],
+    deps = [
+        ":file_handler",
+        ":mock_file_handler",
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
+        "//ocpdiag/core/testing:parse_text_proto",
+        "//ocpdiag/core/testing:proto_matchers",
+        "//ocpdiag/core/testing:status_matchers",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
     ],
 )

@@ -65,7 +65,6 @@ cc_library(
     hdrs = ["utils.h"],
     deps = [
         "//ocpdiag/core/compat:status_converters",
-        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",

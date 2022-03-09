@@ -34,7 +34,7 @@ class ExamplePyTest(parameterized.TestCase):
         args,
         timeout=30,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.DEVNULL,
         check=True)
     self._lines = result.stdout.decode('utf-8').split('\n')
 

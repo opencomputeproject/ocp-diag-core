@@ -129,9 +129,9 @@ def valid(items):
 
 def _launcher_gen_impl(ctx):
     template = """#!/bin/sh
-export RUNFILES=${{RUNFILES:-$0.runfiles}}
-exec {launcher} {binary} {descriptor} {defaults} "$@"
-"""
+    export RUNFILES=${{RUNFILES:-$0.runfiles}}
+    exec {launcher} {binary} {descriptor} {defaults} "$@"
+    """
     prefix = '"${RUNFILES}/%s"'
     script = template.format(
         launcher = prefix % runpath(ctx, ctx.executable._launcher),
@@ -194,8 +194,9 @@ RUNFILES=$(
   rm $EXEC
   mktemp -d $DIR/$CMD.XXX
 )
+chmod 0755 $RUNFILES
 FIFO=$RUNFILES/.running; mkfifo $FIFO
-(cat $FIFO; rm -rf $RUNFILES)&
+(trap "" INT TERM; cat $FIFO; rm -rf $RUNFILES)&
 exec 8>$FIFO 9<&0 <$0
 until [ "$l" = "+" ]; do
   read l
@@ -279,14 +280,14 @@ def _pkg_runfiles_impl(ctx):
         pkg_symlinks = [(sym_info, ctx.label) for sym_info in [
             PackageSymlinkInfo(
                 destination = join_paths(workspace_prefix, sym.path),
-                source = make_relative_path(sym.path, sym.target_file.short_path),
+                target = make_relative_path(sym.path, sym.target_file.short_path),
             )
             for sym in runfiles.symlinks.to_list()
         ] + [
             # Add top-level symlinks to external repos' runfiles.
             PackageSymlinkInfo(
                 destination = join_paths(ctx.attr.runfiles_prefix, name),
-                source = join_paths(ctx.workspace_name, path),
+                target = join_paths(ctx.workspace_name, path),
             )
             for name, path in {
                 file.owner.workspace_name: file.owner.workspace_root

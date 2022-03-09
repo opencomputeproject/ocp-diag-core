@@ -134,7 +134,7 @@ PYBIND11_MODULE(_results, m) {
                static_cast<void (MeasurementSeries::*)(
                    google::protobuf::Value,
                    ocpdiag::results_pb::MeasurementElement::Range)>(
-                   &MeasurementSeries::AddElement)),
+                   &MeasurementSeries::AddElementWithRange)),
            "Adds a range element")
       // Wrapped protos don't play well with Spans, so the (horrible) workaround
       // is to take in a vector rather than span, convert the wrapped vector
@@ -150,7 +150,7 @@ PYBIND11_MODULE(_results, m) {
                 for (const auto& val : vs) {
                   new_values.push_back(val.proto);
                 }
-                a.AddElement(v, new_values);
+                a.AddElementWithValues(v, new_values);
               }),
           "Adds a value element")
       .def("Id", &MeasurementSeries::Id)

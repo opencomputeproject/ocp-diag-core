@@ -156,6 +156,48 @@ INFO: Build completed successfully, 545 total actions
 
 The executable appears under `./bazel-bin/ocpdiag/core/examples/simple/simple` as indicated by bazel logs.
 
+**NOTE**: OCPDiag executable is an compressed tarball embedded in a shell script.
+During runtime, the tarball will be extracted to `TMPDIR`. If `TMPDIR` is not
+defined, a default `/tmp` folder will be used. If you are sensitive to temp
+memory usage, please override `TMPDIR` to another folder which allows execution.
+The following is an example where the tarball is extracted to `/data/` rather
+than the default `/tmp/`:
+
+```
+$ TMPDIR=/data ./simple --dry_run | head -n1
+This test was started with --dry_run.If it was actually run, the raw arguments would have been
+/data/simple.MaN/_ocpdiag_test_pkg_simple_launcher.runfiles/google3/third_party/ocpdiag/core/examples/simple/simple_bin --dry_run
+It would be passed the parameters via stdin.
+{
+```
+
+### OCPDiag Runtime Requirements
+
+#### Google Binaries
+
+If the test binary is built in Google, please make sure the execution machine
+has grte V4 and V5 installed. The setup steps are as follows:
+
+1) Fetch and install the
+[GRTE package](https://ovss-quanta.googlesource.com/google3-binaries.x86_64/+/refs/heads/main/x86_64/grtev5-runtimes.msv)
+and untar it.
+
+```
+$ tar xvf grtev5-runtimes.msv -C /
+```
+
+2) Create GRTE v4 symlink
+
+```
+$ ln -s /usr/grte/v5 /usr/grte/v4 $ ls /usr/grte/
+v4   v5
+```
+
+#### Bazel-built Binaries
+
+If the test binary is built from open repo with `Bazel`, please make sure the
+execution machine has [`glibc`](https://www.gnu.org/software/libc/) installed.
+
 ## Parameter model
 
 The [OCPDiag Parameter](/ocpdiag/g3doc/parameter.md) document defines
@@ -173,5 +215,6 @@ document describes how to define and use the OCPDiag Hardware Interface.
 
 ## Contact information
 
-**Team:** ocp-test-validation@OCP-All.groups.io
+**Team:** ocpdiag-core-team@google.com
 
+**Code reviews:** ocpdiag-core-team+reviews@google.com

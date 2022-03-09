@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Metlan simple example.
+# OCPDiag simple example.
 load("//ocpdiag/core:ocpdiag.bzl", "ocpdiag_test_pkg")
 
 licenses(["notice"])
@@ -50,7 +50,7 @@ cc_test(
         "//ocpdiag/core/compat:status_converters",
         "//ocpdiag/core/results",
         "//ocpdiag/core/results:results_cc_proto",
-        "//ocpdiag/core/testing:fake_test_run",
+        "//ocpdiag/core/testing:mock_results",
         "//ocpdiag/core/testing:proto_matchers",
         "//ocpdiag/core/testing:status_matchers",
         "@com_google_absl//absl/strings",

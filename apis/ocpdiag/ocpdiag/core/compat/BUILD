@@ -34,6 +34,15 @@ cc_library(
 )
 
 cc_library(
+    name = "grpc_status_converters",
+    hdrs = ["grpc_status_converters.h"],
+    deps = [
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
     name = "status_macros",
     hdrs = ["status_macros.h"],
     deps = [
