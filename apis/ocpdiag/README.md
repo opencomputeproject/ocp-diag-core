@@ -171,33 +171,6 @@ It would be passed the parameters via stdin.
 {
 ```
 
-### OCPDiag Runtime Requirements
-
-#### Google Binaries
-
-If the test binary is built in Google, please make sure the execution machine
-has grte V4 and V5 installed. The setup steps are as follows:
-
-1) Fetch and install the
-[GRTE package](https://ovss-quanta.googlesource.com/google3-binaries.x86_64/+/refs/heads/main/x86_64/grtev5-runtimes.msv)
-and untar it.
-
-```
-$ tar xvf grtev5-runtimes.msv -C /
-```
-
-2) Create GRTE v4 symlink
-
-```
-$ ln -s /usr/grte/v5 /usr/grte/v4 $ ls /usr/grte/
-v4   v5
-```
-
-#### Bazel-built Binaries
-
-If the test binary is built from open repo with `Bazel`, please make sure the
-execution machine has [`glibc`](https://www.gnu.org/software/libc/) installed.
-
 ## Parameter model
 
 The [OCPDiag Parameter](/ocpdiag/g3doc/parameter.md) document defines
@@ -215,6 +188,6 @@ document describes how to define and use the OCPDiag Hardware Interface.
 
 ## Contact information
 
-**Team:** ocpdiag-core-team@google.com
+**Team:** ocp-test-validation@OCP-All.groups.io
 
 **Code reviews:** ocpdiag-core-team+reviews@google.com
