@@ -65,7 +65,6 @@ absl::StatusOr<std::string> GetSSHPath(absl::string_view path_env) {
   return absl::NotFoundError("Unable to find valid SSH Path");
 }
 
-// Using flat_hash_map as gtl::fixed_flat_map_of is unavailable for Copy.Bara.
 static const auto* const kStringToConnectionTypeMap =
     new absl::flat_hash_map<absl::string_view, ConnectionTypes>({
         {"ssh", ConnectionTypes::kSSH},
