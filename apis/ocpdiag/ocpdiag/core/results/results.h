@@ -26,10 +26,12 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
+#include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
+#include "ocpdiag/core/results/internal/file_handler.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/utils.h"
 #include "ocpdiag/core/results/results.pb.h"
@@ -40,8 +42,6 @@ ABSL_DECLARE_FLAG(std::string, machine_under_test);
 ABSL_DECLARE_FLAG(bool, ocpdiag_strict_reporting);
 
 namespace ocpdiag {
-//
-class FakeTestRun;
 namespace results {
 
 class DutInfo;
@@ -58,9 +58,9 @@ class ResultsTest;
 
 namespace testonly {
 class FakeResultApi;
-class MockTestRun;
-class MockTestStep;
-class MockMeasurementSeries;
+class FakeTestRun;
+class FakeTestStep;
+class FakeMeasurementSeries;
 }  // namespace testonly
 
 extern const char kInvalidRecordId[];
@@ -185,11 +185,9 @@ class TestRun : public internal::LoggerInterface {
  private:
   friend ResultApi;
   friend testonly::FakeResultApi;
-  friend testonly::MockTestRun;
+  friend testonly::FakeTestRun;
   //
   friend internal::ResultsTest;
-  //
-  friend class ocpdiag::FakeTestRun;
 #ifndef SWIG
   TestRun(std::string name, internal::ArtifactWriter writer);
   enum class RunState { kNotStarted, kInProgress, kEnded };
@@ -243,7 +241,15 @@ class TestStep : public internal::LoggerInterface {
       ocpdiag::results_pb::MeasurementElement,
       const HwRecord* hwrec);
 
-  // Emits a File artifact
+  // Emits a File artifact.
+  // For local files (on runtime-host)
+  //   * set `output_path` in the File proto to absolute/relative log path.
+  // For remote files (e.g. off-DUT test scenario):
+  //   * `output_path` must be the absolute filepath on remote host
+  //   *  make sure `node_address` contains a valid address.
+  // NOTE: Unless file is in current working directory or subdirectory, it will
+  // be copied there, and the File proto `output_path` will be
+  // modified to the local copy.
   virtual void AddFile(ocpdiag::results_pb::File);
 
   // Emits an ArtifactExtension artifact
@@ -291,16 +297,19 @@ class TestStep : public internal::LoggerInterface {
 
  private:
   friend ResultApi;
-  friend testonly::MockTestStep;
+  friend testonly::FakeTestStep;
   //
   friend internal::ResultsTest;
   TestStep(TestRun* parent, std::string id, std::string name,
-           internal::ArtifactWriter);
+           internal::ArtifactWriter,
+           std::unique_ptr<internal::FileHandler> file_handler =
+               std::make_unique<internal::FileHandler>());
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
   TestRun* parent_;
   internal::ArtifactWriter writer_;
+  std::unique_ptr<internal::FileHandler> file_handler_;
   std::string name_;
   std::string id_;
   internal::IntIncrementer series_id_;
@@ -410,22 +419,6 @@ class MeasurementSeries {
       TestStep*, const HwRecord&,
       ocpdiag::results_pb::MeasurementInfo);
 
-  //
-  // Emits a MeasurementElement artifact with valid range limit.
-  virtual void AddElement(
-      google::protobuf::Value val,
-      ocpdiag::results_pb::MeasurementElement::Range range) {
-    AddElementWithRange(val, range);
-  }
-
-  //
-  // Emits a MeasurementElement artifact with valid values limit.
-  virtual void AddElement(
-      google::protobuf::Value val,
-      absl::Span<const google::protobuf::Value> valid_values) {
-    AddElementWithValues(val, valid_values);
-  }
-
   // Emits a MeasurementElement artifact with valid range limit.
   // Acceptable Value kinds: string, number
   virtual void AddElementWithRange(
@@ -453,7 +446,7 @@ class MeasurementSeries {
 
  private:
   friend ResultApi;
-  friend testonly::MockMeasurementSeries;
+  friend testonly::FakeMeasurementSeries;
   //
   friend internal::ResultsTest;
   MeasurementSeries(TestStep* parent, std::string step_id,

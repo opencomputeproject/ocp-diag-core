@@ -17,16 +17,6 @@ licenses(["notice"])
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "fake_test_run",
-    testonly = True,
-    hdrs = ["fake_test_run.h"],
-    deps = [
-        "//ocpdiag/core/results",
-        "//ocpdiag/core/results:results_cc_proto",
-    ],
-)
-
-cc_library(
     name = "file_utils",
     testonly = True,
     srcs = ["file_utils.cc"],
@@ -73,9 +63,12 @@ cc_library(
     testonly = True,
     hdrs = ["mock_results.h"],
     deps = [
+        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
         "//ocpdiag/core/results",
         "//ocpdiag/core/results:results_cc_proto",
         "//ocpdiag/core/results/internal:logging",
+        "//ocpdiag/core/results/internal:mock_file_handler",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
     ],

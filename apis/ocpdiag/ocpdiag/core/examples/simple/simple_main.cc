@@ -170,7 +170,6 @@ int main(int argc, char* argv[]) {
   file.set_output_path(CreateTextFile());
   file.set_description("This is a test file :)");
   file.set_content_type("text/plain");
-  file.set_is_snapshot(false);
   file.add_tags()->set_tag("ocpdiag_example");
   step2->AddFile(std::move(file));
 
@@ -212,7 +211,7 @@ int main(int argc, char* argv[]) {
   MeasurementElement::Range range;
   *range.mutable_maximum() = val_max;
   *range.mutable_minimum() = val_min;
-  series->AddElement(val_max, range);
+  series->AddElementWithRange(val_max, range);
   series->End();  // user may explicitly End a Series, Step, or TestRun.
 
   meas_info.set_name("another_series");

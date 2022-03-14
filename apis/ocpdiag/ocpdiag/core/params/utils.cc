@@ -69,7 +69,7 @@ absl::Status MergeFromJsonStream(google::protobuf::io::ZeroCopyInputStream* json
 absl::Status JsonFileToMessage(const char* file_path, google::protobuf::Message* output) {
   int defaults_fd = open(file_path, O_RDONLY);
   if (defaults_fd < 0) {
-    return absl::InvalidArgumentError(
+    return absl::NotFoundError(
         absl::StrCat("Failed to open defaults file: ", file_path));
   }
   output->Clear();

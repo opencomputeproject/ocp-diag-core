@@ -26,8 +26,8 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/examples/simple/params.pb.h"
 #include "ocpdiag/core/results/results.h"
+#include "ocpdiag/core/testing/mock_results.h"
 #include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/testing/fake_test_run.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"
 
@@ -36,38 +36,23 @@ namespace example {
 namespace {
 
 using ::ocpdiag::AsAbslStatus;
-using ::ocpdiag::FakeTestRun;
-using ::ocpdiag::TestRunResultHandler;
-using ::ocpdiag::results::HwRecord;
-using ::ocpdiag::results::TestStep;
 using ::ocpdiag::testing::EqualsProto;
 using ::ocpdiag::testing::Partially;
-using ::ocpdiag::results_pb::HardwareInfo;
+using ::ocpdiag::results::testonly::FakeTestStep;
 using ::ocpdiag::results_pb::Measurement;
 using ::ocpdiag::results_pb::OutputArtifact;
 
 TEST(TestAddAllMeasurementTypes, CheckAll) {
   // Set up.
-  results::ResultApi api;
-  TestRunResultHandler test_run_handler("fake_simple");
-  FakeTestRun* test_run = test_run_handler.GetFakeTestRun();
-  ocpdiag::simple::Params params;
-  ocpdiag::results::DutInfo dut_info("FakeHost");
-  HardwareInfo hw_info;
-  HwRecord hw_record = dut_info.AddHardware(hw_info);
-  std::vector<ocpdiag::results::DutInfo> dutinfos;
-  dutinfos.emplace_back(std::move(dut_info));
-  test_run->StartAndRegisterInfos(dutinfos, params);
-  absl::StatusOr<std::unique_ptr<TestStep>> step =
-      api.BeginTestStep(test_run, "fake_step");
-  ASSERT_OK(step);
+  std::stringstream json_out;
+  FakeTestStep step("fake_step", &json_out);
 
   // Run AddAllTypeMeasurements.
-  ocpdiag::example::AddAllMeasurementTypes(step->get(), &hw_record);
+  ocpdiag::example::AddAllMeasurementTypes(&step, nullptr);
 
   // Check measurements.
   std::vector<std::string> lines =
-      absl::StrSplit(test_run_handler.GetJsonOut(), '\n');
+      absl::StrSplit(json_out.str(), '\n');
 
   std::vector<Measurement> measurements;
   google::protobuf::util::JsonParseOptions json_parse_options;
@@ -89,7 +74,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "null-measurement" unit: "null-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { null_value: NULL_VALUE }
           valid_values {
             values { null_value: NULL_VALUE }
@@ -102,7 +87,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "number-measurement" unit: "number-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { number_value: 1.23 }
           range {
             maximum { number_value: 2.34 }
@@ -113,7 +98,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "number-measurement" unit: "number-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { number_value: 1.23 }
           valid_values {
             values { number_value: 1.23 }
@@ -126,7 +111,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "string-measurement" unit: "string-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { string_value: "version-1.23" }
           range {
             maximum { string_value: "version-2.34" }
@@ -137,7 +122,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "string-measurement" unit: "string-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { string_value: "version-1.23" }
           valid_values {
             values { string_value: "version-1.23" }
@@ -150,7 +135,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       R"pb(
         info { name: "boolean-measurement" unit: "boolean-measurement-unit" }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value { bool_value: false }
           valid_values {
             values { bool_value: false }
@@ -164,10 +149,9 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
         info {
           name: "list-measurement"
           unit: "list-measurement-unit"
-          hardware_info_id: "0"
         }
         element {
-          measurement_series_id: "NOT_APPLICABLE"
+          measurement_series_id: ""
           value {
             list_value {
               values { number_value: 1.23 }

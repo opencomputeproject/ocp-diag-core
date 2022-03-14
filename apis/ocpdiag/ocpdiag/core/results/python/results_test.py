@@ -337,7 +337,7 @@ class TestRunStep(unittest.TestCase):
               hardware_info_id: "%s"
             }
             element {
-              measurement_series_id: "NOT_APPLICABLE"
+              measurement_series_id: ""
               value { number_value: 3.14 }
               valid_values { values { number_value: 3.14 } }
             }
@@ -368,7 +368,7 @@ class TestRunStep(unittest.TestCase):
               unit: "unit"
             }
             element {
-              measurement_series_id: "NOT_APPLICABLE"
+              measurement_series_id: ""
               value { number_value: 3.14 }
               valid_values { values { number_value: 3.14 } }
             }
@@ -399,7 +399,7 @@ class TestRunStep(unittest.TestCase):
               unit: "unit"
             }
             element {
-              measurement_series_id: "NOT_APPLICABLE"
+              measurement_series_id: ""
               value { number_value: 3.14 }
               valid_values { values { number_value: 3.14 } }
             }
@@ -419,8 +419,7 @@ class TestRunStep(unittest.TestCase):
         upload_as_name="upload name",
         output_path="out path",
         description="description",
-        content_type="content type",
-        is_snapshot=True)
+        content_type="content type")
     self.step.AddFile(file)
     got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
                             results_pb2.OutputArtifact())
@@ -430,7 +429,6 @@ class TestRunStep(unittest.TestCase):
             output_path: "out path"
             description: "description"
             content_type: "content type"
-            is_snapshot: true
           }
         }"""
     compare.assertProto2Contains(

@@ -47,9 +47,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     if not native.existing_rule("com_google_absl"):
         http_archive(
             name = "com_google_absl",
-            sha256 = "a4567ff02faca671b95e31d315bab18b42b6c6f1a60e91c6ea84e5a2142112c2",
-            strip_prefix = "abseil-cpp-20211102.0",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/20211102.0.zip"],
+            sha256 = "11d6eea257cc9322cc49924cf9584dbe61922bfffe3e7c42e2bce3abc1694a1a",
+            strip_prefix = "abseil-cpp-20210324.0",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/20210324.0.zip"],
         )
 
     if not native.existing_rule("com_google_absl_py"):
@@ -75,16 +75,13 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
         )
 
     if not native.existing_rule("com_google_googletest"):
-        # Six is named six_archive to match what absl_py expects.
-        http_archive(
+        git_repository(
             name = "com_google_googletest",
-            sha256 = "9dc9157a9a1551ec7a7e43daea9a694a0bb5fb8bec81235d8a1e6ef64c716dcb",
-            strip_prefix = "googletest-release-1.10.0",
-            urls = ["https://github.com/google/googletest/archive/release-1.10.0.tar.gz"],
+            branch = "main",
+            remote = "https://github.com/google/googletest.git",
         )
 
     if not native.existing_rule("com_google_protobuf"):
-        # Protocol buffers. Official release 3.13.0.1
         patch_path = "@{}//external:com_google_protobuf_build.patch".format(ocpdiag_package_name)
         git_repository(
             name = "com_google_protobuf",
@@ -96,11 +93,11 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     if not native.existing_rule("com_github_grpc_grpc"):
         http_archive(
             name = "com_github_grpc_grpc",
-            sha256 = "abd9e52c69000f2c051761cfa1f12d52d8b7647b6c66828a91d462e796f2aede",
+            sha256 = "9647220c699cea4dafa92ec0917c25c7812be51a18143af047e20f3fb05adddc",
             urls = [
-                "https://github.com/grpc/grpc/archive/v1.38.0.tar.gz",
+                "https://github.com/grpc/grpc/archive/v1.43.0.tar.gz",
             ],
-            strip_prefix = "grpc-1.38.0",
+            strip_prefix = "grpc-1.43.0",
         )
 
     if not native.existing_rule("pybind11_bazel"):
@@ -147,10 +144,10 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
         http_archive(
             name = "rules_pkg",
             urls = [
-                "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.0/rules_pkg-0.5.0.tar.gz",
-                "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.0/rules_pkg-0.5.0.tar.gz",
+                "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz",
+                "https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz",
             ],
-            sha256 = "353b20e8b093d42dd16889c7f918750fb8701c485ac6cceb69a5236500507c27",
+            sha256 = "62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66",
         )
 
     if not native.existing_rule("com_google_ecclesia"):
@@ -158,4 +155,12 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
             name = "com_google_ecclesia",
             branch = "master",
             remote = "https://github.com/google/ecclesia-machine-management.git",
+        )
+
+    if not native.existing_rule("com_google_emboss"):
+        http_archive(
+            name = "com_google_emboss",
+            sha256 = "53971feb699d35cd96986cf451eb85986974d65429807c3c2b168c6786846b34",
+            strip_prefix = "emboss-5cb347f85c9f1d2b7d00c29bd08ef706d8cd0461",
+            urls = ["https://github.com/google/emboss/archive/5cb347f85c9f1d2b7d00c29bd08ef706d8cd0461.tar.gz"],
         )

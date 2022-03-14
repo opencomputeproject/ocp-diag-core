@@ -9,8 +9,17 @@ freshness: { owner: 'viel' reviewed: '2021-09-20' }
 ## Overview
 
 This document introduces a reference API that can dump
-[OCPDiag result artifacts](results.md#data-schema) and provides a walk-through
-of using the API for a simple OCPDiag diagnostic test.
+[OCPDiag result artifacts](results.md#data-schema) and provides a walk-through of
+using the API for a simple OCPDiag diagnostic test.
+
+To learn how to write unit-tests for this library, see
+[Results Generation API Testing](results_reference_api_testing.md).
+
+## Glossary
+
+**FRU**
+:   Field-Replaceable Unit: Hardware components that datacenter techs can swap
+    out (in contrast to embedded components).
 
 ## API structure and semantics
 
@@ -45,8 +54,8 @@ precursor to the next.
 1.  `ResultApi::BeginTestStep` requires a valid `TestRun` object.
 1.  `ResultApi::BeginMeasurementSeries` requires a valid `TestStep` object.
 
-![results_api_classes](results_api_classes.png) ***Figure 1: OCPDiag result API,
-main classes: How they relate and how artifacts are written***
+![results_api_classes](results_api_classes_external.png) ***Figure 1: OCPDiag
+result API, main classes: How they relate and how artifacts are written***
 
 ### Info registration classes
 
@@ -111,13 +120,16 @@ rather than the test author’s interpretation of events. The following actions
 can trigger changes in the Result and/or Status:
 
 *   User skips the test with `TestRun.Skip()`:
-    *  `TestStatus` is set to `SKIPPED`
-    *  `TestResult` is set to `NOT_APPLICABLE`
-*   User emits a Fail `Diagnosis`: 
-    *  `TestResult` is set to `FAIL`, unless an `Error` has already been emitted.
-*   User emits any `Error` artifact (via `TestRun::AddError` or `TestStep::AddError`):
-    *  `TestStatus` is set to `ERROR`.
-    *  `TestResult` is set to `NOT_APPLICABLE`. ***This takes precedence over `Fail diagnoses and Skips`***.
+    *   `TestStatus` is set to `SKIPPED`
+    *   `TestResult` is set to `NOT_APPLICABLE`
+*   User emits a Fail `Diagnosis`:
+    *   `TestResult` is set to `FAIL`, unless an `Error` has already been
+        emitted.
+*   User emits any `Error` artifact (via `TestRun::AddError` or
+    `TestStep::AddError`):
+    *   `TestStatus` is set to `ERROR`.
+    *   `TestResult` is set to `NOT_APPLICABLE`. ***This takes precedence over
+        `Fail diagnoses and Skips`***.
 
 NOTE: Don’t confuse `TestRun/TestStep::AddError(...)` with
 `TestRun/TestStep::LogError(...)` - the latter are for Log artifacts and do not
@@ -135,9 +147,6 @@ parsing.
 
 ```c++
 int main(int argc, char* argv[]) {
-  // Initialize the Google context.
-  InitGoogleExceptChangeRootAndUser(argv[0], &argc, &argv, true);
-
   ocpdiag::results::ResultApi api;
 
   // Initialize the TestRun object.
@@ -169,13 +178,10 @@ int main(int argc, char* argv[]) {
   }
 ```
 
-1.  **REQUIRED: Initialize the Google context:** Why?
-    [InitGoogle](go/cpp-flags#initgoogle) provides native flags such as `--help`
-    and more.
-2.  **Initialize the TestRun:** State this immediately after InitGoogle(). Use
+1.  **Initialize the TestRun:** State this immediately after InitGoogle(). Use
     the TestRun object for emitting Error artifacts in case anything goes wrong
     before the code reaches the diagnostic phase.
-3.  **Parse the input parameters:** These define how your OCPDiag test is
+1.  **Parse the input parameters:** These define how your OCPDiag test is
     customized at runtime. Parsing should happen *after* TestRun initialization
     in case there is a problem parsing the parameters; you can see this with
     `test_run->AddError`. The Error artifact is superior to writing a generic
@@ -259,10 +265,10 @@ WARNING: Don't forget to register your `DutInfos`!
   }
 ```
 
-*   `test_run->Start...` marks the beginning of the "diagnostic" phase of the
+1.  `test_run->Start...` marks the beginning of the "diagnostic" phase of the
     OCPDiag test. This is where you register the 1st DutInfo that you built in
     the previous chunk.
-*   Once TestRun starts you can create your first TestStep using
+1.  Once TestRun starts you can create your first TestStep using
     `TestStep::Begin(...)`.
 
 ### Chunk 4: Files, tags, and artifact extensions
@@ -317,10 +323,10 @@ WARNING: Don't forget to register your `DutInfos`!
       {hw_record_with_component});
 ```
 
-*   Adding a `Diagnosis` using an unregistered `HwRecord` produces a `Diagnosis`
+1.  Adding a `Diagnosis` using an unregistered `HwRecord` produces a `Diagnosis`
     artifact and an `Error` artifact, warning that the record is unregistered.
-*   This is a well formed diagnosis; the hardware record shows the FRU-location.
-*   This is a well formed diagnosis; the hardware record shows
+1.  This is a well formed diagnosis; the hardware record shows the FRU-location.
+1.  This is a well formed diagnosis; the hardware record shows
     component-location instead of the FRU.
 
 ### Chunk 6: Using a MeasurementSeries

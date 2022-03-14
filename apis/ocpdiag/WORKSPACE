@@ -15,3 +15,4 @@ load_secondary_deps()
 # functionality in the original load_ocpdiag_deps function.
 load("//ocpdiag:tertiary_build_deps.bzl", "load_tertiary_deps")
 load_tertiary_deps()
+
