@@ -1,16 +1,8 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
 
 #include <algorithm>
 #include <cstdlib>
@@ -132,6 +124,11 @@ int main(int argc, char* argv[]) {
   sw_info.set_arena("myArena");
   sw_info.set_version("myVersion");
   SwRecord sw_record = dut_info.AddSoftware(sw_info);
+
+  // Add the platform info.
+  dut_info.AddPlatformInfo("myInfo1");
+  dut_info.AddPlatformInfo("myInfo2");
+
   std::vector<DutInfo> dutinfos;
   dutinfos.emplace_back(std::move(dut_info));
 
@@ -177,7 +174,7 @@ int main(int argc, char* argv[]) {
   test_run->AddTag("during-test-step tag");
 
   // Add example artifact extensions.
-  step2->AddArtifactExtension("example-artifact-extention1",
+  step2->AddArtifactExtension("example-artifact-extension1",
                               hw_info_with_component);
 
   // Demonstrate passing diagnoses. Here we add one associated hw record
