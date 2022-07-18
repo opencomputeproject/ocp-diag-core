@@ -115,10 +115,10 @@ class MockTestStep : public TestStep {
                absl::Span<const SwRecord>),
               (override));
 
-  MOCK_METHOD(void, AddMeasurement,
+  MOCK_METHOD(bool, AddMeasurement,
               (ocpdiag::results_pb::MeasurementInfo,
                ocpdiag::results_pb::MeasurementElement,
-               const HwRecord*),
+               const HwRecord*, bool enforce_constraints),
               (override));
 
   MOCK_METHOD(void, AddFile, (ocpdiag::results_pb::File),
@@ -155,13 +155,14 @@ class MockMeasurementSeries : public MeasurementSeries {
 
   MOCK_METHOD(void, AddElement, (google::protobuf::Value), (override));
 
-  MOCK_METHOD(void, AddElementWithRange,
-              (google::protobuf::Value,
-               ocpdiag::results_pb::MeasurementElement::Range),
-              (override));
+  MOCK_METHOD(
+      bool, AddElementWithRange,
+      (const google::protobuf::Value&,
+       const ocpdiag::results_pb::MeasurementElement::Range&),
+      (override));
 
-  MOCK_METHOD(void, AddElementWithValues,
-              (google::protobuf::Value,
+  MOCK_METHOD(bool, AddElementWithValues,
+              (const google::protobuf::Value&,
                absl::Span<const google::protobuf::Value> valid_values),
               (override));
 
