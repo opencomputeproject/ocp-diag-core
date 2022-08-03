@@ -69,14 +69,7 @@ PYBIND11_MODULE(_results, m) {
 
   m.def("BeginTestStep", &TestStep::Begin);
 
-  // We use a shared_ptr holding type on TestStep because we pass these objects
-  // between C++ and Python as function arguments, not simply as property values
-  // like the other objects. Property values use a return value policy that
-  // allows sharing the object as un-owned references, but function arguments
-  // don't. See
-  // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#return-value-policies
-  // for more information.
-  pybind11::class_<TestStep, std::shared_ptr<TestStep>>(m, "TestStep")
+  pybind11::class_<TestStep>(m, "TestStep")
       .def(
           "AddDiagnosis",
           [](TestStep& a, const int symptom_type, std::string symptom,

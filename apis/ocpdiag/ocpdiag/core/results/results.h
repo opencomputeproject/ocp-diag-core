@@ -198,12 +198,7 @@ class TestRun : public internal::LoggerInterface {
 };
 
 // TestStep is a logical subdivision of a TestRun.
-class TestStep
-    : public internal::LoggerInterface,
-      // In order to support the Python test harness while not polluting the C++
-      // API with shared_ptr, we need to be able to create shared pointers from
-      // 'this' when sharing this object between Python and C++.
-      public std::enable_shared_from_this<TestStep> {
+class TestStep : public internal::LoggerInterface {
  public:
 #ifndef SWIG
   TestStep() = delete;
