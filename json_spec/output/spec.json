@@ -1,18 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/ocp",
-  "description": "OCP Hardware Validation Output Specs",
-  "title": "Output Artifact",
+  "$id": "https://github.com/opencomputeproject/ocp-diag-core/output",
+  "title": "OutputArtifact",
+  "description": "TODO: link to spec md link",
   "type": "object",
   "properties": {
     "sequenceNumber": {
-      "description": "Output artifact index number for data loss monitoring",
+      "description": "TODO: link to spec md link",
       "type": "integer",
       "minimum": 0,
       "maximum": 2147483647
     },
     "timestamp": {
-      "description": "Timestamp, see date-time in RFC 3339 section 5.6, Z-normalized",
+      "description": "TODO: link to spec md link",
       "type": "string",
       "format": "date-time"
     },
@@ -113,25 +113,22 @@
           "$ref": "#/$defs/log"
         },
         "measurement": {
-          "$ref": "/extensions/measurements#/$defs/measurement"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/measurements#/$defs/measurement"
         },
         "measurementSeriesStart": {
-          "$ref": "/extensions/measurements#/$defs/measurementSeriesStart"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/measurements#/$defs/measurementSeriesStart"
         },
         "measurementSeriesEnd": {
-          "$ref": "/extensions/measurements#/$defs/measurementSeriesEnd"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/measurements#/$defs/measurementSeriesEnd"
         },
         "measurementElement": {
-          "$ref": "/extensions/measurements#/$defs/measurementElement"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/measurements#/$defs/measurementElement"
         },
         "diagnosis": {
-          "$ref": "/extensions/diagnosis#/$defs/diagnosis"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/diagnosis#/$defs/diagnosis"
         },
         "file": {
-          "$ref": "/extensions/files#/$defs/file"
-        },
-        "artifactExtension": {
-          "$ref": "/extensions/artifact_extensions#/$defs/artifactExtension"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/files#/$defs/file"
         }
       },
       "oneOf": [
@@ -193,12 +190,6 @@
           "required": [
             "testStepId",
             "file"
-          ]
-        },
-        {
-          "required": [
-            "testStepId",
-            "artifactExtension"
           ]
         }
       ]
@@ -366,7 +357,7 @@
           "format": "date-time"
         },
         "additionalDetails": {
-          "$ref": "/extensions/step_details#/$defs/stepDetails"
+          "$ref": "/opencomputeproject/ocp-diag-core/extensions/step_details#/$defs/stepDetails"
         }
       },
       "required": [
