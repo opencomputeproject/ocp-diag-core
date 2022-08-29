@@ -59,8 +59,8 @@
           "$ref": "#/$defs/testRunEnd"
         },
         "log": {
-          "description": "Test run log output",
-          "$ref": "#/$defs/log"
+          "description": "TODO: link to md",
+          "$ref": "/opencomputeproject/ocp-diag-core/log"
         },
         "error": {
           "description": "Test run error",
@@ -110,7 +110,7 @@
           "$ref": "#/$defs/error"
         },
         "log": {
-          "$ref": "#/$defs/log"
+          "$ref": "/opencomputeproject/ocp-diag-core/log"
         },
         "measurement": {
           "$ref": "/opencomputeproject/ocp-diag-core/extensions/measurements#/$defs/measurement"
@@ -192,33 +192,6 @@
             "file"
           ]
         }
-      ]
-    },
-    "log": {
-      "properties": {
-        "text": {
-          "description": "Log message",
-          "type": "string"
-        },
-        "timestampMs": {
-          "description": "Log timestamp",
-          "type": "integer"
-        },
-        "severity": {
-          "description": "Log level/severity",
-          "type": "string",
-          "enum": [
-            "INFO",
-            "DEBUG",
-            "WARNING",
-            "ERROR",
-            "FATAL"
-          ]
-        }
-      },
-      "required": [
-        "text",
-        "severity"
       ]
     },
     "error": {

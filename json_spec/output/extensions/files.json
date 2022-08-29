@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/extensions/files",
+  "$id": "https://github.com/opencomputeproject/ocp-diag-core/extensions/files",
   "title": "Files",
   "description": "...",
   "$defs": {

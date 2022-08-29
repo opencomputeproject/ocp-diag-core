@@ -21,7 +21,7 @@ func initFlags() {
 	cmd := os.Args[0]
 
 	flagSet = flag.NewFlagSet(cmd, flag.ContinueOnError)
-	flagSchema = flagSet.String("schema", "../../json_spec/results_spec.json", "Path to schema file")
+	flagSchema = flagSet.String("schema", "", "Path to schema file")
 	flagJSONL = flagSet.Bool("jsonl", true, "Treat input data as a JSONL. Otherwise it's a whole JSON document")
 
 	flagSet.Usage = func() {
@@ -48,10 +48,13 @@ Flags:
 func main() {
 	initFlags()
 
+	if *flagSchema == "" {
+		log.Fatalln("The <schema> flag is mandatory")
+	}
+
 	filename := flagSet.Arg(0)
 	if filename == "" {
-		fmt.Println("no filename passed, see -help")
-		return
+		log.Fatalln("no filename passed, see -help")
 	}
 
 	sv, err := schemavalidator.New(*flagSchema)

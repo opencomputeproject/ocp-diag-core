@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/extensions/diagnosis",
+  "$id": "https://github.com/opencomputeproject/ocp-diag-core/extensions/diagnosis",
   "title": "Diagnosis",
   "description": "...",
   "$defs": {

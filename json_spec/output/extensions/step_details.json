@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/extensions/step_details",
+  "$id": "https://github.com/opencomputeproject/ocp-diag-core/extensions/step_details",
   "title": "Step Details",
   "description": "Additional details for testStepEnd",
   "$defs": {

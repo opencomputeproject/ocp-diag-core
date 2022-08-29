@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/log",
+    "title": "Log",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "severity": {
+            "description": "TODO: link to md doc",
+            "$ref": "#/$defs/severity"
+        },
+        "message": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        }
+    },
+    "required": [
+        "severity",
+        "message"
+    ],
+    "$defs": {
+        "severity": {
+            "description": "TODO: link to md doc",
+            "type": "string",
+            "enum": [
+                "INFO",
+                "DEBUG",
+                "WARNING",
+                "ERROR",
+                "FATAL"
+            ]
+        }
+    }
+}

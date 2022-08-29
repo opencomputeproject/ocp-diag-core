@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/extensions/measurements",
+  "$id": "https://github.com/opencomputeproject/ocp-diag-core/extensions/measurements",
   "title": "Measurements",
   "description": "...",
   "$defs": {
