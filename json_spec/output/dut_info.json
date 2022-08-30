@@ -1,0 +1,155 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/dutInfo",
+    "title": "Dut info",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "id": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "hostname": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "platformInfos": {
+            "description": "TODO: link to md doc",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/platformInfo"
+            }
+        },
+        "softwareInfos": {
+            "description": "TODO: link to md doc",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/softwareInfo"
+            }
+        },
+        "hardwareInfos": {
+            "description": "TODO: link to md doc",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/hardwareInfo"
+            }
+        },
+        "metadata": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "id"
+    ],
+    "$defs": {
+        "platformInfo": {
+            "properties": {
+                "info": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "info"
+            ]
+        },
+        "softwareInfo": {
+            "properties": {
+                "name": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "revision": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "softwareType": {
+                    "description": "TODO: link to md doc",
+                    "type": "string",
+                    "enum": [
+                        "UNSPECIFIED",
+                        "FIRMWARE",
+                        "SYSTEM",
+                        "APPLICATION"
+                    ]
+                },
+                "softwareInfoId": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "computerSystem": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "softwareInfoId"
+            ]
+        },
+        "hardwareInfo": {
+            "properties": {
+                "name": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "revision": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "location": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "hardwareInfoId": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "serialNumber": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "partNumber": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "partType": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "manufacturer": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "manufacturerPartNumber": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "odataId": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "computerSystem": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                },
+                "manager": {
+                    "description": "TODO: link to md doc",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "hardwareInfoId"
+            ]
+        }
+    }
+}

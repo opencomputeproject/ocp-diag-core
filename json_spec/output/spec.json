@@ -3,7 +3,6 @@
     "$id": "https://github.com/opencomputeproject/ocp-diag-core/output",
     "title": "OutputArtifact",
     "description": "TODO: link to spec md link",
-    "type": "object",
     "properties": {
         "sequenceNumber": {
             "description": "TODO: link to spec md link",
@@ -15,44 +14,44 @@
             "description": "TODO: link to spec md link",
             "type": "string",
             "format": "date-time"
-        },
-        "schemaVersion": {
-            "description": "TODO: link to spec md link",
-            "$ref": "#/$defs/schemaVersion"
-        },
-        "testRunArtifact": {
-            "description": "Test run artifact",
-            "$ref": "#/$defs/testRunArtifact"
-        },
-        "testStepArtifact": {
-            "description": "TODO: link to md",
-            "$ref": "/opencomputeproject/ocp-diag-core/testStepArtifact"
         }
     },
-    "allOf": [
+    "required": [
+        "sequenceNumber",
+        "timestamp"
+    ],
+    "oneOf": [
         {
+            "properties": {
+                "schemaVersion": {
+                    "description": "TODO: link to spec md link",
+                    "$ref": "#/$defs/schemaVersion"
+                }
+            },
             "required": [
-                "sequenceNumber",
-                "timestamp"
+                "schemaVersion"
             ]
         },
         {
-            "oneOf": [
-                {
-                    "required": [
-                        "schemaVersion"
-                    ]
-                },
-                {
-                    "required": [
-                        "testRunArtifact"
-                    ]
-                },
-                {
-                    "required": [
-                        "testStepArtifact"
-                    ]
+            "properties": {
+                "testRunArtifact": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testRunArtifact"
                 }
+            },
+            "required": [
+                "testRunArtifact"
+            ]
+        },
+        {
+            "properties": {
+                "testStepArtifact": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepArtifact"
+                }
+            },
+            "required": [
+                "testStepArtifact"
             ]
         }
     ],
@@ -215,34 +214,6 @@
                 }
             ]
         },
-        "testRunStart": {
-            "properties": {
-                "name": {
-                    "description": "Name of this test",
-                    "type": "string"
-                },
-                "version": {
-                    "description": "Version of this test",
-                    "type": "string"
-                },
-                "parameters": {
-                    "description": "Test parameters",
-                    "type": "object"
-                },
-                "dutsInfo": {
-                    "description": "DUT hardware information",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/dutInfo"
-                    }
-                }
-            },
-            "required": [
-                "name",
-                "version",
-                "parameters"
-            ]
-        },
         "testRunEnd": {
             "properties": {
                 "name": {
@@ -320,117 +291,6 @@
             "required": [
                 "name",
                 "status"
-            ]
-        },
-        "dutInfo": {
-            "properties": {
-                "hostname": {
-                    "description": "Host Name",
-                    "type": "string"
-                },
-                "platformInfo": {
-                    "descrption": "...",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "componentsInfo": {
-                    "description": "Hardware info about components",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/hardwareComponentInfo"
-                    }
-                },
-                "softwaresInfo": {
-                    "description": "Components software info",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/softwareInfo"
-                    }
-                }
-            },
-            "required": [
-                "hostname"
-            ]
-        },
-        "hardwareComponentInfo": {
-            "properties": {
-                "id": {
-                    "description": "Incremental ID",
-                    "type": "integer",
-                    "minimum": 0
-                },
-                "name": {
-                    "description": "Component Name",
-                    "type": "string"
-                },
-                "location": {
-                    "description": "Harware component location",
-                    "$ref": "#/$defs/hardwareComponentLocation"
-                },
-                "partNumber": {
-                    "description": "Component part number",
-                    "type": "string"
-                },
-                "manufacturer": {
-                    "description": "manufacturer",
-                    "type": "string"
-                },
-                "additionalInfo": {
-                    "description": "Others meaningful component information",
-                    "type": "object"
-                }
-            },
-            "required": [
-                "id",
-                "name"
-            ]
-        },
-        "hardwareComponentLocation": {
-            "properties": {
-                "UPI": {
-                    "description": "Unique Part Identifier",
-                    "type": "string"
-                },
-                "serialNumber": {
-                    "description": "Component Serial Number",
-                    "type": "string"
-                },
-                "additionalInfo": {
-                    "description": "Other useful information for component location, like devpath, blockpath, and so on",
-                    "type": "object"
-                }
-            },
-            "required": [
-                "UPI",
-                "serialNumbers"
-            ]
-        },
-        "softwareInfo": {
-            "properties": {
-                "id": {
-                    "description": "Incremental ID",
-                    "type": "integer",
-                    "minimum": 0
-                },
-                "name": {
-                    "description": "Software Name",
-                    "type": "string"
-                },
-                "version": {
-                    "description": "Software Version",
-                    "type": "string"
-                },
-                "additionalInfo": {
-                    "description": "Other useful information about software",
-                    "type": "object"
-                }
-            },
-            "required": [
-                "id",
-                "name",
-                "version"
             ]
         }
     }
