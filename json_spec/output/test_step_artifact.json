@@ -15,6 +15,17 @@
     "oneOf": [
         {
             "properties": {
+                "testStepStart": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepStart"
+                }
+            },
+            "required": [
+                "testStepStart"
+            ]
+        },
+        {
+            "properties": {
                 "error": {
                     "description": "TODO: link to md",
                     "$ref": "/opencomputeproject/ocp-diag-core/error"

@@ -76,9 +76,6 @@
                     "description": "...",
                     "type": "string"
                 },
-                "testStepStart": {
-                    "$ref": "#/$defs/testStepStart"
-                },
                 "testStepEnd": {
                     "$ref": "#/$defs/testStepEnd"
                 },
@@ -110,12 +107,6 @@
                 }
             },
             "oneOf": [
-                {
-                    "required": [
-                        "testStepId",
-                        "testStepStart"
-                    ]
-                },
                 {
                     "required": [
                         "testStepId",
@@ -170,22 +161,6 @@
                         "file"
                     ]
                 }
-            ]
-        },
-        "testStepStart": {
-            "properties": {
-                "name": {
-                    "description": "Name of this test step",
-                    "type": "string"
-                }
-            },
-            "timestampMs": {
-                "description": "Timestamp, ms precision",
-                "type": "string",
-                "format": "date-time"
-            },
-            "required": [
-                "name"
             ]
         },
         "testStepEnd": {
