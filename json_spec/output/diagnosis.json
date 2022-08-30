@@ -29,6 +29,7 @@
         "verdict",
         "type"
     ],
+    "additionalProperties": false,
     "$defs": {
         "type": {
             "description": "TODO: link to md doc",

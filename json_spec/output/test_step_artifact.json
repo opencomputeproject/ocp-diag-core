@@ -12,6 +12,7 @@
     "required": [
         "testStepId"
     ],
+    "unevaluatedProperties": false,
     "oneOf": [
         {
             "properties": {

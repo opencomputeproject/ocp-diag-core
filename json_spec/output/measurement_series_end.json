@@ -17,5 +17,6 @@
     "required": [
         "measurementSeriesId",
         "totalCount"
-    ]
+    ],
+    "additionalProperties": false
 }

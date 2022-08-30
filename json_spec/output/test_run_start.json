@@ -36,6 +36,7 @@
         "parameters",
         "dutInfo"
     ],
+    "additionalProperties": false,
     "$defs": {
         "parameters": {
             "$comment": "will be extracted in the future, when spec is published",

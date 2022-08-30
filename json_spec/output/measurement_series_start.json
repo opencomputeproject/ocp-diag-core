@@ -39,5 +39,6 @@
     "required": [
         "name",
         "measurementSeriesId"
-    ]
+    ],
+    "additionalProperties": false
 }

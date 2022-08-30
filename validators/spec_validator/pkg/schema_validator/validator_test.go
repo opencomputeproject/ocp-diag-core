@@ -21,12 +21,13 @@ func TestSchemaVersion(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func xTestValidateBytesComplexRunArtifact(t *testing.T) {
+func TestValidateBytesComplexRunArtifact(t *testing.T) {
 	json := `{
 		"testRunArtifact": {
 			"testRunStart": {
 				"name": "Error Monitor",
 				"version": "392747070",
+				"commandLine": "",
 				"parameters": {
 					"@type": "type.googleapis.com/meltan.error_monitor.Params",
 					"pollingIntervalSecs": 1,
@@ -475,7 +476,7 @@ func TestMeasurementSeriesElementSimple(t *testing.T) {
 }
 
 func validateString(t *testing.T, json string) error {
-	const schema string = "../../../../json_spec/output/spec.json"
+	const schema string = "../../../../json_spec/output/root.json"
 
 	sv, err := New(schema)
 	require.NoError(t, err)

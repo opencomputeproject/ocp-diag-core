@@ -17,6 +17,7 @@
         "status",
         "result"
     ],
+    "additionalProperties": false,
     "$defs": {
         "testResult": {
             "description": "TODO: link to md doc",

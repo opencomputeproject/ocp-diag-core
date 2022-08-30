@@ -17,6 +17,7 @@
         "severity",
         "message"
     ],
+    "additionalProperties": false,
     "$defs": {
         "severity": {
             "description": "TODO: link to md doc",

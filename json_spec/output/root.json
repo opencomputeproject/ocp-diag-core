@@ -1,0 +1,75 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/output",
+    "title": "OutputArtifact",
+    "description": "TODO: link to spec md link",
+    "properties": {
+        "sequenceNumber": {
+            "description": "TODO: link to spec md link",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+        },
+        "timestamp": {
+            "description": "TODO: link to spec md link",
+            "type": "string",
+            "format": "date-time"
+        }
+    },
+    "required": [
+        "sequenceNumber",
+        "timestamp"
+    ],
+    "unevaluatedProperties": false,
+    "oneOf": [
+        {
+            "properties": {
+                "schemaVersion": {
+                    "description": "TODO: link to spec md link",
+                    "$ref": "#/$defs/schemaVersion"
+                }
+            },
+            "required": [
+                "schemaVersion"
+            ]
+        },
+        {
+            "properties": {
+                "testRunArtifact": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testRunArtifact"
+                }
+            },
+            "required": [
+                "testRunArtifact"
+            ]
+        },
+        {
+            "properties": {
+                "testStepArtifact": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepArtifact"
+                }
+            },
+            "required": [
+                "testStepArtifact"
+            ]
+        }
+    ],
+    "$defs": {
+        "schemaVersion": {
+            "properties": {
+                "major": {
+                    "const": 2
+                },
+                "minor": {
+                    "const": 0
+                }
+            },
+            "required": [
+                "major",
+                "minor"
+            ]
+        }
+    }
+}

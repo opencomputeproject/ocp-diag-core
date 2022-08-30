@@ -29,6 +29,7 @@
         "type",
         "value"
     ],
+    "additionalProperties": false,
     "$defs": {
         "type": {
             "description": "TODO: link to md doc",

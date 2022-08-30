@@ -41,6 +41,7 @@
     "required": [
         "id"
     ],
+    "additionalProperties": false,
     "$defs": {
         "platformInfo": {
             "properties": {
@@ -51,7 +52,8 @@
             },
             "required": [
                 "info"
-            ]
+            ],
+            "additionalProperties": false
         },
         "softwareInfo": {
             "properties": {
@@ -89,7 +91,8 @@
             "required": [
                 "name",
                 "softwareInfoId"
-            ]
+            ],
+            "additionalProperties": false
         },
         "hardwareInfo": {
             "properties": {
@@ -149,7 +152,8 @@
             "required": [
                 "name",
                 "hardwareInfoId"
-            ]
+            ],
+            "additionalProperties": false
         }
     }
 }

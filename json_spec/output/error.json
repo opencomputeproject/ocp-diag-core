@@ -23,5 +23,6 @@
     },
     "required": [
         "symptom"
-    ]
+    ],
+    "additionalProperties": false
 }
