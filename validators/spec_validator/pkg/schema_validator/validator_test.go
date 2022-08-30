@@ -207,6 +207,32 @@ func TestStepFileSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStepDiagnosisSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"diagnosis": {
+				"verdict": "mlc-intranode-bandwidth-pass",
+				"type": "PASS",
+				"message": "intranode bandwidth within threshold.",
+				"hardwareInfoId": "1",
+				"subcomponent": {
+					"type": "BUS",
+					"name": "QPI1",
+					"location": "CPU-3-2-3",
+					"version": "1",
+					"revision": "0"
+				}
+			},
+			"testStepId": "1"
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2022-07-25T02:15:58.296032Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

@@ -12,27 +12,42 @@
             "description": "TODO: link to md",
             "$ref": "/opencomputeproject/ocp-diag-core/log"
         },
+        "diagnosis": {
+            "description": "TODO: link to md",
+            "$ref": "/opencomputeproject/ocp-diag-core/diagnosis"
+        },
         "file": {
             "$ref": "#/$defs/file"
         }
     },
-    "oneOf": [
+    "allOf": [
         {
             "required": [
-                "testStepId",
-                "error"
+                "testStepId"
             ]
         },
         {
-            "required": [
-                "testStepId",
-                "log"
-            ]
-        },
-        {
-            "required": [
-                "testStepId",
-                "file"
+            "oneOf": [
+                {
+                    "required": [
+                        "error"
+                    ]
+                },
+                {
+                    "required": [
+                        "log"
+                    ]
+                },
+                {
+                    "required": [
+                        "diagnosis"
+                    ]
+                },
+                {
+                    "required": [
+                        "file"
+                    ]
+                }
             ]
         }
     ],
