@@ -455,6 +455,25 @@ func TestMeasurementSeriesEndSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestMeasurementSeriesElementSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurementSeriesElement": {
+				"index": 144,
+				"measurementSeriesId": "12",
+				"value": 100219.5,
+				"timestamp": "2022-07-26T02:45:00.102414Z"
+			},
+			"testStepId": "45398"
+		},
+		"sequenceNumber": 700,
+		"timestamp": "2022-07-26T02:45:00.097896Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

@@ -67,32 +67,6 @@ func New(schemaPath string) (*SchemaValidator, error) {
 		return nil, err
 	}
 
-	// keeping this temporarily so that the tests pass on each commit of the branch
-	err = filepath.WalkDir(path.Join(path.Dir(schemaPath), "extensions"), func(fpath string, d fs.DirEntry, err error) error {
-		if !d.IsDir() && filepath.Ext(fpath) == ".json" {
-			url, err := getSchemaURL(fpath)
-			if err != nil {
-				return fmt.Errorf("failed to get schema $id: %w", err)
-			}
-
-			f, err := os.Open(fpath)
-			if err != nil {
-				return fmt.Errorf("could not open extension spec: %v", err)
-			}
-			defer f.Close()
-
-			if err := c.AddResource(url, f); err != nil {
-				return err
-			}
-			log.Printf("Registered ext schema %v -> %v\n", url, fpath)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	mainURL, err := getSchemaURL(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get $id for root schema: %w", err)
