@@ -215,6 +215,26 @@ func TestStepErrorSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStepFileSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepId": "1",
+			"file": {
+				"displayName": "mem_cfg_log",
+				"uri": "file:///root/mem_cfg_log",
+				"description": "DIMM configuration settings.",
+				"contentType": "text/plain",
+				"isSnapshot": false
+			}
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

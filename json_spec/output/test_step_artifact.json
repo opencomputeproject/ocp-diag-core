@@ -1,0 +1,76 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testStepArtifact",
+    "title": "Step artifact",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "error": {
+            "description": "TODO: link to md",
+            "$ref": "/opencomputeproject/ocp-diag-core/error"
+        },
+        "log": {
+            "description": "TODO: link to md",
+            "$ref": "/opencomputeproject/ocp-diag-core/log"
+        },
+        "file": {
+            "$ref": "#/$defs/file"
+        }
+    },
+    "oneOf": [
+        {
+            "required": [
+                "testStepId",
+                "error"
+            ]
+        },
+        {
+            "required": [
+                "testStepId",
+                "log"
+            ]
+        },
+        {
+            "required": [
+                "testStepId",
+                "file"
+            ]
+        }
+    ],
+    "$defs": {
+        "file": {
+            "$comment": "file is just used in step artifact; extract when more usages appear",
+            "properties": {
+                "displayName": {
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "uri": {
+                    "$comment": "maybe this should be more constrained",
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "contentType": {
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "isSnapshot": {
+                    "description": "TODO: link to md",
+                    "type": "boolean"
+                },
+                "metadata": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+                }
+            },
+            "required": [
+                "displayName",
+                "uri",
+                "isSnapshot"
+            ]
+        }
+    }
+}
