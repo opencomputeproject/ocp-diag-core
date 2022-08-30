@@ -1,16 +1,8 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
 
 #include "ocpdiag/core/results/results.h"
 
@@ -76,7 +68,15 @@ PYBIND11_MODULE(_results, m) {
       .def("LogFatal", &TestRun::LogFatal);
 
   m.def("BeginTestStep", &TestStep::Begin);
-  pybind11::class_<TestStep>(m, "TestStep")
+
+  // We use a shared_ptr holding type on TestStep because we pass these objects
+  // between C++ and Python as function arguments, not simply as property values
+  // like the other objects. Property values use a return value policy that
+  // allows sharing the object as un-owned references, but function arguments
+  // don't. See
+  // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#return-value-policies
+  // for more information.
+  pybind11::class_<TestStep, std::shared_ptr<TestStep>>(m, "TestStep")
       .def(
           "AddDiagnosis",
           [](TestStep& a, const int symptom_type, std::string symptom,

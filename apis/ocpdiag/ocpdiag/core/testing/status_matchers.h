@@ -1,16 +1,8 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
 
 #ifndef OCPDIAG_CORE_TESTING_STATUS_MATCHERS_H_
 #define OCPDIAG_CORE_TESTING_STATUS_MATCHERS_H_
@@ -117,13 +109,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/base/casts.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/any.h"
-#include "absl/utility/utility.h"
 
 // This header contains utilities for testing absl::Status and absl::StatusOr
 // It is adapted from the open-source Abseil unit tests.
@@ -310,13 +298,16 @@ class IsOkMatcher {
 
 }  // namespace internal_status
 
+// Supersede these symbols if present.
+#undef ASSERT_OK_AND_ASSIGN
+#undef ASSERT_OK
+#undef EXPECT_OK
+
 // Macros for testing the results of functions that return absl::Status or
 // absl::StatusOr<T> (for any type T).
-#ifndef EXPECT_OK
 #define ASSERT_OK(expression) ASSERT_THAT(expression, ::ocpdiag::testing::IsOk())
 #define EXPECT_OK(expression) EXPECT_THAT(expression, ::ocpdiag::testing::IsOk())
-#endif
-#ifndef ASSERT_OK_AND_ASSIGN
+
 // Executes an expression that returns an absl::StatusOr, and assigns the
 // contained variable to lhs if the error code is OK.
 // If the Status is non-OK, generates a test failure and returns from the
@@ -341,7 +332,6 @@ class IsOkMatcher {
   auto c = (s);                                                 \
   ASSERT_OK(c.status());                                        \
   v = *std::move(c);
-#endif
 
 // Returns a gMock matcher that matches a StatusOr<> whose status is
 // OK and whose value matches the inner matcher.

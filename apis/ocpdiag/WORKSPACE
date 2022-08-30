@@ -16,3 +16,13 @@ load_secondary_deps()
 load("//ocpdiag:tertiary_build_deps.bzl", "load_tertiary_deps")
 load_tertiary_deps()
 
+# Configure toolchain based on system compiler
+load("//toolchain/cpp:configure_cc_toolchain.bzl", "configure_cc_toolchain")
+configure_cc_toolchain(name = "configure_gcc")
+
+register_toolchains(
+    "//toolchain/cpp:grte_toolchain",
+    "//toolchain/python:py3_6_exec_toolchain",
+    "//toolchain/python:py3_6_google_runtime_toolchain",
+    "//toolchain/python:py3_8_toolchain",
+)

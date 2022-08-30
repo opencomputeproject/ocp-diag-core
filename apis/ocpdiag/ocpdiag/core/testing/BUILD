@@ -1,16 +1,8 @@
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 licenses(["notice"])
 
@@ -41,7 +33,6 @@ cc_library(
     deps = [
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
         "@com_google_protobuf//:protobuf",
     ],
@@ -63,7 +54,6 @@ cc_library(
     testonly = True,
     hdrs = ["mock_results.h"],
     deps = [
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
         "//ocpdiag/core/results",
         "//ocpdiag/core/results:results_cc_proto",
         "//ocpdiag/core/results/internal:logging",
@@ -81,12 +71,9 @@ cc_library(
     hdrs = ["status_matchers.h"],
     deps = [
         "@com_google_absl//absl/base",
-        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:any",
-        "@com_google_absl//absl/utility",
         "@com_google_googletest//:gtest",
     ],
 )

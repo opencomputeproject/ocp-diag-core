@@ -1,16 +1,8 @@
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Tests for simple examples."""
 import os
@@ -28,6 +20,10 @@ class ExamplePyTest(parameterized.TestCase):
   def _execute_and_collect_output(self, binary_name):
     exec_path = 'ocpdiag/core/examples/simple/{:s}'.format(
         binary_name)
+    # Prevent launchers that use PYTHON_RUNFILES for multiprocess threading from
+    # breaking subprocesses launched via a nested data dependency.
+    testenv = os.environ.copy()
+    del testenv['PYTHON_RUNFILES']
     args = [os.path.join(data_file_path_prefix(), exec_path)]
     # If rc != 0, raises an exception.
     result = subprocess.run(
@@ -35,6 +31,7 @@ class ExamplePyTest(parameterized.TestCase):
         timeout=30,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        env=testenv,
         check=True)
     self._lines = result.stdout.decode('utf-8').split('\n')
 
@@ -44,8 +41,8 @@ class ExamplePyTest(parameterized.TestCase):
       if line.strip() and 'testRunStart' not in line:
         json_format.Parse(line, results_pb2.OutputArtifact())
 
-  @parameterized.named_parameters(('c++', 'simple_bin'),
-                                  ('python', 'python/simple'))
+  @parameterized.named_parameters(('c++', 'simple'),
+                                  ('python', 'python/simple_py'))
   def test_executables(self, exe):
     self._execute_and_collect_output(exe)
     self._check_artifact_validity()

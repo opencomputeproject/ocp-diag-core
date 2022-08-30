@@ -3,7 +3,7 @@
 
 
 <!--*
-freshness: { owner: 'yuanlinw' reviewed: '2021-09-23' }
+freshness: { owner: 'yuanlinw' reviewed: '2022-03-22' }
 *-->
 
 OCPDiag is an open and multi-node friendly hardware diagnostics framework. The

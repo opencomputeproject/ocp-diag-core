@@ -1,16 +1,8 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
 
 #ifndef OCPDIAG_LIB_RESULTS_RESULTS_H_
 #define OCPDIAG_LIB_RESULTS_RESULTS_H_
@@ -208,7 +200,12 @@ class TestRun : public internal::LoggerInterface {
 };
 
 // TestStep is a logical subdivision of a TestRun.
-class TestStep : public internal::LoggerInterface {
+class TestStep
+    : public internal::LoggerInterface,
+      // In order to support the Python test harness while not polluting the C++
+      // API with shared_ptr, we need to be able to create shared pointers from
+      // 'this' when sharing this object between Python and C++.
+      public std::enable_shared_from_this<TestStep> {
  public:
 #ifndef SWIG
   TestStep() = delete;

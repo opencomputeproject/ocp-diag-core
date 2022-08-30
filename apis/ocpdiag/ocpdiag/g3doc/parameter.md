@@ -3,7 +3,7 @@
 
 
 <!--*
-freshness: { owner: 'yuanlinw' reviewed: '2021-09-23' }
+freshness: { owner: 'yuanlinw' reviewed: '2022-02-22' }
 *-->
 
 This page describes how to define and use the OCPDiag parameter model.
@@ -18,9 +18,9 @@ Test developers sometimes encounter situations in which they need to:
 
 To accommodate these situations, the OCPDiag framework provides options for:
 
-*  providing a simple help to show parameter flags and defaults.
-*  adding a flag to override default values at execution time.
-*  override at execution time either by command line CLI or StdIn files.
+*   providing a simple help to show parameter flags and defaults.
+*   adding a flag to override default values at execution time.
+*   override at execution time either by command line CLI or StdIn files.
 
 **Parameter recipe**
 
@@ -88,11 +88,11 @@ message Params {
 }
 ```
 
-**Note:** If a proto definition has more than one top-level message, the
-`(.ocpdiag.options).params_message` proto file option must be set, as shown in
-the following example. Because the package contains two proto definitions
-(`SubMessage` and `ParamsMessage`), you specify the test parameter entry by
-setting `option (.ocpdiag.options).params_message`
+**Note:** In rare cases when a proto definition needs more than one top-level
+message, the `(.ocpdiag.options).params_message` proto file option must be set,
+as shown in the following example. Because the package contains two proto
+definitions (`SubMessage` and `ParamsMessage`), you specify the test parameter
+entry by setting `option (.ocpdiag.options).params_message`
 
 ```proto
 syntax = "proto3";
@@ -111,8 +111,9 @@ message ParamsMessage {
 
 ## Parameter defaults
 
-Default parameter values are defined as a JSON file. For canonical mapping
-between JSON and Proto, please refer to
+Default parameter values are defined as a JSON file. We use JSON instead of
+textproto to better integrate with external vendors. For canonical
+mapping between JSON and Proto, please refer to
 [the JSON Mapping document](https://developers.google.com/protocol-buffers/docs/proto3#json).
 
 Here is an example default json file for the parameter proto above:

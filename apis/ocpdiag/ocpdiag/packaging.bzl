@@ -1,20 +1,12 @@
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 """Bazel rules for building and packaging OCPDiag tests"""
 
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
 load("@rules_pkg//:providers.bzl", "PackageFilegroupInfo", "PackageFilesInfo", "PackageSymlinkInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
@@ -77,6 +69,27 @@ descriptor_set = rule(
     implementation = _descriptor_set_impl,
 )
 
+def _master_rule_impl(ctx):
+    """Combines two rules into a single target.
+
+    Used to instantiate gendeb and export_dependencies rule with one target.
+
+    Args:
+      ctx: Rule's context
+
+    Returns:
+      Union of the output files of both rules
+    """
+    return DefaultInfo(files = depset(transitive = [ctx.attr.dep_rule_1.files, ctx.attr.dep_rule_2.files]))
+
+master_rule = rule(
+    implementation = _master_rule_impl,
+    attrs = {
+        "dep_rule_1": attr.label(),
+        "dep_rule_2": attr.label(),
+    },
+)
+
 _DEFAULT_PROTO = "@com_google_protobuf//:empty_proto"
 
 def ocpdiag_test_pkg(
@@ -113,6 +126,186 @@ def ocpdiag_test_pkg(
     ocpdiag_sar_name = name
 
     create_ocpdiag_sar(ocpdiag_sar_name, ":" + launcher)
+
+def ocpdiag_ovss_tar(name, ocpdiag_test, **kwargs):
+    """Packages a OCPDiag tarball from a OCPDiag package.
+
+    Args:
+      name: Name of the tarball build rule.
+      ocpdiag_test: OCPDiag package.
+      **kwargs: Additional args to pass to the pkg_tar rule.
+    """
+    _, test_name = _parse_label(ocpdiag_test)
+    ovss_prefix = "export/hda3/ocpdiag/%s" % test_name
+    pkg_tar(
+        name = name,
+        srcs = [ocpdiag_test],
+        mode = "0755",
+        package_dir = ovss_prefix,
+        out = "%s.tar" % test_name,
+        **kwargs
+    )
+
+def ocpdiag_ovss_debian(
+        name,
+        test_name,
+        binary,
+        version,
+        description,
+        params_proto = _DEFAULT_PROTO,
+        json_defaults = None):
+    """Packages a ocpdiag binary into debian packages for release in OVSS.
+
+    This creates the payload package containing the binary and runfiles themselves and
+    the pointer package, which contains a dependency on the payload package and exists
+    to be included in OVSS release bundles.
+
+    Args:
+      name: Name of debian package build rule.
+      test_name: The name of the OCPDiag test.
+      binary: The executable program for the ocpdiag test, including all data deps.
+      version: The version string, in the form X.X.X.
+      description: The description for the debian package.
+      params_proto: The proto_library rule for the input parameters, if any.
+      json_defaults: Optional JSON file with default values for the params.
+    """
+    pointer_name = "%s_pointer" % name
+    _ocpdiag_ovss_pointer_debian(
+        name = pointer_name,
+        test_name = test_name,
+        description = description,
+        version = version,
+    )
+    payload_name = "%s_payload" % name
+    _ocpdiag_ovss_payload_debian(
+        name = payload_name,
+        test_name = test_name,
+        binary = binary,
+        version = version,
+        description = description,
+        params_proto = params_proto,
+        json_defaults = json_defaults,
+    )
+    master_rule(
+        name = name,
+        dep_rule_1 = ":" + pointer_name,
+        dep_rule_2 = ":" + payload_name,
+    )
+
+def _ocpdiag_ovss_pointer_debian(name, test_name, description, version):
+    """Creates a debian pointer package with a dependency on the payload package.
+
+    Args:
+      name: Name of debian pointer package build rule.
+      test_name: The name of the OCPDiag test.
+      description: The description for the debian package.
+      version: The version string, in the form X.X.X. This version should match
+        the version of the payload bundle.
+    """
+    test_name = test_name.replace("_", "-")
+
+    #
+    architecture = "amd64"
+    empty_tar = "_ocpdiag_test_pkg_%s_empty_tar" % name
+    pkg_tar(
+        name = empty_tar,
+        extension = "tar.gz",
+        visibility = ["//visibility:private"],
+    )
+
+    pkg_deb(
+        name = name,
+        data = empty_tar,
+        maintainer = "ocpdiag-core-team@google.com",
+        package = test_name,
+        architecture = architecture,
+        depends = ["%s-%s" % (test_name, version)],
+        version = version,
+        description = description,
+        visibility = ["//visibility:private"],
+    )
+
+def _ocpdiag_ovss_payload_debian(
+        name,
+        test_name,
+        binary,
+        version,
+        description,
+        params_proto = _DEFAULT_PROTO,
+        json_defaults = None):
+    """Creates a debian payload package containing the test binary and run files.
+
+    Args:
+      name: Name of debian package build rule.
+      test_name: The name of the OCPDiag test.
+      binary: The executable program for the ocpdiag test, including all data deps.
+      version: The version string, in the form X.X.X.
+      description: The description for the debian package.
+      params_proto: The proto_library rule for the input parameters, if any.
+      json_defaults: Optional JSON file with default values for the params.
+    """
+    test_name = test_name.replace("_", "-")
+    ovss_prefix = "opt/ovss/v1/versions/%s/%s" % (test_name, version)
+    descriptors = "_ocpdiag_test_pkg_%s_descriptors" % name
+    descriptor_label = ":%s" % descriptors
+    descriptor_set(
+        name = descriptors,
+        deps = [params_proto],
+        visibility = ["//visibility:private"],
+    )
+
+    launcher = "_ocpdiag_test_pkg_%s_launcher" % name
+    launcher_label = ":%s" % launcher
+    ocpdiag_launcher(
+        name = launcher,
+        binary = binary,
+        descriptors = descriptor_label,
+        defaults = json_defaults,
+        visibility = ["//visibility:private"],
+    )
+
+    runfiles_dir = "%s.runfiles" % test_name
+    launcher_path = "%s/%s" % _parse_label(launcher_label)
+
+    binary_symlink_name = "%s/%s" % (ovss_prefix, test_name)
+    symlinks = {binary_symlink_name: "%s/google3/%s" % (runfiles_dir, launcher_path)}
+    if json_defaults:
+        defaults_path = "%s/%s" % _parse_label(json_defaults)
+        json_symlink_name = "%s/%s.json" % (ovss_prefix, test_name)
+        symlinks[json_symlink_name] = "%s/google3/%s" % (runfiles_dir, defaults_path)
+
+    runfiles = "_%s_runfiles" % name
+    runfiles_label = ":%s" % runfiles
+    pkg_tar_runfiles(
+        name = runfiles,
+        srcs = [launcher],
+        runfiles_prefix = runfiles_dir,
+        visibility = ["//visibility:private"],
+    )
+
+    data_tar = "_ocpdiag_test_pkg_%s_data_tar" % name
+    pkg_tar(
+        name = data_tar,
+        extension = "tar.gz",
+        srcs = [runfiles_label],
+        mode = "0755",
+        package_dir = ovss_prefix,
+        symlinks = symlinks,
+        visibility = ["//visibility:private"],
+    )
+
+    #
+    architecture = "amd64"
+    pkg_deb(
+        name = name,
+        data = data_tar,
+        maintainer = "ocpdiag-core-team@google.com",
+        package = "%s-%s" % (test_name, version),
+        architecture = architecture,
+        version = "0.0",
+        description = description,
+        visibility = ["//visibility:private"],
+    )
 
 def join_paths(path, *others):
     return paths.normalize(paths.join(path, *others))

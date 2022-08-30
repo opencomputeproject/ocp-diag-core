@@ -1,16 +1,8 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
 
 #include "ocpdiag/core/params/ocpdiag_parameter_parser.h"
 
@@ -107,7 +99,7 @@ google::protobuf::Message* GetMessageMember(google::protobuf::Message* message,
 // and at the given index if it's repeated.
 absl::Status AssignValue(google::protobuf::Message* message,
                          const google::protobuf::FieldDescriptor* field,
-                         absl::optional<size_t> index, absl::string_view text) {
+                         std::optional<size_t> index, absl::string_view text) {
   const google::protobuf::Reflection* reflection = message->GetReflection();
   // Assigning an empty string clears the entry.
   if (text.empty()) {
@@ -180,6 +172,7 @@ absl::Status AssignValue(google::protobuf::Message* message,
     }
     case ::google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE: {
       google::protobuf::Message* value = GetMessageMember(message, field, index);
+      value->Clear();
       if (absl::Status parse = AsAbslStatus(
               google::protobuf::util::JsonStringToMessage(std::string(text), value));
           !parse.ok()) {
@@ -256,7 +249,7 @@ absl::Status AssignPath(google::protobuf::Message* root, absl::string_view path,
                         absl::string_view value) {
   google::protobuf::Message* message = nullptr;
   const google::protobuf::FieldDescriptor* field = nullptr;
-  absl::optional<size_t> index;
+  std::optional<size_t> index;
   google::protobuf::Message* next = root;
   for (absl::string_view name :
        absl::StrSplit(path, '.', absl::SkipWhitespace())) {
