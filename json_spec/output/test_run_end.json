@@ -6,7 +6,7 @@
     "properties": {
         "status": {
             "description": "TODO: link to md doc",
-            "$ref": "#/$defs/testStatus"
+            "$ref": "/opencomputeproject/ocp-diag-core/testStatus"
         },
         "result": {
             "description": "TODO: link to md doc",
@@ -18,15 +18,6 @@
         "result"
     ],
     "$defs": {
-        "testStatus": {
-            "description": "TODO: link to md doc",
-            "type": "string",
-            "enum": [
-                "COMPLETE",
-                "ERROR",
-                "SKIP"
-            ]
-        },
         "testResult": {
             "description": "TODO: link to md doc",
             "type": "string",

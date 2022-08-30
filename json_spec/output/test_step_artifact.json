@@ -26,6 +26,17 @@
         },
         {
             "properties": {
+                "testStepEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepEnd"
+                }
+            },
+            "required": [
+                "testStepEnd"
+            ]
+        },
+        {
+            "properties": {
                 "error": {
                     "description": "TODO: link to md",
                     "$ref": "/opencomputeproject/ocp-diag-core/error"

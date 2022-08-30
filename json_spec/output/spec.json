@@ -76,9 +76,6 @@
                     "description": "...",
                     "type": "string"
                 },
-                "testStepEnd": {
-                    "$ref": "#/$defs/testStepEnd"
-                },
                 "error": {
                     "description": "TODO: link to md",
                     "$ref": "/opencomputeproject/ocp-diag-core/error"
@@ -107,12 +104,6 @@
                 }
             },
             "oneOf": [
-                {
-                    "required": [
-                        "testStepId",
-                        "testStepEnd"
-                    ]
-                },
                 {
                     "required": [
                         "testStepId",
@@ -161,36 +152,6 @@
                         "file"
                     ]
                 }
-            ]
-        },
-        "testStepEnd": {
-            "properties": {
-                "name": {
-                    "description": "Name of this test step",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "Status of this test",
-                    "type": "string",
-                    "enum": [
-                        "UNKNOWN",
-                        "COMPLETE",
-                        "ERROR",
-                        "SKIPPED"
-                    ]
-                },
-                "timestampMs": {
-                    "description": "Timestamp, ms precision",
-                    "type": "string",
-                    "format": "date-time"
-                },
-                "additionalDetails": {
-                    "$ref": "/opencomputeproject/ocp-diag-core/extensions/step_details#/$defs/stepDetails"
-                }
-            },
-            "required": [
-                "name",
-                "status"
             ]
         }
     }

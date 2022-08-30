@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testStepEnd",
+    "title": "Test step end",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "status": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/testStatus"
+        }
+    },
+    "required": [
+        "status"
+    ]
+}

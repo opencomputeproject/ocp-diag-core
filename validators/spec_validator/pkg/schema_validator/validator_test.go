@@ -346,6 +346,22 @@ func TestStepStartSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStepEndSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepEnd": {
+				"status": "COMPLETE"
+			},
+			"testStepId": "22"
+		},
+		"sequenceNumber": 200,
+		"timestamp": "2022-07-25T04:54:41.292679Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 
