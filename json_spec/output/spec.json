@@ -63,8 +63,8 @@
           "$ref": "/opencomputeproject/ocp-diag-core/log"
         },
         "error": {
-          "description": "Test run error",
-          "$ref": "#/$defs/error"
+          "description": "TODO: link to md",
+          "$ref": "/opencomputeproject/ocp-diag-core/error"
         },
         "meta": {
           "description": "Output meta info. Expected to be the first message",
@@ -107,9 +107,11 @@
           "$ref": "#/$defs/testStepEnd"
         },
         "error": {
-          "$ref": "#/$defs/error"
+          "description": "TODO: link to md",
+          "$ref": "/opencomputeproject/ocp-diag-core/error"
         },
         "log": {
+          "description": "TODO: link to md",
           "$ref": "/opencomputeproject/ocp-diag-core/log"
         },
         "measurement": {
@@ -192,25 +194,6 @@
             "file"
           ]
         }
-      ]
-    },
-    "error": {
-      "properties": {
-        "source": {
-          "description": "Software that raise the error",
-          "type": "string"
-        },
-        "message": {
-          "description": "Error messages",
-          "type": "string"
-        },
-        "symptom": {
-          "description": "...",
-          "type": "string"
-        }
-      },
-      "required": [
-        "message"
       ]
     },
     "testRunStart": {
