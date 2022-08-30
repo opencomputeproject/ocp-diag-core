@@ -59,6 +59,17 @@
         },
         {
             "properties": {
+                "measurementSeriesEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/measurementSeriesEnd"
+                }
+            },
+            "required": [
+                "measurementSeriesEnd"
+            ]
+        },
+        {
+            "properties": {
                 "error": {
                     "description": "TODO: link to md",
                     "$ref": "/opencomputeproject/ocp-diag-core/error"
