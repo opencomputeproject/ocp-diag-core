@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/validator",
+    "title": "Measurement validator",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "name": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "type": {
+            "description": "TODO: link to md doc",
+            "$ref": "#/$defs/type"
+        },
+        "value": {
+            "description": "TODO: link to md doc",
+            "type": [
+                "string",
+                "boolean",
+                "number"
+            ]
+        },
+        "metadata": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "type",
+        "value"
+    ],
+    "$defs": {
+        "type": {
+            "description": "TODO: link to md doc",
+            "type": "string",
+            "enum": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "LESS_THAN",
+                "LESS_THAN_OR_EQUAL",
+                "GREATER_THAN",
+                "GREATER_THAN_OR_EQUAL",
+                "REGEX_MATCH",
+                "REGEX_NO_MATCH",
+                "IN_SET",
+                "NOT_IN_SET"
+            ]
+        }
+    }
+}
