@@ -400,6 +400,44 @@ func TestMeasurementWithValidatorSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestMeasurementSeriesStartSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurementSeriesStart": {
+				"measurementSeriesId": "0",
+				"name": "measured-fan-speed-100",
+				"unit": "RPM",
+				"hardwareInfoId": "5",
+				"subcomponent": {
+					"name": "FAN1",
+					"location": "F0_1",
+					"version": "1",
+					"revision": "1",
+					"type": "UNSPECIFIED"
+				},
+				"validators": [
+					{
+						"name": "80mm_fan_upper_limit",
+						"type": "LESS_THAN_OR_EQUAL",
+						"value": 11000.0
+					},
+					{
+						"name": "80mm_fan_lower_limit",
+						"type": "GREATER_THAN_OR_EQUAL",
+						"value": 8000.0
+					}
+				]
+			},
+			"testStepId": "33"
+		},
+		"sequenceNumber": 300,
+		"timestamp": "2022-07-26T02:04:02.083679Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

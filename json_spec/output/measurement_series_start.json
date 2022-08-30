@@ -1,0 +1,43 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/measurementSeriesStart",
+    "title": "Measurement series start",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "name": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "unit": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "measurementSeriesId": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "validators": {
+            "description": "TODO: link to md doc",
+            "type": "array",
+            "items": {
+                "$ref": "/opencomputeproject/ocp-diag-core/validator"
+            }
+        },
+        "hardwareInfoId": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "subcomponent": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/subcomponent"
+        },
+        "metadata": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "name",
+        "measurementSeriesId"
+    ]
+}
