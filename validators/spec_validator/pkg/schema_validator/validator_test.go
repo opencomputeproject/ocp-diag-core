@@ -233,6 +233,27 @@ func TestStepDiagnosisSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStepExtensionSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"extension": {
+				"name": "extension example",
+				"content": {
+					"@type": "ExampleExtension",
+					"stringField": "example string",
+					"numberField": "42"
+				}
+			},
+			"testStepId": "2321"
+		},
+		"sequenceNumber": 600,
+		"timestamp": "2022-07-26T02:34:06.249683Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

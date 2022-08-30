@@ -4,50 +4,66 @@
     "title": "Step artifact",
     "description": "TODO: link to md doc",
     "properties": {
-        "error": {
+        "testStepId": {
             "description": "TODO: link to md",
-            "$ref": "/opencomputeproject/ocp-diag-core/error"
-        },
-        "log": {
-            "description": "TODO: link to md",
-            "$ref": "/opencomputeproject/ocp-diag-core/log"
-        },
-        "diagnosis": {
-            "description": "TODO: link to md",
-            "$ref": "/opencomputeproject/ocp-diag-core/diagnosis"
-        },
-        "file": {
-            "$ref": "#/$defs/file"
+            "type": "string"
         }
     },
-    "allOf": [
+    "required": [
+        "testStepId"
+    ],
+    "oneOf": [
         {
+            "properties": {
+                "error": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/error"
+                }
+            },
             "required": [
-                "testStepId"
+                "error"
             ]
         },
         {
-            "oneOf": [
-                {
-                    "required": [
-                        "error"
-                    ]
-                },
-                {
-                    "required": [
-                        "log"
-                    ]
-                },
-                {
-                    "required": [
-                        "diagnosis"
-                    ]
-                },
-                {
-                    "required": [
-                        "file"
-                    ]
+            "properties": {
+                "log": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/log"
                 }
+            },
+            "required": [
+                "log"
+            ]
+        },
+        {
+            "properties": {
+                "diagnosis": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/diagnosis"
+                }
+            },
+            "required": [
+                "diagnosis"
+            ]
+        },
+        {
+            "properties": {
+                "file": {
+                    "$ref": "#/$defs/file"
+                }
+            },
+            "required": [
+                "file"
+            ]
+        },
+        {
+            "properties": {
+                "extension": {
+                    "$ref": "#/$defs/extension"
+                }
+            },
+            "required": [
+                "extension"
             ]
         }
     ],
@@ -85,6 +101,22 @@
                 "displayName",
                 "uri",
                 "isSnapshot"
+            ]
+        },
+        "extension": {
+            "properties": {
+                "name": {
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "content": {
+                    "description": "TODO: link to md",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "name",
+                "content"
             ]
         }
     }
