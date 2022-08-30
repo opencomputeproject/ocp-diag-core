@@ -16,6 +16,10 @@
             "type": "string",
             "format": "date-time"
         },
+        "schemaVersion": {
+            "description": "TODO: link to spec md link",
+            "$ref": "#/$defs/schemaVersion"
+        },
         "testRunArtifact": {
             "description": "Test run artifact",
             "$ref": "#/$defs/testRunArtifact"
@@ -36,6 +40,11 @@
             "oneOf": [
                 {
                     "required": [
+                        "schemaVersion"
+                    ]
+                },
+                {
+                    "required": [
                         "testRunArtifact"
                     ]
                 },
@@ -48,6 +57,20 @@
         }
     ],
     "$defs": {
+        "schemaVersion": {
+            "properties": {
+                "major": {
+                    "const": 2
+                },
+                "minor": {
+                    "const": 0
+                }
+            },
+            "required": [
+                "major",
+                "minor"
+            ]
+        },
         "testRunArtifact": {
             "properties": {
                 "testRunStart": {

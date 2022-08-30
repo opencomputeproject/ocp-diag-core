@@ -7,36 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func xTestValidateBytesSimpleRunArtifact(t *testing.T) {
+func TestSchemaVersion(t *testing.T) {
 	json := `{
-		"testRunArtifact": {
-			"log": {
-				"text": "log text",
-				"timestampMs": 0,
-				"severity": "INFO"
-			},
-			"meta": {
-				"version": "0.0"
-			}
+		"schemaVersion": {
+			"major": 2,
+			"minor": 0
 		},
-
 		"sequenceNumber": 0,
-		"timestamp": "2021-10-19T22:59:20+00:00"
-	}`
-
-	err := validateString(t, json)
-	require.NoError(t, err)
-}
-
-func xTestValidateBytesSimpleStepArtifact(t *testing.T) {
-	json := `{
-		"testStepArtifact": {
-			"testStepId": "1",
-			"error": {
-				"message": "some error"
-			}
-		},
-		"sequenceNumber": 42,
 		"timestamp": "2021-10-19T22:59:20+00:00"
 	}`
 
@@ -118,23 +95,18 @@ func xTestValidateBytesComplexRunArtifact(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func xTestValidateBytesInvalid(t *testing.T) {
+func TestValidateBytesInvalid(t *testing.T) {
 	json := `{
 		"testRunArtifact": {
 			"log": {
 				"text": "log text",
-				"timestampMs": 0,
 				"severity": "INFO"
-			},
-			"meta": {
-				"version": "0.0"
 			}
 		},
 		"testStepArtifact": {
 			"testStepId": "1",
 			"log": {
 				"text": "log text",
-				"timestampMs": 0,
 				"severity": "INFO"
 			}
 		},
