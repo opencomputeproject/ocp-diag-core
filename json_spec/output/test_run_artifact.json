@@ -17,6 +17,17 @@
         },
         {
             "properties": {
+                "testRunEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testRunEnd"
+                }
+            },
+            "required": [
+                "testRunEnd"
+            ]
+        },
+        {
+            "properties": {
                 "log": {
                     "description": "TODO: link to md",
                     "$ref": "/opencomputeproject/ocp-diag-core/log"

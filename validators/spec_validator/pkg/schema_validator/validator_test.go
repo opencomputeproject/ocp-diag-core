@@ -314,6 +314,22 @@ func TestRunStartSimple(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRunEndSimple(t *testing.T) {
+	json := `{
+		"testRunArtifact": {
+			"testRunEnd": {
+				"status": "COMPLETE",
+				"result": "PASS"
+			}
+		},
+		"sequenceNumber": 100,
+		"timestamp": "2022-07-25T04:49:25.262947Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
 	const schema string = "../../../../json_spec/output/spec.json"
 

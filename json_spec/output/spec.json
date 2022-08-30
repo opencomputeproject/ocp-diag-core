@@ -70,48 +70,6 @@
                 "minor"
             ]
         },
-        "testRunArtifact": {
-            "properties": {
-                "testRunStart": {
-                    "description": "Test run start",
-                    "$ref": "#/$defs/testRunStart"
-                },
-                "testRunEnd": {
-                    "description": "Test run end",
-                    "$ref": "#/$defs/testRunEnd"
-                },
-                "log": {
-                    "description": "TODO: link to md",
-                    "$ref": "/opencomputeproject/ocp-diag-core/log"
-                },
-                "error": {
-                    "description": "TODO: link to md",
-                    "$ref": "/opencomputeproject/ocp-diag-core/error"
-                }
-            },
-            "oneOf": [
-                {
-                    "required": [
-                        "testRunStart"
-                    ]
-                },
-                {
-                    "required": [
-                        "testRunEnd"
-                    ]
-                },
-                {
-                    "required": [
-                        "log"
-                    ]
-                },
-                {
-                    "required": [
-                        "error"
-                    ]
-                }
-            ]
-        },
         "testStepArtifact": {
             "properties": {
                 "testStepId": {
@@ -212,39 +170,6 @@
                         "file"
                     ]
                 }
-            ]
-        },
-        "testRunEnd": {
-            "properties": {
-                "name": {
-                    "description": "Name of this test",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "Status of this test",
-                    "type": "string",
-                    "enum": [
-                        "UNKNOWN",
-                        "COMPLETE",
-                        "ERROR",
-                        "SKIPPED"
-                    ]
-                },
-                "result": {
-                    "description": "Result of this test",
-                    "type": "string",
-                    "enum": [
-                        "NOT_APPLICABLE",
-                        "PASS",
-                        "FAIL",
-                        "CONFIGURABLE"
-                    ]
-                }
-            },
-            "required": [
-                "name",
-                "status",
-                "result"
             ]
         },
         "testStepStart": {
