@@ -26,6 +26,7 @@
 namespace ocpdiag {
 namespace params {
 
+// asdf
 absl::StatusOr<ParamsCleanup> FakeParams(const google::protobuf::Message& params) {
   const std::string type_prefix = "type.googleapis.com";
   const std::string type_url =
