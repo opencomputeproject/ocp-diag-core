@@ -104,7 +104,6 @@ class TestRun : public internal::LoggerInterface {
 #endif
   ~TestRun() override { End(); }
 
-  //
   // Returns a TestRun object if successful. This is meant to be called only
   // once per test, and will fail if called a second time. `name`: a descriptive
   // name for your test.
@@ -175,7 +174,6 @@ class TestRun : public internal::LoggerInterface {
   internal::ArtifactWriter& GetWriter() { return writer_; }
 
  private:
-  friend ResultApi;
   friend testonly::FakeResultApi;
   friend testonly::FakeTestRun;
   //
@@ -214,7 +212,6 @@ class TestStep
 #endif
   ~TestStep() override { End(); }
 
-  //
   // Factory to create a TestStep. Emits a TestStepStart artifact if successful.
   static absl::StatusOr<TestStep> Begin(TestRun*, std::string name);
 
@@ -293,7 +290,6 @@ class TestStep
       const ocpdiag::results_pb::MeasurementElement&);
 
  private:
-  friend ResultApi;
   friend testonly::FakeTestStep;
   //
   friend internal::ResultsTest;
@@ -409,7 +405,6 @@ class MeasurementSeries {
 #endif
   virtual ~MeasurementSeries() { End(); }
 
-  //
   // Factory method to create a MeasurementSeries. Emits a
   // MeasurementSeriesStart artifact if successful.
   static absl::StatusOr<MeasurementSeries> Begin(
@@ -442,7 +437,6 @@ class MeasurementSeries {
   std::string Id() const { return series_id_; }
 
  private:
-  friend ResultApi;
   friend testonly::FakeMeasurementSeries;
   //
   friend internal::ResultsTest;

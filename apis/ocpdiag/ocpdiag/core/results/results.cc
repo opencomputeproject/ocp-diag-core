@@ -165,97 +165,27 @@ class MergedTypeResolver final : public google::protobuf::util::TypeResolver {
 
 }  // namespace
 
-// Note: this method is overridden in FakeResultApi to remove
+// Note: this method is overridden in FakeResultApi to allow
 // multi-initialization.
 absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
     std::string name) {
-  static bool initialized = false;
-  if (initialized) {
-    static constexpr absl::string_view kMessage =
-        "OCPDiag TestRun already initialized.";
-    std::cerr << kMessage << std::endl;
-    return absl::AlreadyExistsError(kMessage);
-  }
-  initialized = true;
-  absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
-      absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
-  if (!fd.ok()) {
-    return fd.status();
-  }
-  std::ostream* stream =
-      absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout) ? &std::cout : nullptr;
-  return absl::WrapUnique(new TestRun(
-      std::move(name), internal::ArtifactWriter(fd.value(), stream)));
+  ASSIGN_OR_RETURN(TestRun test_run, TestRun::Init(name));
+  return std::make_unique<TestRun>(std::move(test_run));
 }
 
 absl::StatusOr<std::unique_ptr<TestStep>> ResultApi::BeginTestStep(
     TestRun* parent, std::string name) {
-  if (parent == nullptr) {
-    return absl::InvalidArgumentError("TestRun argument cannot be null");
-  }
-  if (!parent->Started()) {
-    return absl::FailedPreconditionError(
-        "TestSteps cannot be created until the TestRun has started, nor after "
-        "TestRun has ended.");
-  }
-
-  // Emit TestStepStart artifact
-  std::string id = parent->GenerateID();
-  internal::ArtifactWriter& writer = parent->GetWriter();
-  rpb::TestStepStart start_pb;
-  start_pb.set_name(name);
-  rpb::TestStepArtifact step_pb;
-  *step_pb.mutable_test_step_start() = std::move(start_pb);
-  step_pb.set_test_step_id(id);
-  rpb::OutputArtifact out;
-  *out.mutable_test_step_artifact() = std::move(step_pb);
-  writer.Write(out);
-  writer.Flush();
-
-  return absl::WrapUnique(new TestStep(parent, id, name, writer));
+  ASSIGN_OR_RETURN(TestStep test_step, TestStep::Begin(parent, name));
+  return std::make_unique<TestStep>(std::move(test_step));
 }
 
 absl::StatusOr<std::unique_ptr<MeasurementSeries>>
 ResultApi::BeginMeasurementSeries(
     TestStep* parent, const HwRecord& hw,
     ocpdiag::results_pb::MeasurementInfo info) {
-  if (parent == nullptr) {
-    return absl::InvalidArgumentError("'TestStep' argument cannot be null");
-  }
-  if (parent->Ended()) {
-    return absl::FailedPreconditionError(
-        "MeasurementSeries cannot be started after the parent TestStep has "
-        "ended");
-  }
-
-  std::string id = hw.Data().hardware_info_id();
-  internal::ArtifactWriter& writer = parent->GetWriter();
-  if (!writer.IsHwRegistered(id)) {
-    std::string msg = absl::StrFormat(
-        "The MeasurementSeries (%s) is ill-formed; the associated hardware "
-        "info is not registered with the TestRun: %s",
-        info.DebugString(), hw.Data().DebugString());
-    // This is considered a procedural test error.
-    parent->AddError(kSympUnregHw, msg, {});
-  }
-  info.set_hardware_info_id(hw.Data().hardware_info_id());
-
-  // Emit MeasurementSeriesBegin artifact
-  std::string series_id = parent->GenerateID();
-  std::string step_id = parent->Id();
-  rpb::MeasurementSeriesStart ms_pb;
-  ms_pb.set_measurement_series_id(series_id);
-  *ms_pb.mutable_info() = info;
-  rpb::TestStepArtifact step_pb;
-  *step_pb.mutable_measurement_series_start() = std::move(ms_pb);
-  step_pb.set_test_step_id(step_id);
-  rpb::OutputArtifact out_pb;
-  *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer.Write(out_pb);
-  writer.Flush();
-
-  return absl::WrapUnique(
-      new MeasurementSeries(parent, step_id, series_id, writer, info));
+  ASSIGN_OR_RETURN(MeasurementSeries series,
+                   MeasurementSeries::Begin(parent, hw, info));
+  return std::make_unique<MeasurementSeries>(std::move(series));
 }
 
 absl::StatusOr<TestRun> TestRun::Init(std::string name) {
@@ -924,6 +854,7 @@ absl::StatusOr<MeasurementSeries> MeasurementSeries::Begin(
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
   writer.Write(out_pb);
+  writer.Flush();
 
   return MeasurementSeries(parent, step_id, series_id, writer, info);
 }
