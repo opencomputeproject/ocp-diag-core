@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 load("//ocpdiag:python.bzl", "pytype_strict_library", pytype_strict_test = "pytype_strict_contrib_test")
+load("//ocpdiag:params_version.bzl", "get_params_version_command")
 
 licenses(["notice"])
 
@@ -41,10 +42,10 @@ cc_library(
 )
 
 genrule(
-    name = "version_header",
-    srcs = ["ocpdiag_version.txt"],
+    name = "version_file",
     outs = ["utils_version.h"],
-    cmd = """cat >$@ <(echo -n 'constexpr char kVersionString[] = R"ENDOFVERSION(') $< <(echo ')ENDOFVERSION";')""",
+    cmd = get_params_version_command(),
+    stamp = 1,
     visibility = ["//visibility:private"],
 )
 
