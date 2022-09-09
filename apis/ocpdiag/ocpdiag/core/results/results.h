@@ -104,11 +104,6 @@ class TestRun : public internal::LoggerInterface {
 #endif
   ~TestRun() override { End(); }
 
-  // Returns a TestRun object if successful. This is meant to be called only
-  // once per test, and will fail if called a second time. `name`: a descriptive
-  // name for your test.
-  static absl::StatusOr<TestRun> Init(std::string name);
-
   // Emits a TestRunStart artifact and registers the DutInfos.
   // No additional DutInfos can be registered after this point.
   virtual void StartAndRegisterInfos(
@@ -174,10 +169,17 @@ class TestRun : public internal::LoggerInterface {
   internal::ArtifactWriter& GetWriter() { return writer_; }
 
  private:
+  friend ResultApi;  // only they can construct us
   friend testonly::FakeResultApi;
   friend testonly::FakeTestRun;
   //
   friend internal::ResultsTest;
+
+  // Returns a TestRun object if successful. This is meant to be called only
+  // once per test, and will fail if called a second time. `name`: a descriptive
+  // name for your test.
+  static absl::StatusOr<TestRun> Init(std::string name);
+
 #ifndef SWIG
   TestRun(std::string name, internal::ArtifactWriter writer);
   enum class RunState { kNotStarted, kInProgress, kEnded };
@@ -206,9 +208,6 @@ class TestStep : public internal::LoggerInterface {
   TestStep& operator=(TestStep&&);
 #endif
   ~TestStep() override { End(); }
-
-  // Factory to create a TestStep. Emits a TestStepStart artifact if successful.
-  static absl::StatusOr<TestStep> Begin(TestRun*, std::string name);
 
   // Emits a Diagnosis artifact. A FAIL type also sets TestRun result to FAIL,
   // unless an Error artifact has been emitted before this.
@@ -285,9 +284,14 @@ class TestStep : public internal::LoggerInterface {
       const ocpdiag::results_pb::MeasurementElement&);
 
  private:
+  friend ResultApi;  // only they can construct us
   friend testonly::FakeTestStep;
   //
   friend internal::ResultsTest;
+
+  // Factory to create a TestStep. Emits a TestStepStart artifact if successful.
+  static absl::StatusOr<TestStep> Begin(TestRun*, std::string name);
+
   TestStep(TestRun* parent, std::string id, std::string name,
            internal::ArtifactWriter,
            std::unique_ptr<internal::FileHandler> file_handler =
@@ -400,12 +404,6 @@ class MeasurementSeries {
 #endif
   virtual ~MeasurementSeries() { End(); }
 
-  // Factory method to create a MeasurementSeries. Emits a
-  // MeasurementSeriesStart artifact if successful.
-  static absl::StatusOr<MeasurementSeries> Begin(
-      TestStep*, const HwRecord&,
-      ocpdiag::results_pb::MeasurementInfo);
-
   // Emits a MeasurementElement artifact with valid range limit.
   // Acceptable Value kinds: string, number
   virtual void AddElementWithRange(
@@ -432,9 +430,17 @@ class MeasurementSeries {
   std::string Id() const { return series_id_; }
 
  private:
+  friend ResultApi;  // only they can construct us
   friend testonly::FakeMeasurementSeries;
   //
   friend internal::ResultsTest;
+
+  // Factory method to create a MeasurementSeries. Emits a
+  // MeasurementSeriesStart artifact if successful.
+  static absl::StatusOr<MeasurementSeries> Begin(
+      TestStep*, const HwRecord&,
+      ocpdiag::results_pb::MeasurementInfo);
+
   MeasurementSeries(TestStep* parent, std::string step_id,
                     std::string series_id, internal::ArtifactWriter,
                     ocpdiag::results_pb::MeasurementInfo);

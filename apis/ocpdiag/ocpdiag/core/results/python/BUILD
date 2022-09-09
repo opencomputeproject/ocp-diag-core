@@ -33,7 +33,6 @@ pytype_pybind_extension(
     deps = [
         "//ocpdiag/core/results",
         "//ocpdiag/core/results:results_cc_proto",
-        "//ocpdiag/core/results/internal:logging",
         "@com_google_absl//absl/flags:flag",
         "@pybind11_abseil//pybind11_abseil:absl_casters",
         "@pybind11_abseil//pybind11_abseil:status_casters",

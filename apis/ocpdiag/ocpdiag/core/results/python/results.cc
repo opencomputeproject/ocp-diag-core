@@ -11,7 +11,6 @@
 #include "google/protobuf/empty.pb.h"
 #include "google/protobuf/struct.pb.h"
 #include "absl/flags/flag.h"
-#include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "pybind11_abseil/absl_casters.h"
 #include "pybind11_abseil/status_casters.h"
@@ -39,7 +38,12 @@ PYBIND11_MODULE(_results, m) {
   m.def("SetResultsLibFlags", &SetFlags);
 
   m.doc() = "Bindings for the OCPDiag results library";
-  m.def("InitTestRun", &TestRun::Init);
+  m.def(
+      "InitTestRun",
+      [](const std::string& name) {
+        return ResultApi().InitializeTestRun(name);
+      },
+      pybind11::arg("name"));
   pybind11::class_<TestRun>(m, "TestRun")
       .def("StartAndRegisterInfos",
            WithWrappedProtos([](TestRun& a, absl::Span<const DutInfo> dutinfos,
@@ -67,7 +71,12 @@ PYBIND11_MODULE(_results, m) {
       .def("LogError", &TestRun::LogError)
       .def("LogFatal", &TestRun::LogFatal);
 
-  m.def("BeginTestStep", &TestStep::Begin);
+  m.def(
+      "BeginTestStep",
+      [](TestRun* parent, std::string name) {
+        return ResultApi().BeginTestStep(parent, name);
+      },
+      pybind11::arg("parent"), pybind11::arg("name"));
 
   pybind11::class_<TestStep>(m, "TestStep")
       .def(
@@ -114,7 +123,14 @@ PYBIND11_MODULE(_results, m) {
   pybind11::class_<SwRecord>(m, "SwRecord")
       .def("Data", WithWrappedProtos(&SwRecord::Data));
 
-  m.def("BeginMeasurementSeries", WithWrappedProtos(&MeasurementSeries::Begin));
+  m.def("BeginMeasurementSeries",
+        WithWrappedProtos(
+            [](TestStep* parent, const HwRecord& hwrecord,
+               ocpdiag::results_pb::MeasurementInfo info) {
+              return ResultApi().BeginMeasurementSeries(parent, hwrecord, info);
+            }),
+        pybind11::arg("parent"), pybind11::arg("hwrecord"),
+        pybind11::arg("info"));
   pybind11::class_<MeasurementSeries>(m, "MeasurementSeries")
       .def(
           "AddElement",
