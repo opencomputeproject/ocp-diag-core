@@ -119,9 +119,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "pybind11_abseil",
-        url = "https://github.com/pybind/pybind11_abseil/archive/56cd3558cdf50b4873cdc7f6629c12135cf9e1f0.zip",  # 2022-07-15
-        strip_prefix = "pybind11_abseil-56cd3558cdf50b4873cdc7f6629c12135cf9e1f0",
-        sha256 = "263014813ff38944a4f16a5e5427974b8e5ac5f9db9bf2142537034bccc1ac61",
+        url = "https://github.com/pybind/pybind11_abseil/archive/0c45d0f5c804cd30bf59013ebcc09f6c1460bd87.zip",  # 2022-09-08
+        strip_prefix = "pybind11_abseil-0c45d0f5c804cd30bf59013ebcc09f6c1460bd87",
+        sha256 = "3df6de84ddfc9331c4d2a1a1c1e05283ac97176e596ba73dbb5cc7aa72756695",
     )
 
     maybe(
