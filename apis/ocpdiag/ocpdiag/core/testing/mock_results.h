@@ -213,6 +213,8 @@ class MockTestStep : public FakeTestStep {
   MOCK_METHOD(void, End, (), (override));
 
   MOCK_METHOD(void, Skip, (), (override));
+  MOCK_METHOD(ocpdiag::results_pb::TestStatus, Status, (),
+              (const override));
 
   MOCK_METHOD(void, LogDebug, (absl::string_view), (override));
   MOCK_METHOD(void, LogInfo, (absl::string_view), (override));

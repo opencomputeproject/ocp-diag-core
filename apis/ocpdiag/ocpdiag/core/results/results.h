@@ -266,7 +266,7 @@ class TestStep : public internal::LoggerInterface {
   bool Ended() const;
 
   // Returns current TestStep status
-  ocpdiag::results_pb::TestStatus Status() const;
+  virtual ocpdiag::results_pb::TestStatus Status() const;
 
   // Internal use only.
   std::string Id() const { return id_; }
