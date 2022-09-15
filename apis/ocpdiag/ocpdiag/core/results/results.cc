@@ -126,7 +126,7 @@ absl::Status CheckValueKind(const KindCase& k,
         absl::StrFormat(invalid_kind_msg, KindToString(k),
                         absl::StrJoin(valid, ", ", value_kind_formatter())));
   }
-  return absl::OkStatus();
+  return absl::UnknownError("DO NOT SUBMIT");
 }
 
 constexpr const char* kTypeUrlPrefix = "type.googleapis.com";
