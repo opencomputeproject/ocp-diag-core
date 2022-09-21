@@ -31,6 +31,8 @@
 ABSL_DECLARE_FLAG(bool, ocpdiag_copy_results_to_stdout);
 ABSL_DECLARE_FLAG(std::string, ocpdiag_results_filepath);
 ABSL_DECLARE_FLAG(std::string, machine_under_test);
+ABSL_DECLARE_FLAG(std::string, nodes_under_test);
+ABSL_DECLARE_FLAG(bool, alsologtoocpdiagresults);
 ABSL_DECLARE_FLAG(bool, ocpdiag_strict_reporting);
 
 namespace ocpdiag {

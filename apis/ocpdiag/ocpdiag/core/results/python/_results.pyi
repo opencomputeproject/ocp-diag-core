@@ -11,9 +11,13 @@ from google.protobuf import message
 from ocpdiag.core.results import results_pb2
 
 
-def SetResultsLibFlags(ocpdiag_copy_results_to_stdout: bool,
-                       ocpdiag_results_filepath: Text, machine_under_test: Text,
-                       ocpdiag_strict_reporting: bool) -> None:
+def SetResultsLibFlags(
+    ocpdiag_copy_results_to_stdout: bool,
+    ocpdiag_results_filepath: Text,
+    machine_under_test: Text,
+    alsologtoocpdiagresults: bool,
+    ocpdiag_strict_reporting: bool,
+) -> None:
   ...
 
 

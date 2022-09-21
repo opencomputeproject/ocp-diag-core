@@ -24,7 +24,8 @@ from absl import flags
 flags.DEFINE_boolean(
     'ocpdiag_copy_results_to_stdout',
     True,
-    'Prints human-readable result artifacts to stdout in addition to default output',
+    'Prints human-readable result artifacts to stdout in addition to default '
+    'output',
     allow_hide_cpp=True)
 flags.DEFINE_string(
     'ocpdiag_results_filepath',
@@ -34,12 +35,19 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     'machine_under_test',
     'local',
-    'Machine under test. If the test binary is running on the same machine as the machine under test, just keep the default \"local\".',
+    'Machine under test. If the test binary is running on the same machine as '
+    'the machine under test, just keep the default \"local\".',
     allow_hide_cpp=True)
 flags.DEFINE_boolean(
     'ocpdiag_strict_reporting',
-    True,
-    'Whether to require a global devpath to be reported in third_party.ocpdiag.results_pb.HardwareInfo',
+    True, 'Whether to require a global devpath to be reported in '
+    'third_party.ocpdiag.results_pb.HardwareInfo',
+    allow_hide_cpp=True)
+flags.DEFINE_boolean(
+    'alsologtoocpdiagresults',
+    False,
+    'If set to true, ABSL and Ecclesia logger will be also direct to OCPDiag '
+    'results other than ABSL default logging destination.',
     allow_hide_cpp=True)
 
 
@@ -47,8 +55,11 @@ flags.DEFINE_boolean(
 def _SetPybindFlags():
   SetResultsLibFlags(
       flags.FLAGS.ocpdiag_copy_results_to_stdout,
-      flags.FLAGS.ocpdiag_results_filepath, flags.FLAGS.machine_under_test,
-      flags.FLAGS.ocpdiag_strict_reporting)
+      flags.FLAGS.ocpdiag_results_filepath,
+      flags.FLAGS.machine_under_test,
+      flags.FLAGS.alsologtoocpdiagresults,
+      flags.FLAGS.ocpdiag_strict_reporting,
+  )
 
 
 app.call_after_init(_SetPybindFlags)

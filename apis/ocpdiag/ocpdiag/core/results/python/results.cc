@@ -21,11 +21,13 @@ namespace ocpdiag::results {
 void SetFlags(const bool ocpdiag_copy_results_to_stdout,
               const std::string ocpdiag_results_filepath,
               const std::string machine_under_test,
+              const bool alsologtoocpdiagresults,
               const bool ocpdiag_strict_reporting) {
   absl::SetFlag(&FLAGS_ocpdiag_copy_results_to_stdout,
                 ocpdiag_copy_results_to_stdout);
   absl::SetFlag(&FLAGS_ocpdiag_results_filepath, ocpdiag_results_filepath);
   absl::SetFlag(&FLAGS_machine_under_test, machine_under_test);
+  absl::SetFlag(&FLAGS_alsologtoocpdiagresults, alsologtoocpdiagresults);
   absl::SetFlag(&FLAGS_ocpdiag_strict_reporting, ocpdiag_strict_reporting);
 }
 

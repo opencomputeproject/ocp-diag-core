@@ -60,6 +60,10 @@ ABSL_FLAG(
     "Nodes under test. The list of nodes in the target machine to test. The "
     "default is \"\".");
 
+ABSL_FLAG(bool, alsologtoocpdiagresults, false,
+          "If set to true, also and Ecclesia logger will be directed to OCPDiag "
+          "results and ABSL default logging destination.");
+
 //
 ABSL_FLAG(bool, ocpdiag_strict_reporting, true,
           "Whether to require a global devpath to be reported in"
