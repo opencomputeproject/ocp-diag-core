@@ -21,6 +21,10 @@ def SetResultsLibFlags(
   ...
 
 
+def InitializeOCPDiagLogSink() -> None:
+  ...
+
+
 def InitTestRun(name: Text) -> TestRun:
   ...
 

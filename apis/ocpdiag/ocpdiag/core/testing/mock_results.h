@@ -39,8 +39,8 @@ class FakeResultApi : public ResultApi {
   // Allows unrestricted creation of TestRun objects.
   absl::StatusOr<std::unique_ptr<TestRun>> InitializeTestRun(
       std::string name) override {
-    return absl::WrapUnique(
-        new TestRun(std::move(name), internal::ArtifactWriter(-1)));
+    return absl::WrapUnique(new TestRun(
+        std::move(name), std::make_shared<internal::ArtifactWriter>(-1)));
   }
 };
 
@@ -87,7 +87,8 @@ class FakeTestRun : public TestRun {
   // `name`: a descriptive name for your test.
   // `json_out`: you may inject an output stream for artifact validation.
   FakeTestRun(std::string name, std::ostream* json_out = nullptr)
-      : TestRun(name, internal::ArtifactWriter(-1, json_out)) {}
+      : TestRun(name,
+                std::make_shared<internal::ArtifactWriter>(-1, json_out)) {}
 };
 
 // Standalone TestRun that can be created without the use of a ResultApi object.
@@ -173,7 +174,8 @@ class FakeTestStep : public TestStep {
   // `json_out`: you may inject an output stream for artifact validation.
   FakeTestStep(std::string name = "mock_test_step",
                std::ostream* json_out = nullptr)
-      : TestStep(nullptr, kFakeId, name, internal::ArtifactWriter(-1, json_out),
+      : TestStep(nullptr, kFakeId, name,
+                 std::make_shared<internal::ArtifactWriter>(-1, json_out),
                  absl::make_unique<internal::MockFileHandler>()) {}
 };
 
@@ -258,8 +260,9 @@ class FakeMeasurementSeries : public MeasurementSeries {
                         std::ostream* json_out = nullptr,
                         ocpdiag::results_pb::MeasurementInfo info =
                             ocpdiag::results_pb::MeasurementInfo{})
-      : MeasurementSeries(parent, kFakeId, kFakeId,
-                          internal::ArtifactWriter(-1, json_out), info) {}
+      : MeasurementSeries(
+            parent, kFakeId, kFakeId,
+            std::make_shared<internal::ArtifactWriter>(-1, json_out), info) {}
 };
 
 // Standalone MeasurementSeries that does not require some of the setup required
