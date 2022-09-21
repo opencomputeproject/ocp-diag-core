@@ -40,7 +40,9 @@ class ArtifactWriterStr {
 // resultstestpy.clif will wrap this class for python unit testing.
 class ResultsTest {
  public:
-  ResultsTest() : artifact_writer_(-1, &readable_output_) {}
+  ResultsTest()
+      : artifact_writer_(
+            std::make_shared<ArtifactWriter>(-1, &readable_output_)) {}
   static constexpr char kStepIdDefault[] = "0";
   TestRun InitializeTestRun(std::string name) {
     return TestRun(name, artifact_writer_);
@@ -60,12 +62,12 @@ class ResultsTest {
 
   void Reset() { readable_output_.str(""); }
 
-  void RegisterHwId(absl::string_view i) { artifact_writer_.RegisterHwId(i); }
-  void RegisterSwId(absl::string_view i) { artifact_writer_.RegisterSwId(i); }
+  void RegisterHwId(absl::string_view i) { artifact_writer_->RegisterHwId(i); }
+  void RegisterSwId(absl::string_view i) { artifact_writer_->RegisterSwId(i); }
 
  private:
   std::stringstream readable_output_;
-  ArtifactWriter artifact_writer_;
+  std::shared_ptr<ArtifactWriter> artifact_writer_;
 };
 
 }  // namespace internal

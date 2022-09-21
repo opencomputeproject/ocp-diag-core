@@ -39,6 +39,8 @@ PYBIND11_MODULE(_results, m) {
 
   m.def("SetResultsLibFlags", &SetFlags);
 
+  m.def("InitializeOCPDiagLogSink", &ResultApi::InitializeOCPDiagLogSink);
+
   m.doc() = "Bindings for the OCPDiag results library";
   m.def(
       "InitTestRun",
