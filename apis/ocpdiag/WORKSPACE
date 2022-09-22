@@ -21,8 +21,6 @@ load("//toolchain/cpp:configure_cc_toolchain.bzl", "configure_cc_toolchain")
 configure_cc_toolchain(name = "configure_gcc")
 
 register_toolchains(
-    "//toolchain/cpp:grte_toolchain",
-    "//toolchain/python:py3_6_exec_toolchain",
-    "//toolchain/python:py3_6_google_runtime_toolchain",
-    "//toolchain/python:py3_8_toolchain",
+    "//toolchain/cpp:oss_toolchain",
+    "//toolchain/python:py_toolchain",
 )
