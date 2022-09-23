@@ -18,6 +18,7 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
+#include "absl/log/log_sink.h"
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -60,17 +61,45 @@ class FakeMeasurementSeries;
 extern const char kInvalidRecordId[];
 extern const char kSympProceduralErr[];
 
+#ifndef SWIG
+// Return the global ArtifactWriter that's guarenteed to be the only
+// global ArtifactWriter existing in this process.
+absl::StatusOr<std::shared_ptr<internal::ArtifactWriter>> GetArtifactWriter();
+#endif
+
+// Log function that directly logs the message with ArtifactWriter. This will
+// allow logging without TestRun or TestStep.
+void LogToArtifact(absl::string_view msg,
+                   ocpdiag::results_pb::Log::Severity severity);
+
+#ifndef SWIG
+// Custom ABSL LogSink that redirect the ABSL log to ArtifactWriter.
+class OCPDiagLogSink : public absl::LogSink {
+ public:
+  void Send(const absl::LogEntry& entry) override;
+};
+#endif
+
 // Contains factory methods to create main Result API objects.
 // Note: for unit tests, use fake or mock provided in
 // 'ocpdiag/core/testing/mock_results.h'
 class ResultApi {
  public:
-  ResultApi() = default;
-  ResultApi(const ResultApi& other) = default;
+  ResultApi() {
+#ifndef SWIG
+    InitializeOCPDiagLogSink();
+#endif
+  }
+  ResultApi(const ResultApi& other) {}
   ResultApi& operator=(const ResultApi& other) = default;
   virtual ~ResultApi() = default;
 
 #ifndef SWIG
+  // Create OCPDiagLogSink and add it to ABSL LogSink.
+  // Note: Only one OCPDiagLogSink can be added. Thus this method will be skipped
+  // if called the second time.
+  static void InitializeOCPDiagLogSink();
+
   // Factory method to create a TestRun.
   // NOTE: only one TestRun may exist per binary, thus this method will fail if
   // called a second time. `name`: a descriptive name for your test.
@@ -168,7 +197,7 @@ class TestRun : public internal::LoggerInterface {
   std::string GenerateID();
 
   // Internal use only.
-  internal::ArtifactWriter& GetWriter() { return writer_; }
+  std::shared_ptr<internal::ArtifactWriter> GetWriter() { return writer_; }
 
  private:
   friend ResultApi;  // only they can construct us
@@ -183,7 +212,7 @@ class TestRun : public internal::LoggerInterface {
   static absl::StatusOr<TestRun> Init(std::string name);
 
 #ifndef SWIG
-  TestRun(std::string name, internal::ArtifactWriter writer);
+  TestRun(std::string name, std::shared_ptr<internal::ArtifactWriter> writer);
   enum class RunState { kNotStarted, kInProgress, kEnded };
 #endif
   // Emits the TestRunStart artifact without holding mutex lock.
@@ -192,7 +221,7 @@ class TestRun : public internal::LoggerInterface {
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
-  internal::ArtifactWriter writer_;
+  std::shared_ptr<internal::ArtifactWriter> writer_;
   std::string name_;
   internal::IntIncrementer step_id_;
   mutable absl::Mutex mutex_;  // mutable allows const methods to acquire mutex.
@@ -277,7 +306,7 @@ class TestStep : public internal::LoggerInterface {
   std::string GenerateID();
 
   // Internal use only.
-  internal::ArtifactWriter& GetWriter() { return writer_; }
+  std::shared_ptr<internal::ArtifactWriter> GetWriter() { return writer_; }
 
   // Internal use only.
   // Ensures that a MeasurementElement added to this Step is well-formed and has
@@ -295,14 +324,14 @@ class TestStep : public internal::LoggerInterface {
   static absl::StatusOr<TestStep> Begin(TestRun*, std::string name);
 
   TestStep(TestRun* parent, std::string id, std::string name,
-           internal::ArtifactWriter,
+           std::shared_ptr<internal::ArtifactWriter> writer,
            std::unique_ptr<internal::FileHandler> file_handler =
                std::make_unique<internal::FileHandler>());
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
   TestRun* parent_;
-  internal::ArtifactWriter writer_;
+  std::shared_ptr<internal::ArtifactWriter> writer_;
   std::unique_ptr<internal::FileHandler> file_handler_;
   std::string name_;
   std::string id_;
@@ -444,7 +473,8 @@ class MeasurementSeries {
       ocpdiag::results_pb::MeasurementInfo);
 
   MeasurementSeries(TestStep* parent, std::string step_id,
-                    std::string series_id, internal::ArtifactWriter,
+                    std::string series_id,
+                    std::shared_ptr<internal::ArtifactWriter> writer,
                     ocpdiag::results_pb::MeasurementInfo);
   // If no values have yet been added to this series, sets the value kind rule.
   // `val`: the value to be added.
@@ -458,7 +488,7 @@ class MeasurementSeries {
   absl::Status CheckValueKind(const google::protobuf::Value&);
 
   TestStep* parent_;
-  internal::ArtifactWriter writer_;
+  std::shared_ptr<internal::ArtifactWriter> writer_;
   std::string step_id_;  // Id of parent Step
   std::string series_id_;
   internal::IntIncrementer element_count_;

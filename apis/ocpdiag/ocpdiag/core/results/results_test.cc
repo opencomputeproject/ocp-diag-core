@@ -115,8 +115,9 @@ void toProtoOrFail(std::string s, rpb::OutputArtifact& out) {
 //
 class ResultsTest : public ::testing::Test {
  public:
-  static TestRun GenerateTestRun(std::string name, ArtifactWriter&& w) {
-    return TestRun(name, std::forward<ArtifactWriter>(w));
+  static TestRun GenerateTestRun(std::string name,
+                                 std::shared_ptr<ArtifactWriter> w) {
+    return TestRun(name, w);
   }
 
   static HwRecord GenerateHwRecord(rpb::HardwareInfo info) {
@@ -130,17 +131,17 @@ class ResultsTest : public ::testing::Test {
   }
 
   static TestStep GenerateTestStep(
-      TestRun* parent, std::string name, internal::ArtifactWriter&& writer,
+      TestRun* parent, std::string name,
+      std::shared_ptr<internal::ArtifactWriter> writer,
       std::string customId = kStepIdDefault,
       std::unique_ptr<internal::MockFileHandler> file_handler =
           std::make_unique<internal::MockFileHandler>()) {
-    return TestStep(parent, customId, std::move(name),
-                    std::forward<ArtifactWriter>(writer),
+    return TestStep(parent, customId, std::move(name), std::move(writer),
                     std::move(file_handler));
   }
 
   static MeasurementSeries GenerateMeasurementSeries(
-      internal::ArtifactWriter writer) {
+      std::shared_ptr<internal::ArtifactWriter> writer) {
     rpb::HardwareInfo hwinfo = ParseTextProtoOrDie(kHwRegistered);
     HwRecord hw = GenerateHwRecord(hwinfo);
     rpb::MeasurementInfo minfo = ParseTextProtoOrDie(kMeasurementInfo);
@@ -159,14 +160,16 @@ class ResultsTest : public ::testing::Test {
 class TestRunTest : public ::testing::Test {
  protected:
   TestRunTest()
-      : test_(ResultsTest::GenerateTestRun(
-            "TestRunTest",
-            internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_))) {}
+      : artifact_writer_(std::make_shared<internal::ArtifactWriter>(
+            dup(tmpfile_.descriptor), &json_out_)),
+        test_(ResultsTest::GenerateTestRun("TestRunTest", artifact_writer_)) {}
   void SetUp() { json_out_.clear(); }
   ~TestRunTest() override = default;
 
   std::stringstream json_out_;
   TestFile tmpfile_;
+  std::shared_ptr<internal::ArtifactWriter> artifact_writer_;
+
   rpb::OutputArtifact got_;
   TestRun test_;
   ResultApi api_;
@@ -248,14 +251,14 @@ TEST_F(TestRunTest, EndAfterStart) {
     }
   )pb");
   EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  test_.GetWriter().Close();
+  test_.GetWriter()->Close();
 }
 
 // Even if TestRun::End() called multiple times, expect only 1 artifact
 TEST_F(TestRunTest, EndTwice) {
   test_.End();
   test_.End();
-  test_.GetWriter().Close();
+  test_.GetWriter()->Close();
 }
 
 // Expect default NOT_APPLICABLE:UNKNOWN
@@ -305,7 +308,7 @@ TEST_F(TestRunTest, ResultCalcPass) {
 TEST_F(TestRunTest, ResultCalcAddFailDiag) {
   test_.StartAndRegisterInfos({});
   TestStep step = ResultsTest::GenerateTestStep(
-      &test_, "", internal::ArtifactWriter(-1, nullptr));
+      &test_, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
   step.AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
   rpb::TestResult result = test_.End();
   EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
@@ -332,7 +335,7 @@ TEST_F(TestRunTest, ResultCalcTestRunAddError) {
 TEST_F(TestRunTest, ResultCalcTestStepAddError) {
   test_.StartAndRegisterInfos({});
   TestStep step = ResultsTest::GenerateTestStep(
-      &test_, "", internal::ArtifactWriter(-1, nullptr));
+      &test_, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
   step.AddError("", "", {});
   rpb::TestResult result = test_.End();
   EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
@@ -422,18 +425,19 @@ TEST_F(TestRunTest, LogFatal) {
 class TestStepTest : public ::testing::Test {
  protected:
   TestStepTest()
-      : parent_(ResultsTest::GenerateTestRun(
-            "TestRun", internal::ArtifactWriter(-1, nullptr))),
-        step_(ResultsTest::GenerateTestStep(
-            &parent_, "TestStepTest",
-            internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_))) {}
+      : artifact_writer_(std::make_shared<internal::ArtifactWriter>(
+            dup(tmpfile_.descriptor), &json_out_)),
+        parent_(ResultsTest::GenerateTestRun("TestRun", artifact_writer_)),
+        step_(ResultsTest::GenerateTestStep(&parent_, "TestStepTest",
+                                            artifact_writer_)) {}
   void SetUp() { json_out_.clear(); }
   ~TestStepTest() override = default;
 
-  TestRun parent_;
   testonly::FakeResultApi fake_api_;
   std::stringstream json_out_;
   TestFile tmpfile_;
+  std::shared_ptr<internal::ArtifactWriter> artifact_writer_;
+  TestRun parent_;
   rpb::OutputArtifact got_;
   TestStep step_;
 };
@@ -441,8 +445,9 @@ class TestStepTest : public ::testing::Test {
 TEST_F(TestStepTest, Begin) {
   // This test also confirms that the readable stream from the child object
   // (TestStep) writes to the same buffer as the parent (TestRun), as expected.
-  TestRun test = ResultsTest::GenerateTestRun(
-      "Begin", internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_));
+  auto artifact_writer_ =
+      std::make_shared<ArtifactWriter>(dup(tmpfile_.descriptor), &json_out_);
+  TestRun test = ResultsTest::GenerateTestRun("Begin", artifact_writer_);
   test.StartAndRegisterInfos({});
   fake_api_.BeginTestStep(&test, "BeginTest").IgnoreError();
 
@@ -467,18 +472,20 @@ TEST_F(TestStepTest, BeginWithNullParent) {
 }
 
 TEST_F(TestStepTest, BeginWithParentNotStarted) {
-  TestRun test = ResultsTest::GenerateTestRun(
-      "Begin", internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_));
+  auto artifact_writer_ =
+      std::make_shared<ArtifactWriter>(dup(tmpfile_.descriptor), &json_out_);
+  TestRun test = ResultsTest::GenerateTestRun("Begin", artifact_writer_);
   absl::StatusOr<std::unique_ptr<TestStep>> step =
       fake_api_.BeginTestStep(&test, "invalid");
   ASSERT_THAT(step, StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
 TEST_F(TestStepTest, AddDiagnosis) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   HwRecord hw =
       ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  fakeWriter.RegisterHwId(hw.Data().hardware_info_id());
+  fakeWriter->RegisterHwId(hw.Data().hardware_info_id());
   TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddDiagnosis",
                                                 std::move(fakeWriter));
   step.AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
@@ -537,14 +544,15 @@ TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
       )pb",
       step_.Id());
   wants.push_back(want);
-  step_.GetWriter().Close();
+  step_.GetWriter()->Close();
 }
 
 TEST_F(TestStepTest, AddError) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   SwRecord sw =
       ResultsTest::GenerateSwRecord(ParseTextProtoOrDie(kSwRegistered));
-  fakeWriter.RegisterSwId(sw.Data().software_info_id());
+  fakeWriter->RegisterSwId(sw.Data().software_info_id());
   TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddError",
                                                 std::move(fakeWriter));
   step.AddError("symptom", "add error success", {sw});
@@ -604,10 +612,11 @@ TEST_F(TestStepTest, AddErrorSwUnregistered) {
 }
 
 TEST_F(TestStepTest, AddMeasurement) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   HwRecord hw =
       ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  fakeWriter.RegisterHwId(hw.Data().hardware_info_id());
+  fakeWriter->RegisterHwId(hw.Data().hardware_info_id());
   TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
                                                 std::move(fakeWriter));
   rpb::MeasurementInfo info;
@@ -738,7 +747,8 @@ TEST_F(TestStepTest, ValidateMeasElemRangeMaxEmpty) {
 }
 
 TEST_F(TestStepTest, AddMeasurementWithNullptr) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
                                                 std::move(fakeWriter));
   rpb::MeasurementInfo info;
@@ -775,7 +785,8 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
 }
 
 TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   HwRecord hw =
       ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
   TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
@@ -835,10 +846,11 @@ TEST_F(TestStepTest, AddFile) {
   // Make sure copy methods are not called.
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).Times(0);
   EXPECT_CALL(*fh, CopyRemoteFile(_)).Times(0);
-  auto step = ResultsTest::GenerateTestStep(
-      nullptr, "step",
-      internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_),
-      kStepIdDefault, std::move(fh));
+  auto step =
+      ResultsTest::GenerateTestStep(nullptr, "step",
+                                    std::make_shared<internal::ArtifactWriter>(
+                                        dup(tmpfile_.descriptor), &json_out_),
+                                    kStepIdDefault, std::move(fh));
 
   std::error_code err;
   std::string cwd = std::filesystem::current_path(err);
@@ -865,8 +877,7 @@ TEST_F(TestStepTest, AddFile) {
           test_step_id: "%s"
         }
       )pb",
-      output_path,
-      step.Id());
+      output_path, step.Id());
   EXPECT_THAT(got_, Partially(EqualsProto(want)));
 }
 
@@ -874,12 +885,12 @@ TEST_F(TestStepTest, AddFile) {
 TEST_F(TestStepTest, AddFileLocalCopy) {
   auto fh = std::make_unique<internal::MockFileHandler>();
   fh->DelegateToReal();
-  EXPECT_CALL(*fh, CopyLocalFile(_, _))
-      .WillOnce(Return(absl::OkStatus()));
-  auto step = ResultsTest::GenerateTestStep(
-      nullptr, "step",
-      internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_),
-      kStepIdDefault, std::move(fh));
+  EXPECT_CALL(*fh, CopyLocalFile(_, _)).WillOnce(Return(absl::OkStatus()));
+  auto step =
+      ResultsTest::GenerateTestStep(nullptr, "step",
+                                    std::make_shared<internal::ArtifactWriter>(
+                                        dup(tmpfile_.descriptor), &json_out_),
+                                    kStepIdDefault, std::move(fh));
   rpb::File file;
   // Set a local path not in test dir, so expects file copy.
   file.set_output_path("/tmp/data/file");
@@ -893,10 +904,11 @@ TEST_F(TestStepTest, AddFileFail) {
   fh->DelegateToReal();
   EXPECT_CALL(*fh, CopyLocalFile(_, _))
       .WillOnce(Return(absl::UnknownError("")));
-  auto step = ResultsTest::GenerateTestStep(
-      nullptr, "step",
-      internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_),
-      kStepIdDefault, std::move(fh));
+  auto step =
+      ResultsTest::GenerateTestStep(nullptr, "step",
+                                    std::make_shared<internal::ArtifactWriter>(
+                                        dup(tmpfile_.descriptor), &json_out_),
+                                    kStepIdDefault, std::move(fh));
   rpb::File file;
   file.set_output_path("/tmp/data/file");
   step.AddFile(file);
@@ -916,10 +928,11 @@ TEST_F(TestStepTest, AddFileFail) {
 TEST_F(TestStepTest, AddFileRemote) {
   auto fh = std::make_unique<internal::MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::OkStatus()));
-  auto step = ResultsTest::GenerateTestStep(
-      nullptr, "step",
-      internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_),
-      kStepIdDefault, std::move(fh));
+  auto step =
+      ResultsTest::GenerateTestStep(nullptr, "step",
+                                    std::make_shared<internal::ArtifactWriter>(
+                                        dup(tmpfile_.descriptor), &json_out_),
+                                    kStepIdDefault, std::move(fh));
   rpb::File file;
   file.set_upload_as_name("upload name");
   // mimic absolute path on remote node.
@@ -933,10 +946,11 @@ TEST_F(TestStepTest, AddFileRemote) {
 TEST_F(TestStepTest, AddFileRemoteFail) {
   auto fh = std::make_unique<internal::MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::UnknownError("")));
-  auto step = ResultsTest::GenerateTestStep(
-      nullptr, "step",
-      internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_),
-      kStepIdDefault, std::move(fh));
+  auto step =
+      ResultsTest::GenerateTestStep(nullptr, "step",
+                                    std::make_shared<internal::ArtifactWriter>(
+                                        dup(tmpfile_.descriptor), &json_out_),
+                                    kStepIdDefault, std::move(fh));
   rpb::File file;
   file.set_upload_as_name("upload name");
   // mimic absolute path on remote node.
@@ -1134,7 +1148,8 @@ class MeasurementSeriesTest : public ::testing::Test {
  protected:
   MeasurementSeriesTest()
       : series_(ResultsTest::GenerateMeasurementSeries(
-            internal::ArtifactWriter(dup(tmpfile_.descriptor), &json_out_))) {}
+            std::make_shared<internal::ArtifactWriter>(dup(tmpfile_.descriptor),
+                                                       &json_out_))) {}
   void SetUp() { json_out_.clear(); }
   ~MeasurementSeriesTest() override = default;
 
@@ -1146,11 +1161,12 @@ class MeasurementSeriesTest : public ::testing::Test {
 };
 
 TEST_F(MeasurementSeriesTest, Begin) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   HwRecord hw =
       ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
   std::string hw_id = hw.Data().hardware_info_id();
-  fakeWriter.RegisterHwId(hw_id);
+  fakeWriter->RegisterHwId(hw_id);
   TestStep step = ResultsTest::GenerateTestStep(
       nullptr, "fake_api_.BeginMeasurementSeries", std::move(fakeWriter));
   rpb::MeasurementInfo minfo =
@@ -1174,7 +1190,7 @@ TEST_F(MeasurementSeriesTest, Begin) {
 // ended.
 TEST_F(MeasurementSeriesTest, BeginFailAfterStepEnd) {
   TestStep step = ResultsTest::GenerateTestStep(
-      nullptr, "", internal::ArtifactWriter(-1, nullptr));
+      nullptr, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
   step.End();
   HwRecord hw = ResultsTest::GenerateHwRecord(rpb::HardwareInfo());
   ASSERT_THAT(
@@ -1183,7 +1199,8 @@ TEST_F(MeasurementSeriesTest, BeginFailAfterStepEnd) {
 }
 
 TEST_F(MeasurementSeriesTest, BeginHwUnregistered) {
-  internal::ArtifactWriter fakeWriter(tmpfile_.descriptor, &json_out_);
+  auto fakeWriter =
+      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
   TestStep step = ResultsTest::GenerateTestStep(
       nullptr, "fake_api_.BeginMeasurementSeries", std::move(fakeWriter));
   HwRecord hw =

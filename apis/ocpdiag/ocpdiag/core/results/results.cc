@@ -25,6 +25,7 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/log_sink_registry.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -61,7 +62,7 @@ ABSL_FLAG(
     "default is \"\".");
 
 ABSL_FLAG(bool, alsologtoocpdiagresults, false,
-          "If set to true, also and Ecclesia logger will be directed to OCPDiag "
+          "If set to true, absl and Ecclesia logger will be directed to OCPDiag "
           "results and ABSL default logging destination.");
 
 //
@@ -169,6 +170,72 @@ class MergedTypeResolver final : public google::protobuf::util::TypeResolver {
 
 }  // namespace
 
+void OCPDiagLogSink::Send(const absl::LogEntry& entry) {
+  absl::string_view text = entry.text_message_with_prefix();
+  switch (entry.log_severity()) {
+    case absl::LogSeverity::kInfo:
+      LogToArtifact(text, rpb::Log::INFO);
+      return;
+    case absl::LogSeverity::kWarning:
+      LogToArtifact(text, rpb::Log::WARNING);
+      return;
+    case absl::LogSeverity::kError:
+      LogToArtifact(text, rpb::Log::ERROR);
+      return;
+    case absl::LogSeverity::kFatal:
+      LogToArtifact(text, rpb::Log::FATAL);
+      return;
+  }
+  static constexpr absl::string_view kMessage = "Unknown ABSL log severity: ";
+  std::cerr << kMessage << entry.log_severity() << std::endl;
+}
+
+absl::StatusOr<std::shared_ptr<internal::ArtifactWriter>> GetArtifactWriter() {
+  static std::shared_ptr<internal::ArtifactWriter> writer = nullptr;
+  if (writer == nullptr) {
+    absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
+        absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
+    if (!fd.ok()) {
+      return fd.status();
+    }
+    std::ostream* stream = absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout)
+                               ? &std::cout
+                               : nullptr;
+    writer = std::make_shared<internal::ArtifactWriter>(fd.value(), stream);
+  }
+  return writer;
+}
+
+void LogToArtifact(absl::string_view msg, rpb::Log::Severity severity) {
+  rpb::Log log_pb;
+  log_pb.set_text(std::string(msg));
+  log_pb.set_severity(severity);
+  rpb::TestRunArtifact run_pb;
+  *run_pb.mutable_log() = std::move(log_pb);
+  rpb::OutputArtifact out_pb;
+  *out_pb.mutable_test_run_artifact() = std::move(run_pb);
+
+  absl::StatusOr<std::shared_ptr<internal::ArtifactWriter>> writer =
+      GetArtifactWriter();
+  if (writer.ok()) {
+    (writer.value())->Write(out_pb);
+  } else {
+    static constexpr absl::string_view kMessage =
+        "Failed to write to OCPDiag artifact: Unable to get ArtifactWriter.";
+    std::cerr << kMessage << std::endl;
+  }
+}
+
+void ResultApi::InitializeOCPDiagLogSink() {
+  static bool called = false;
+  if (!called) {
+    called = true;
+    if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
+      absl::AddLogSink(new OCPDiagLogSink());
+    }
+  }
+}
+
 // Note: this method is overridden in FakeResultApi to allow
 // multi-initialization.
 absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
@@ -196,16 +263,9 @@ absl::StatusOr<TestRun> TestRun::Init(std::string name) {
   static bool called = false;
   if (!called) {
     called = true;
-    absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
-        absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
-    if (!fd.ok()) {
-      return fd.status();
-    }
-    std::ostream* stream = absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout)
-                               ? &std::cout
-                               : nullptr;
-    return TestRun(std::move(name),
-                   internal::ArtifactWriter(fd.value(), stream));
+    ASSIGN_OR_RETURN(std::shared_ptr<internal::ArtifactWriter> writer,
+                     GetArtifactWriter());
+    return TestRun(std::move(name), std::move(writer));
   }
   static constexpr absl::string_view kMessage =
       "OCPDiag Test already initialized.";
@@ -213,14 +273,17 @@ absl::StatusOr<TestRun> TestRun::Init(std::string name) {
   return absl::AlreadyExistsError(kMessage);
 }
 
-TestRun::TestRun(std::string name, internal::ArtifactWriter writer)
-    : writer_(std::move(writer)),
+TestRun::TestRun(std::string name,
+                 std::shared_ptr<internal::ArtifactWriter> writer)
+    : writer_(writer),
       name_(std::move(name)),
       state_(RunState::kNotStarted),
       result_(ocpdiag::results_pb::TestResult::NOT_APPLICABLE),
       status_(ocpdiag::results_pb::TestStatus::UNKNOWN) {}
 
-TestRun::TestRun(TestRun&& other) { *this = std::move(other); }
+TestRun::TestRun(TestRun&& other) {
+  *this = std::move(other);
+}
 
 TestRun& TestRun::operator=(TestRun&& other) ABSL_LOCKS_EXCLUDED(mutex_) {
   if (this != &other) {
@@ -270,10 +333,10 @@ if (false) {
   for (auto& info : dutinfos) {
     auto info_pb = info.ToProto();
     for (const auto& hw : info_pb.hardware_components()) {
-      writer_.RegisterHwId(hw.hardware_info_id());
+      writer_->RegisterHwId(hw.hardware_info_id());
     }
     for (const auto& sw : info_pb.software_infos()) {
-      writer_.RegisterSwId(sw.software_info_id());
+      writer_->RegisterSwId(sw.software_info_id());
     }
     start_pb.mutable_dut_info()->Add(std::move(info_pb));
   }
@@ -283,8 +346,8 @@ if (false) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
   MergedTypeResolver resolver(params.GetDescriptor()->file()->pool());
-  writer_.Write(out_pb, &resolver);
-  writer_.Flush();
+  writer_->Write(out_pb, &resolver);
+  writer_->Flush();
 }
 
 rpb::TestResult TestRun::End() ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -322,8 +385,8 @@ rpb::TestResult TestRun::End() ABSL_LOCKS_EXCLUDED(mutex_) {
       *run_pb.mutable_test_run_end() = std::move(end_pb);
       rpb::OutputArtifact out_pb;
       *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-      writer_.Write(out_pb);
-      writer_.Flush();
+      writer_->Write(out_pb);
+      writer_->Flush();
       break;
     }
   }
@@ -354,7 +417,7 @@ void TestRun::AddError(absl::string_view symptom, absl::string_view message)
   *run_pb.mutable_error() = std::move(err_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
   absl::MutexLock l(&mutex_);
   status_ = rpb::TestStatus::ERROR;
   result_ = rpb::TestResult::NOT_APPLICABLE;
@@ -367,7 +430,7 @@ void TestRun::AddTag(absl::string_view tag) {
   *run_pb.mutable_tag() = std::move(tag_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 rpb::TestStatus TestRun::Status() const ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -431,7 +494,7 @@ void TestRun::WriteLog(ocpdiag::results_pb::Log::Severity severity,
   *run_pb.mutable_log() = std::move(log_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 absl::StatusOr<TestStep> TestStep::Begin(TestRun* parent, std::string name) {
@@ -454,17 +517,17 @@ absl::StatusOr<TestStep> TestStep::Begin(TestRun* parent, std::string name) {
   step_pb.set_test_step_id(id);
   rpb::OutputArtifact out;
   *out.mutable_test_step_artifact() = std::move(step_pb);
-  writer.Write(out);
-  writer.Flush();
+  writer->Write(out);
+  writer->Flush();
 
   return TestStep(parent, id, name, writer);
 }
 
 TestStep::TestStep(TestRun* parent, std::string id, std::string name,
-                   internal::ArtifactWriter writer,
+                   std::shared_ptr<internal::ArtifactWriter> writer,
                    std::unique_ptr<internal::FileHandler> file_handler)
     : parent_(parent),
-      writer_(std::move(writer)),
+      writer_(writer),
       file_handler_(std::move(file_handler)),
       name_(std::move(name)),
       id_(std::move(id)),
@@ -504,7 +567,7 @@ void TestStep::AddDiagnosis(rpb::Diagnosis::Type type, std::string symptom,
   // Check if HW info IDs are registered.
   for (const auto& rec : records) {
     auto info = rec.Data();
-    if (!writer_.IsHwRegistered(info.hardware_info_id())) {
+    if (!writer_->IsHwRegistered(info.hardware_info_id())) {
       std::string msg = absl::StrCat(
           "The following hardware will be omitted from the diagnosis, ",
           "as it was not previously registered with the TestRun: ",
@@ -520,7 +583,7 @@ void TestStep::AddDiagnosis(rpb::Diagnosis::Type type, std::string symptom,
   *step_pb.mutable_diagnosis() = std::move(diag_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 void TestStep::AddError(absl::string_view symptom, absl::string_view message,
@@ -538,7 +601,7 @@ void TestStep::AddError(absl::string_view symptom, absl::string_view message,
   // Check if SW info IDs are registered.
   for (const auto& rec : records) {
     auto info = rec.Data();
-    if (!writer_.IsSwRegistered(info.software_info_id())) {
+    if (!writer_->IsSwRegistered(info.software_info_id())) {
       auto msg = absl::StrCat(
           "The following software will be omitted from the diagnosis, ",
           "as it was not previously registered with the TestRun: ",
@@ -555,7 +618,7 @@ void TestStep::AddError(absl::string_view symptom, absl::string_view message,
   *step_pb.mutable_error() = std::move(error_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 absl::Status TestStep::ValidateMeasElem(const rpb::MeasurementElement& elem) {
@@ -606,7 +669,7 @@ void TestStep::AddMeasurement(rpb::MeasurementInfo info,
   if (hwrec != nullptr) {
     // Check if HW info ID is registered.
     std::string id = hwrec->Data().hardware_info_id();
-    if (!writer_.IsHwRegistered(id)) {
+    if (!writer_->IsHwRegistered(id)) {
       std::string msg = absl::StrCat(
           "The following hardware will be omitted from the Measurement "
           "result, ",
@@ -627,7 +690,7 @@ void TestStep::AddMeasurement(rpb::MeasurementInfo info,
   step_pb.set_test_step_id(id_);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 void TestStep::AddFile(rpb::File file) {
@@ -669,7 +732,7 @@ void TestStep::AddFile(rpb::File file) {
   rpb::TestStepArtifact* step_pb = out_pb.mutable_test_step_artifact();
   *step_pb->mutable_file() = std::move(file);
   step_pb->set_test_step_id(id_);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 void TestStep::AddArtifactExtension(std::string name,
@@ -693,7 +756,7 @@ if (false) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
   MergedTypeResolver resolver(extension.GetDescriptor()->file()->pool());
-  writer_.Write(out_pb, &resolver);
+  writer_->Write(out_pb, &resolver);
 }
 
 bool TestStep::Ended() const ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -720,8 +783,8 @@ void TestStep::End() ABSL_LOCKS_EXCLUDED(mutex_) {
   step_pb.set_test_step_id(absl::StrCat(id_));
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
-  writer_.Flush();
+  writer_->Write(out_pb);
+  writer_->Flush();
 }
 
 void TestStep::Skip() ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -765,7 +828,7 @@ void TestStep::WriteLog(ocpdiag::results_pb::Log::Severity severity,
   step.set_test_step_id(id_);
   rpb::OutputArtifact out;
   *out.mutable_test_step_artifact() = std::move(step);
-  writer_.Write(out);
+  writer_->Write(out);
 }
 
 // Initialize static members
@@ -812,10 +875,10 @@ MeasurementSeries& MeasurementSeries::operator=(MeasurementSeries&& other)
 
 MeasurementSeries::MeasurementSeries(
     TestStep* parent, std::string step_id, std::string series_id,
-    internal::ArtifactWriter writer,
+    std::shared_ptr<internal::ArtifactWriter> writer,
     ocpdiag::results_pb::MeasurementInfo info)
     : parent_(parent),
-      writer_(std::move(writer)),
+      writer_(writer),
       step_id_(std::move(step_id)),
       series_id_(std::move(series_id)),
       ended_(false),
@@ -836,7 +899,7 @@ absl::StatusOr<MeasurementSeries> MeasurementSeries::Begin(
 
   auto writer = parent->GetWriter();
   auto id = hw.Data().hardware_info_id();
-  if (!writer.IsHwRegistered(id)) {
+  if (!writer->IsHwRegistered(id)) {
     std::string msg = absl::StrFormat(
         "The MeasurementSeries (%s) is ill-formed; the associated hardware "
         "info is not registered with the TestRun: %s",
@@ -857,8 +920,8 @@ absl::StatusOr<MeasurementSeries> MeasurementSeries::Begin(
   step_pb.set_test_step_id(step_id);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer.Write(out_pb);
-  writer.Flush();
+  writer->Write(out_pb);
+  writer->Flush();
 
   return MeasurementSeries(parent, step_id, series_id, writer, info);
 }
@@ -903,7 +966,7 @@ void MeasurementSeries::AddElementWithRange(
   step_pb.set_test_step_id(step_id_);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 void MeasurementSeries::AddElement(google::protobuf::Value value) {
@@ -952,7 +1015,7 @@ void MeasurementSeries::AddElementWithValues(
   step_pb.set_test_step_id(step_id_);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
+  writer_->Write(out_pb);
 }
 
 void MeasurementSeries::End() {
@@ -970,8 +1033,8 @@ void MeasurementSeries::End() {
   step_pb.set_test_step_id(step_id_);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = std::move(step_pb);
-  writer_.Write(out_pb);
-  writer_.Flush();
+  writer_->Write(out_pb);
+  writer_->Flush();
   ended_ = true;
 }
 
