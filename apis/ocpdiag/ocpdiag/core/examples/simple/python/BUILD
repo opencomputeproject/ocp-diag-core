@@ -20,9 +20,9 @@ py_binary(
         "//ocpdiag/core/params:utils_py",
         "//ocpdiag/core/results:results_py_pb2",
         "//ocpdiag/core/results/python:results",
-        "//third_party/pybind11_abseil:status",
         "@com_google_absl_py//absl:app",
         "@com_google_protobuf//:protobuf_python",
+        "@pybind11_abseil//pybind11_abseil:status",
     ],
 )
 
