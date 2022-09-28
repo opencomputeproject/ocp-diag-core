@@ -157,3 +157,11 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
         strip_prefix = "ecclesia-machine-management-92ae4d367c7a3a892bf672cdca424b75677c2bb2",
         sha256 = "92d1acae14262951e0b0c8c7c7c34996353548921008d3e6f59f2d0d0ec123c3",
     )
+
+    maybe(
+        http_archive,
+        "com_google_riegeli",
+        url = "https://github.com/google/riegeli/archive/a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c.tar.gz",
+        strip_prefix = "riegeli-a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c",
+        sha256 = "69046b1dc669ebebb7ea20b8f88dc92d869b61e20ac872882afc54f4ce88059f",
+    )

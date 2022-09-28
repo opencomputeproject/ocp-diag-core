@@ -79,5 +79,8 @@ cc_test(
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest",
         "@com_google_protobuf//:protobuf",
+        "@com_google_riegeli//riegeli/base",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/records:record_reader",
     ],
 )

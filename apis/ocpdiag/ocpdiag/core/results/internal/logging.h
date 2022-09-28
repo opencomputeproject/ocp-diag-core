@@ -20,6 +20,9 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/results.pb.h"
+#include "riegeli/base/object.h"
+#include "riegeli/bytes/fd_writer.h"
+#include "riegeli/records/record_writer.h"
 namespace ocpdiag {
 namespace results {
 
@@ -109,6 +112,11 @@ class ArtifactWriter {
     absl::Mutex mutex_;
     int sequence_num_ ABSL_GUARDED_BY(mutex_);
     std::ostream* readable_out_ ABSL_GUARDED_BY(mutex_);
+    riegeli::RecordWriter<riegeli::FdWriter<>> file_out_
+        ABSL_GUARDED_BY(mutex_){riegeli::kClosed};
+
+    // Flushes the output file buffer.
+    void FlushFileBuffer() ABSL_LOCKS_EXCLUDED(mutex_);
   };
 
   std::shared_ptr<WriterProxy> proxy_;
