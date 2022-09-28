@@ -16,15 +16,19 @@ namespace params {
 // absl::Cleanup can't be explicitly returned, so this replicates it using a
 // std::function for callback type erasure. Less efficient, but it's test-only.
 class ParamsCleanup final {
- private:
-  std::function<void()> cleanup_;
-
  public:
   ParamsCleanup(std::function<void()> cleanup) : cleanup_(std::move(cleanup)) {}
   ParamsCleanup(ParamsCleanup&& from) : cleanup_(std::move(from.cleanup_)) {
     from.cleanup_ = []() {};
   }
-  ~ParamsCleanup() { cleanup_(); }
+  ~ParamsCleanup() { Cleanup(); }
+
+  // It is not required to call this explicitly, it will be called automatically
+  // in the destructor. This function is exposed for Python wrappers only.
+  void Cleanup();
+
+ private:
+  std::function<void()> cleanup_;
 };
 
 absl::StatusOr<ParamsCleanup> FakeParams(const google::protobuf::Message& params);
