@@ -56,5 +56,11 @@ absl::StatusOr<ParamsCleanup> FakeParams(const google::protobuf::Message& params
   });
 }
 
+void ParamsCleanup::Cleanup() {
+  if (!cleanup_) return;
+  cleanup_();
+  cleanup_ = nullptr;
+}
+
 }  // namespace params
 }  // namespace ocpdiag
