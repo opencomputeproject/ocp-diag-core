@@ -15,11 +15,9 @@
 #include <utility>
 
 #include "google/protobuf/timestamp.pb.h"
-#include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/util/json_util.h"
 #include "google/protobuf/util/type_resolver_util.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -28,8 +26,9 @@
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ocpdiag/core/compat/status_converters.h"
-#include "ocpdiag/core/params/utils.h"
 #include "ocpdiag/core/results/results.pb.h"
+#include "riegeli/bytes/fd_writer.h"
+#include "riegeli/records/records_metadata.pb.h"
 
 namespace ocpdiag {
 namespace results {
@@ -127,16 +126,51 @@ void ArtifactWriter::Write(rpb::OutputArtifact& out_pb,
     absl::StrReplaceAll({{R"(\n)", R"(\\n)"}}, &json);
     *proxy_->readable_out_ << json << std::endl;
   }
+
+  // Output compressed proto to file
+  if (proxy_->file_out_.ok()) {
+    if (!proxy_->file_out_.WriteRecord(out_pb)) {
+      std::cerr << "Failed to write proto record to file: "
+                << "\"" << out_pb.DebugString() << "\"" << std::endl
+                << "File writer error: "
+                << proxy_->file_out_.status().ToString() << std::endl;
+    }
+  }
 }
 
 void ArtifactWriter::Flush() {
+  if (proxy_) {
+    proxy_->FlushFileBuffer();
+  }
+}
+
+void ArtifactWriter::WriterProxy::FlushFileBuffer()
+    ABSL_LOCKS_EXCLUDED(mutex_) {
+  absl::MutexLock l(&mutex_);
+  file_out_.Flush(riegeli::FlushType::kFromMachine);
 }
 
 ArtifactWriter::WriterProxy::WriterProxy(int fd, std::ostream* readable)
     : sequence_num_(0), readable_out_(readable) {
+  if (fd < 0) {
+    return;
+  }
+  // Set record metadata, so Riegeli file is self-describing
+  riegeli::RecordsMetadata metadata;
+  riegeli::SetRecordType(
+      *ocpdiag::results_pb::OutputArtifact::GetDescriptor(),
+      metadata);
+  file_out_.Reset(
+      riegeli::FdWriter(fd),
+      riegeli::RecordWriterBase::Options().set_metadata(std::move(metadata)));
+  if (!file_out_.ok()) {
+    std::cerr << "File writer error: " << file_out_.status().ToString()
+              << std::endl;
+  }
 }
 
 ArtifactWriter::WriterProxy::~WriterProxy() {
+  file_out_.Close();
 }
 
 }  // namespace internal
