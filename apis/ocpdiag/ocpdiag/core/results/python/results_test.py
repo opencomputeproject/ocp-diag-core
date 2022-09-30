@@ -52,6 +52,27 @@ MEASUREMENTINFO = """
   """
 
 
+class OutputReceiverTest(unittest.TestCase):
+
+  def test_model_inside_context(self):
+    with results.OutputReceiver() as receiver:
+      test_run = results.InitTestRun("Test")
+      test_run.End()
+
+      # Test that the model is populated.
+      self.assertIsNotNone(receiver.model.end)
+
+    # Iterate through the output, outside of the managed context.
+    self.cnt = 0
+
+    def count_artifacts(unused_artifact: results_pb2.OutputArtifact) -> bool:
+      self.cnt += 1
+      return True
+
+    receiver.Iterate(count_artifacts)
+    self.assertEqual(self.cnt, 2)  # 1 start + 1 end
+
+
 class DutInfoTest(unittest.TestCase):
 
   def testDutInfoHwInfo(self):
@@ -334,7 +355,8 @@ class TestRunStep(unittest.TestCase):
               valid_values { values { number_value: 3.14 } }
             }
           }
-        }""" % (hw.Data().hardware_info_id)
+        }""" % (
+            hw.Data().hardware_info_id)
     compare.assertProto2Contains(
         self,
         want,
