@@ -38,10 +38,9 @@ namespace rpb = ocpdiag::results_pb;
 class FileHandlerTest : public ::testing::Test {
  public:
   FileHandlerTest() {
-    ::testing::DefaultValue<absl::StatusOr<
-        std::unique_ptr<ConnInterface>>>::SetFactory([] {
-      return absl::StatusOr<
-          std::unique_ptr<ConnInterface>>(
+    ::testing::DefaultValue<
+        absl::StatusOr<std::unique_ptr<ConnInterface>>>::SetFactory([] {
+      return absl::StatusOr<std::unique_ptr<ConnInterface>>(
           std::make_unique<MockConnInterface>());
     });
     ::testing::DefaultValue<
@@ -49,6 +48,18 @@ class FileHandlerTest : public ::testing::Test {
       return absl::StatusOr<std::unique_ptr<std::ostream>>(
           std::make_unique<std::stringstream>());
     });
+
+    // Tells mock to execute the real file handler code inside these methods,
+    // while keeping other method mocks/stubs/expectations.
+    ON_CALL(mock_file_handler_, CopyRemoteFile(_))
+        .WillByDefault([&](ocpdiag::results_pb::File& f) {
+          return mock_file_handler_.FileHandler::CopyRemoteFile(f);
+        });
+    ON_CALL(mock_file_handler_, CopyLocalFile(_, _))
+        .WillByDefault(
+            [&](ocpdiag::results_pb::File& f, absl::string_view s) {
+              return mock_file_handler_.FileHandler::CopyLocalFile(f, s);
+            });
   }
 
   FileHandler file_handler_;
@@ -77,10 +88,6 @@ TEST_F(FileHandlerTest, CopyRemoteFile) {
       absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::Cord("content")));
-
-  // We want the mock to actually execute `CopyRemoteFile`, instead of just
-  // return a default value. Other methods are mocked by default.
-  mock_file_handler_.DelegateToReal();
 
   // Stub GetConnInterface
   ON_CALL(mock_file_handler_, GetConnInterface(_))
@@ -112,10 +119,6 @@ TEST_F(FileHandlerTest, CopyRemoteFileWithUploadName) {
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::Cord("content")));
 
-  // We want the mock to actually execute `CopyRemoteFile`, instead of just
-  // return a default value. Other methods are mocked by default.
-  mock_file_handler_.DelegateToReal();
-
   // Stub GetConnInterface
   ON_CALL(mock_file_handler_, GetConnInterface(_))
       .WillByDefault(
@@ -138,10 +141,6 @@ TEST_F(FileHandlerTest, NodeReadFileFail) {
       absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::InternalError("")));
-
-  // We want the mock to actually execute `CopyRemoteFile`, instead of just
-  // return a default value. Other methods are mocked by default.
-  mock_file_handler_.DelegateToReal();
 
   // Stub GetConnInterface
   ON_CALL(mock_file_handler_, GetConnInterface(_))
@@ -166,10 +165,6 @@ TEST_F(FileHandlerTest, CopyLocalFile) {
   rpb::File file;
   file.set_output_path(tmp_filepath);
 
-  // We want the mock to actually execute `CopyLocalFile`, instead of just
-  // return a default value. Other methods are mocked by default.
-  mock_file_handler_.DelegateToReal();
-
   ASSERT_OK(mock_file_handler_.CopyLocalFile(file, tmpdir));
   // Make sure destination file is different
   ASSERT_STRNE(file.output_path().c_str(), tmp_filepath.c_str());
@@ -181,10 +176,6 @@ TEST_F(FileHandlerTest, CopyLocalFile) {
 
 TEST_F(FileHandlerTest, CopyLocalFileFail) {
   rpb::File file;
-
-  // We want the mock to actually execute `CopyLocalFile`, instead of just
-  // return a default value. Other methods are mocked by default.
-  mock_file_handler_.DelegateToReal();
 
   // Tests are not allowed to write to CWD on forge.
   ASSERT_THAT(mock_file_handler_.CopyLocalFile(

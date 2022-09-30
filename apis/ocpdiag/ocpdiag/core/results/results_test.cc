@@ -842,7 +842,6 @@ TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
 // Test AddFile on local CWD file, no file copy expected.
 TEST_F(TestStepTest, AddFile) {
   auto fh = std::make_unique<internal::MockFileHandler>();
-  fh->DelegateToReal();
   // Make sure copy methods are not called.
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).Times(0);
   EXPECT_CALL(*fh, CopyRemoteFile(_)).Times(0);
@@ -884,7 +883,6 @@ TEST_F(TestStepTest, AddFile) {
 // expect local file copy
 TEST_F(TestStepTest, AddFileLocalCopy) {
   auto fh = std::make_unique<internal::MockFileHandler>();
-  fh->DelegateToReal();
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).WillOnce(Return(absl::OkStatus()));
   auto step =
       ResultsTest::GenerateTestStep(nullptr, "step",
@@ -901,7 +899,6 @@ TEST_F(TestStepTest, AddFileLocalCopy) {
 
 TEST_F(TestStepTest, AddFileFail) {
   auto fh = std::make_unique<internal::MockFileHandler>();
-  fh->DelegateToReal();
   EXPECT_CALL(*fh, CopyLocalFile(_, _))
       .WillOnce(Return(absl::UnknownError("")));
   auto step =

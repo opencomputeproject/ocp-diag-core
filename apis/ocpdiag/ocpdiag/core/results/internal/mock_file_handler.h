@@ -37,21 +37,6 @@ class MockFileHandler : public FileHandler {
   MOCK_METHOD(absl::Status, CopyLocalFile,
               (ocpdiag::results_pb::File&, absl::string_view),
               (override));
-
-  // Tells mock to execute code inside these methods, while keeping other method
-  // mocks/stubs/expectations.
-  // WARNING: Will override previously defined expectations on these methods.
-  void DelegateToReal() {
-    ON_CALL(*this, CopyRemoteFile(testing::_))
-        .WillByDefault([&](ocpdiag::results_pb::File& f) {
-          return this->FileHandler::CopyRemoteFile(f);
-        });
-    ON_CALL(*this, CopyLocalFile(testing::_, testing::_))
-        .WillByDefault(
-            [&](ocpdiag::results_pb::File& f, absl::string_view s) {
-              return this->FileHandler::CopyLocalFile(f, s);
-            });
-  }
 };
 
 }  // namespace internal
