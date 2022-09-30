@@ -16,7 +16,6 @@ a data dependency in open source).
 """
 
 from ._results import *  # pylint:disable=wildcard-import
-from ._results import InitializeOCPDiagLogSink
 from ._results import SetResultsLibFlags
 from absl import app
 from absl import flags
@@ -64,4 +63,3 @@ def _SetPybindFlags():
 
 
 app.call_after_init(_SetPybindFlags)
-app.call_after_init(InitializeOCPDiagLogSink)
