@@ -4,11 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-from typing import Text, List, Optional
+from typing import Callable, Text, List, Optional
 
 from google.protobuf import struct_pb2
 from google.protobuf import message
 from ocpdiag.core.results import results_pb2
+from ocpdiag.core.results.python import output_model
 
 
 def SetResultsLibFlags(
@@ -18,10 +19,6 @@ def SetResultsLibFlags(
     alsologtoocpdiagresults: bool,
     ocpdiag_strict_reporting: bool,
 ) -> None:
-  ...
-
-
-def InitializeOCPDiagLogSink() -> None:
   ...
 
 
@@ -198,4 +195,23 @@ class MeasurementSeries:
     ...
 
   def End(self) -> None:
+    ...
+
+
+class OutputReceiver:
+
+  def __init__(self):
+    ...
+
+  def __enter__(self) -> OutputReceiver:
+    ...
+
+  def __exit__(self, *args):
+    ...
+
+  @property
+  def model(self) -> output_model.TestRunOutput:
+    ...
+
+  def Iterate(callback: Callable[[results_pb2.OutputArtifact], bool]):
     ...

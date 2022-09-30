@@ -25,6 +25,7 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/log/check.h"
 #include "absl/log/log_sink_registry.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
@@ -168,45 +169,42 @@ class MergedTypeResolver final : public google::protobuf::util::TypeResolver {
   std::unique_ptr<google::protobuf::util::TypeResolver> resolver_;
 };
 
+std::unique_ptr<internal::ArtifactWriter> NewArtifactWriterOrDie() {
+  absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
+      absl::GetFlag(FLAGS_ocpdiag_results_filepath));
+  CHECK_OK(fd.status());
+  std::ostream* stream =
+      absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout) ? &std::cout : nullptr;
+  return std::make_unique<internal::ArtifactWriter>(*fd, stream);
+}
+
 }  // namespace
 
-void OCPDiagLogSink::Send(const absl::LogEntry& entry) {
-  absl::string_view text = entry.text_message_with_prefix();
-  switch (entry.log_severity()) {
-    case absl::LogSeverity::kInfo:
-      LogToArtifact(text, rpb::Log::INFO);
-      return;
-    case absl::LogSeverity::kWarning:
-      LogToArtifact(text, rpb::Log::WARNING);
-      return;
-    case absl::LogSeverity::kError:
-      LogToArtifact(text, rpb::Log::ERROR);
-      return;
-    case absl::LogSeverity::kFatal:
-      LogToArtifact(text, rpb::Log::FATAL);
-      return;
-  }
-  static constexpr absl::string_view kMessage = "Unknown ABSL log severity: ";
-  std::cerr << kMessage << entry.log_severity() << std::endl;
+GlobalArtifactWriterManager::GlobalArtifactWriterManager()
+    : writer_(NewArtifactWriterOrDie()) {}
+
+GlobalArtifactWriterManager& GlobalArtifactWriterManager::Get() {
+  static auto& manager = *new GlobalArtifactWriterManager;
+  return manager;
 }
 
-absl::StatusOr<std::shared_ptr<internal::ArtifactWriter>> GetArtifactWriter() {
-  static std::shared_ptr<internal::ArtifactWriter> writer = nullptr;
-  if (writer == nullptr) {
-    absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
-        absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
-    if (!fd.ok()) {
-      return fd.status();
-    }
-    std::ostream* stream = absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout)
-                               ? &std::cout
-                               : nullptr;
-    writer = std::make_shared<internal::ArtifactWriter>(fd.value(), stream);
-  }
-  return writer;
+std::shared_ptr<internal::ArtifactWriter>
+GlobalArtifactWriterManager::writer() {
+  absl::MutexLock l(&mutex_);
+  return writer_;
 }
 
-void LogToArtifact(absl::string_view msg, rpb::Log::Severity severity) {
+void GlobalArtifactWriterManager::SetWriter(
+    std::unique_ptr<internal::ArtifactWriter> writer) {
+  if (writer == nullptr) writer = NewArtifactWriterOrDie();
+
+  absl::MutexLock l(&mutex_);
+  writer_ = std::move(writer);
+}
+
+void LogSink::LogToArtifactWriter(
+    absl::string_view msg,
+    ocpdiag::results_pb::Log::Severity severity) {
   rpb::Log log_pb;
   log_pb.set_text(std::string(msg));
   log_pb.set_severity(severity);
@@ -215,25 +213,40 @@ void LogToArtifact(absl::string_view msg, rpb::Log::Severity severity) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
 
-  absl::StatusOr<std::shared_ptr<internal::ArtifactWriter>> writer =
-      GetArtifactWriter();
-  if (writer.ok()) {
-    (writer.value())->Write(out_pb);
-  } else {
-    static constexpr absl::string_view kMessage =
-        "Failed to write to OCPDiag artifact: Unable to get ArtifactWriter.";
-    std::cerr << kMessage << std::endl;
-  }
+  GlobalArtifactWriterManager::Get().writer()->Write(out_pb);
 }
 
-void ResultApi::InitializeOCPDiagLogSink() {
-  static bool called = false;
-  if (!called) {
-    called = true;
-    if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
-      absl::AddLogSink(new OCPDiagLogSink());
-    }
+void LogSink::Send(const absl::LogEntry& entry) {
+  absl::string_view text = entry.text_message_with_prefix();
+  switch (entry.log_severity()) {
+    case absl::LogSeverity::kInfo:
+      LogToArtifactWriter(text, rpb::Log::INFO);
+      return;
+    case absl::LogSeverity::kWarning:
+      LogToArtifactWriter(text, rpb::Log::WARNING);
+      return;
+    case absl::LogSeverity::kError:
+      LogToArtifactWriter(text, rpb::Log::ERROR);
+      return;
+    case absl::LogSeverity::kFatal:
+      LogToArtifactWriter(text, rpb::Log::FATAL);
+      return;
   }
+  std::cerr << "Unknown ABSL log severity: " << entry.log_severity()
+            << std::endl;
+}
+
+void LogSink::RegisterWithAbsl() {
+  // The LogSink is stored as a global static variable, which is initialized
+  // once in a thread-safe manner.
+  static LogSink* log_sink = []() {
+    auto* ret = new LogSink();
+    if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
+      absl::AddLogSink(ret);
+    }
+    return ret;
+  }();
+  (void)log_sink;  // suppress unused variable warning
 }
 
 // Note: this method is overridden in FakeResultApi to allow
@@ -263,14 +276,12 @@ absl::StatusOr<TestRun> TestRun::Init(std::string name) {
   static bool called = false;
   if (!called) {
     called = true;
-    ASSIGN_OR_RETURN(std::shared_ptr<internal::ArtifactWriter> writer,
-                     GetArtifactWriter());
-    return TestRun(std::move(name), std::move(writer));
+    return TestRun(std::move(name),
+                   GlobalArtifactWriterManager::Get().writer());
   }
-  static constexpr absl::string_view kMessage =
-      "OCPDiag Test already initialized.";
-  std::cerr << kMessage << std::endl;
-  return absl::AlreadyExistsError(kMessage);
+  auto status = absl::AlreadyExistsError("OCPDiag Test already initialized.");
+  std::cerr << status.message() << std::endl;
+  return status;
 }
 
 TestRun::TestRun(std::string name,
@@ -279,11 +290,11 @@ TestRun::TestRun(std::string name,
       name_(std::move(name)),
       state_(RunState::kNotStarted),
       result_(ocpdiag::results_pb::TestResult::NOT_APPLICABLE),
-      status_(ocpdiag::results_pb::TestStatus::UNKNOWN) {}
-
-TestRun::TestRun(TestRun&& other) {
-  *this = std::move(other);
+      status_(ocpdiag::results_pb::TestStatus::UNKNOWN) {
+  LogSink::RegisterWithAbsl();
 }
+
+TestRun::TestRun(TestRun&& other) { *this = std::move(other); }
 
 TestRun& TestRun::operator=(TestRun&& other) ABSL_LOCKS_EXCLUDED(mutex_) {
   if (this != &other) {

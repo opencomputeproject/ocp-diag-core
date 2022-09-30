@@ -30,6 +30,7 @@ cc_library(
         "//ocpdiag/core/params:utils",
         "//ocpdiag/core/results:results_cc_proto",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -38,6 +39,12 @@ cc_library(
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
         "@com_google_protobuf//:protobuf",
+        "@com_google_riegeli//riegeli/base",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/bytes:fd_writer",
+        "@com_google_riegeli//riegeli/records:record_reader",
+        "@com_google_riegeli//riegeli/records:record_writer",
+        "@com_google_riegeli//riegeli/records:records_metadata_cc_proto",
     ],
 )
 
@@ -85,6 +92,9 @@ cc_test(
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
+        "@com_google_riegeli//riegeli/base",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/records:record_reader",
     ],
 )
 

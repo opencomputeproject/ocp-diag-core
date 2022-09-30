@@ -20,6 +20,10 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/results.pb.h"
+#include "riegeli/base/object.h"
+#include "riegeli/bytes/fd_writer.h"
+#include "riegeli/records/record_writer.h"
+
 namespace ocpdiag {
 namespace results {
 
@@ -33,10 +37,17 @@ google::protobuf::Timestamp Now();
 // Opens the requested file and returns the file-descriptor.
 // Returns -1 (invalid descriptor) on empty string, or error if file is invalid
 // or could not be opened.
-absl::StatusOr<int> OpenAndGetDescriptor(const char* filepath);
+absl::StatusOr<int> OpenAndGetDescriptor(absl::string_view filepath);
 
 // Returns a globally cached TypeResolver for the generated pool.
 google::protobuf::util::TypeResolver* GeneratedResolver();
+
+// Parses a binary recordIO file of output artifacts and executes the callback
+// on each record. Touches all output until the callback returns "false".
+absl::Status ParseRecordIo(
+    absl::string_view filepath,
+    std::function<bool(ocpdiag::results_pb::OutputArtifact)>
+        callback);
 
 // Handles emission of OutputArtifacts for OCPDiag tests.
 class ArtifactWriter {
@@ -109,6 +120,11 @@ class ArtifactWriter {
     absl::Mutex mutex_;
     int sequence_num_ ABSL_GUARDED_BY(mutex_);
     std::ostream* readable_out_ ABSL_GUARDED_BY(mutex_);
+    riegeli::RecordWriter<riegeli::FdWriter<>> file_out_
+        ABSL_GUARDED_BY(mutex_){riegeli::kClosed};
+
+    // Flushes the output file buffer.
+    void FlushFileBuffer() ABSL_LOCKS_EXCLUDED(mutex_);
   };
 
   std::shared_ptr<WriterProxy> proxy_;
