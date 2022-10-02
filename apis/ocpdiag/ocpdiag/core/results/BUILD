@@ -85,3 +85,69 @@ cc_test(
         "@com_google_riegeli//riegeli/records:record_reader",
     ],
 )
+
+cc_library(
+    name = "output_model",
+    srcs = ["output_model.cc"],
+    hdrs = ["output_model.h"],
+    deps = [
+        ":results_cc_proto",
+        "//ocpdiag/core/compat:status_macros",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:bind_front",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_test(
+    name = "output_model_test",
+    srcs = [
+        "output_model_test.cc",
+    ],
+    deps = [
+        ":output_model",
+        ":results_cc_proto",
+        "//ocpdiag/core/testing:parse_text_proto",
+        "//ocpdiag/core/testing:status_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "output_receiver",
+    srcs = ["output_receiver.cc"],
+    hdrs = ["output_receiver.h"],
+    deps = [
+        ":output_model",
+        ":results",
+        ":results_cc_proto",
+        "//ocpdiag/core/results/internal:logging",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/functional:bind_front",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "output_receiver_test",
+    srcs = [
+        "output_receiver_test.cc",
+    ],
+    deps = [
+        ":output_receiver",
+        ":results",
+        ":results_cc_proto",
+        "//ocpdiag/core/compat:status_macros",
+        "//ocpdiag/core/testing:status_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
