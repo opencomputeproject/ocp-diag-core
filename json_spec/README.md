@@ -190,27 +190,27 @@ The following data types are used in this **specification** and are constrained 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td><em>Array</em></td>
+        <td>Array</td>
         <td>A list of elements consisting of the same data type.</td>
     </tr>
     <tr>
-        <td><em>Boolean</em></td>
+        <td>Boolean</td>
         <td>A single bit data type consisting of true or false.</td>
     </tr>
     <tr>
-        <td><em>Null</em></td>
+        <td>Null</td>
         <td>A nullable value</td>
     </tr>
     <tr>
-        <td><em>Number</em></td>
+        <td>Number</td>
         <td>An integer or floating point value expressed in base 10.</td>
     </tr>
     <tr>
-        <td><em>Object</em></td>
+        <td>Object</td>
         <td>A set of key/value pairs. Each key in the key/value pair of an object shall be a unique string.</td>
     </tr>
     <tr>
-        <td><em>String</em></td>
+        <td>String</td>
         <td>Sequence of characters contained in double quotes. Strings support escape sequences which are outlined in the following section.</td>
     </tr>
 </table>
@@ -220,7 +220,7 @@ This **specification** attempts to allow the use of common JSON parsing librarie
 
 ### String Escape Sequences
 
-The following escape sequences are supported in the diagnostic output, which are the standard JSON escape sequences. There is no expansion of the JSON specification for escaping. 
+The following escape sequences are supported in the diagnostic output, which are the standard JSON escape sequences. There is no expansion of the JSON specification for escaping.
 
 <table>
     <tr>
@@ -294,12 +294,12 @@ The JSON specification does not include precision requirements for numeric value
 
 The level of numeric precision required for diagnostic testing may exceed the limitations of common JSON parsers, which typically convert the _number_ value type of JSON message to an appropriate native value type of the implementation language. When serializing to JSON, consider any such limitations in applications that may consume your JSON. In particular, it is common for JSON numbers to be deserialized into [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754) double precision numbers and thus subject to that representation's range and precision limitations.
 
-It is however _recommended_ that the numeric values in the produced **LDJSON** are convertible to double precision floats.  
+It is however _recommended_ that the numeric values in the produced **LDJSON** are convertible to double precision floats.
 
 
 ### Enumerations used in the specification
 
-The following enumerations are used in this **specification**. In each case, their value is represented in JSON as an upper case string matching the enumeration value.  
+The following enumerations are used in this **specification**. In each case, their value is represented in JSON as an upper case string matching the enumeration value.
 
 
 #### DiagnosisType
@@ -360,7 +360,7 @@ Specifies the seriousness of a particular diagnostic log message. These values g
 
 #### SoftwareType
 
-Specifies the type of software that is represented by a _SoftwareInfo_ message. 
+Specifies the type of software that is represented by a _SoftwareInfo_ message.
 
 <table>
     <tr>
@@ -588,7 +588,7 @@ The following examples below are _both_ considered valid representations of an o
 }
 ```
 
-#### Example 2: Omitting an optional field  
+#### Example 2: Omitting an optional field
 
 ```json
 {
@@ -612,15 +612,15 @@ The _OutputArtifact_ is the single parseable output object from a **diagnostic**
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>SchemaVersionArtifact</td>
+        <td><em>SchemaVersionArtifact</em></td>
         <td>An informational element conveying details about the data to be exported, primarily the version of the emitted data to follow. </td>
     </tr>
     <tr>
-        <td>TestRunArtifact</td>
+        <td><em>TestRunArtifact</em></td>
         <td>An informational element conveying details about a top level <strong>test run</strong>. A <strong>test run</strong> consists of zero or more <strong>test steps</strong>.</td>
     </tr>
     <tr>
-        <td>TestStepArtifact</td>
+        <td><em>TestStepArtifact</em></td>
         <td>An informational element conveying details about a <strong>test step</strong> which was executed as part of a <strong>test run</strong>.</td>
     </tr>
 </table>
@@ -632,35 +632,32 @@ All top level _OutputArtifacts_ contain the following attributes in addition to 
 
 <table>
     <tr>
-        <td colspan="4" ><strong>OutputArtifact fields</strong></td>
-    </tr>
-    <tr>
         <td><strong>Attribute</strong></td>
         <td><strong>Type</strong></td>
         <td><strong>Required</strong></td>
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>sequenceNumber</td>
+        <td><em>sequenceNumber</em></td>
         <td>number (integer)</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A monotonically increasing field indicating the order of output returned from a <strong>diagnostic</strong>. A sequence number is valuable for determining if information regarding a <strong>diagnostic's</strong> execution has been lost in transmission or transformation and for re-sequencing possibly out of order transmissions.</td>
     </tr>
     <tr>
-        <td>timestamp</td>
+        <td><em>timestamp</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A timestamp indicating when the information was generated by the <strong>diagnostic</strong> returned in an ISO date-time format (see Date/Time Strings for details).</td>
     </tr>
     <tr>
-        <td><em>&lt;artifact&gt;</em></td>
+        <td><strong><em>&lt;artifact&gt;</em></strong></td>
         <td>JSON: object<br/>Message: various</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A <em>SchemaVersionArtifact</em>, <em>TestRunArtifact</em>, or <em>TestStepArtifact</em> message.</td>
     </tr>
 </table>
 
-A diagram of the complete result structure of this **specification** for data messages is shown below. 
+A diagram of the complete result structure of this **specification** for data messages is shown below.
 
 ---
 
@@ -697,15 +694,15 @@ A minor change to the schema represents a non-breaking change such as the additi
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>major</td>
+        <td><em>major</em></td>
         <td>number (integer)</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Major version of the <strong>OCP Test and Validation output specification</strong>.</td>
     </tr>
     <tr>
-        <td>minor</td>
+        <td><em>minor</em></td>
         <td>number (integer)</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Minor version of the <strong>OCP test and Validation output specification</strong>.</td>
     </tr>
 </table>
@@ -736,9 +733,9 @@ A _testRunArtifact_ contains a single field which is a message of the valid type
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td><em>&lt;artifact&gt;</em></td>
+        <td><strong><em>&lt;artifact&gt;</em></strong></td>
         <td>JSON: object<br/>Message: various</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>The <strong>artifact</strong> output message.</td>
     </tr>
 </table>
@@ -751,19 +748,19 @@ The following message types are valid messages that may be populated in the arti
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>Log</td>
+        <td><em>Log</em></td>
         <td>An entry of free-form text documenting the output of a diagnostic execution typically meant for the purpose of debugging or tracing program execution.</td>
     </tr>
     <tr>
-        <td>Error</td>
+        <td><em>Error</em></td>
         <td>An exception or unexpected event has occurred in the <strong>diagnostic's</strong> execution</td>
     </tr>
     <tr>
-        <td>TestRunStart</td>
+        <td><em>TestRunStart</em></td>
         <td>Contains information about the invocation or start of a particular <strong>test run</strong>.</td>
     </tr>
     <tr>
-        <td>TestRunEnd</td>
+        <td><em>TestRunEnd</em></td>
         <td>Contains information about the completion and final status of a particular <strong>test run</strong>.</td>
     </tr>
 </table>
@@ -771,7 +768,7 @@ The following message types are valid messages that may be populated in the arti
 
 #### Test Step Artifacts
 
-A _testStepArtifact_ refers to data and information associated with a particular sub-sequence of a diagnostics overall execution. 
+A _testStepArtifact_ refers to data and information associated with a particular sub-sequence of a diagnostics overall execution.
 
 <table>
     <tr>
@@ -781,15 +778,15 @@ A _testStepArtifact_ refers to data and information associated with a particular
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>testStepId</td>
+        <td><em>testStepId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A <strong>unique identifier</strong> for the <strong>test step</strong>. This identifier is used to associate any additional messages with the <strong>test step</strong>.</td>
     </tr>
     <tr>
-        <td><em>&lt;artifact&gt;</em></td>
+        <td><strong><em>&lt;artifact&gt;</em></strong></td>
         <td>JSON: object<br/>Message: various</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>The artifact test step message.</td>
     </tr>
 </table>
@@ -802,47 +799,47 @@ The following artifacts are supported attributes of a test step artifact:
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>TestStepStart</td>
+        <td><em>TestStepStart</em></td>
         <td>Information pertaining to the starting condition of a test step.</td>
     </tr>
     <tr>
-        <td>TestStepEnd</td>
+        <td><em>TestStepEnd</em></td>
         <td>Information pertaining to the ending condition of a test step.</td>
     </tr>
     <tr>
-        <td>Measurement</td>
+        <td><em>Measurement</em></td>
         <td>Information concerning a discrete <strong>measurement</strong> or telemetry from a <strong>device under test</strong>.</td>
     </tr>
     <tr>
-        <td>MeasurementSeriesStart</td>
+        <td><em>MeasurementSeriesStart</em></td>
         <td>Information concerning the beginning of a measurement series.</td>
     </tr>
     <tr>
-        <td>MeasurementSeriesEnd</td>
+        <td><em>MeasurementSeriesEnd</em></td>
         <td>Information concerning the ending of a measurement series.</td>
     </tr>
     <tr>
-        <td>MeasurementElement</td>
+        <td><em>MeasurementElement</em></td>
         <td>Information concerning a discrete observation contained in a measurement or measurement series.</td>
     </tr>
     <tr>
-        <td>Diagnosis</td>
+        <td><em>Diagnosis</em></td>
         <td>The identification of the status of a <strong>device or system under test</strong> based on the examination of measurements and <strong>symptoms</strong>.</td>
     </tr>
     <tr>
-        <td>Error</td>
+        <td><em>Error</em></td>
         <td>Information concerning an invalid state or condition that was encountered during the execution of a <strong>diagnostic</strong>.</td>
     </tr>
     <tr>
-        <td>File</td>
+        <td><em>File</em></td>
         <td>An arbitrary collection of related information that was gathered in a file produced by the execution of a diagnostic. The content type is specified by the meta data included in this artifact type. Storage backend of the file may vary.</td>
     </tr>
     <tr>
-        <td>Log</td>
+        <td><em>Log</em></td>
         <td>An entry of free-form text documenting the output of a diagnostic execution typically meant for the purpose of debugging or tracing program execution.</td>
     </tr>
     <tr>
-        <td>Extension</td>
+        <td><em>Extension</em></td>
         <td>An extensible data type that allows for new objects to be added to the diagnostic specification that will be compatible with existing parsers.</td>
     </tr>
 </table>
@@ -850,7 +847,7 @@ The following artifacts are supported attributes of a test step artifact:
 
 ### Artifact Message Details
 
-The following section of the **specification** presents an alphabetical comprehensive list of all output **artifacts** and examples of each element.  
+The following section of the **specification** presents an alphabetical comprehensive list of all output **artifacts** and examples of each element.
 
 #### Diagnosis
 
@@ -862,37 +859,37 @@ A _diagnosis_ gives the verdict of the health status for hardware **components u
 
 <table>
     <tr>
-        <td>Attribute</td>
-        <td>Type</td>
-        <td>Required</td>
-        <td>Description</td>
+        <td><strong>Attribute</strong></td>
+        <td><strong>Type</strong></td>
+        <td><strong>Required</strong></td>
+        <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>verdict</td>
+        <td><em>verdict</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A short string describing the overall determination of the <strong>diagnostic</strong> (e.g. cpu-good, hdd-overtemp, etc). These short human readable strings are typically used to aggregate counts of observed <strong>symptoms</strong>.</td>
     </tr>
     <tr>
-        <td>type</td>
+        <td><em>type</em></td>
         <td>JSON: string<br/>Message: enum DiagnosisType</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>The overall assessment of the result of the diagnostic execution, expressed as a <em>DiagnosisType</em> message.</td>
     </tr>
     <tr>
-        <td>message</td>
+        <td><em>message</em></td>
         <td>string</td>
         <td>No</td>
         <td>Detailed explanation why the <em>Diagnosis</em> gives the above verdict of the hardware health.</td>
     </tr>
     <tr>
-        <td>hardwareInfoId</td>
+        <td><em>hardwareInfoId</em></td>
         <td>string</td>
         <td>No</td>
         <td>Hardware identifier to which the <em>diagnosis</em> applies. The referenced info ID information can be found in the <em>DutInfo</em> of <em>TestRunStart</em>.</td>
     </tr>
     <tr>
-        <td>subcomponent</td>
+        <td><em>subcomponent</em></td>
         <td>JSON: object<br/>Message: Subcomponent</td>
         <td>No</td>
         <td>Provides additional information about a specific functional <em>subcomponent</em> of the hardware referenced by ID. If present, the <em>diagnosis</em> applies to this <em>subcomponent</em> instead of the parent hardware component.</td>
@@ -942,37 +939,37 @@ The DUT info contains information about the **device under test** as determined 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>dutInfoId</td>
+        <td><em>dutInfoId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A <strong>unique identifier</strong> for the device under test.</td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
         <td>No</td>
         <td>The name of the <strong>device under test</strong> against which the <strong>diagnostic</strong> is currently executing.</td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: Metadata</td>
         <td>No</td>
         <td>An arbitrary non-nested JSON object containing metadata about the DUT.</td>
     </tr>
     <tr>
-        <td>platformInfos</td>
+        <td><em>platformInfos</em></td>
         <td>JSON: array<br/>Message: list of PlatformInfo</td>
         <td>No</td>
         <td>A list of <em>platformInfo</em> objects containing information about the platform under test.</td>
     </tr>
     <tr>
-        <td>hardwareInfos</td>
+        <td><em>hardwareInfos</em></td>
         <td>JSON: array<br/>Message: list of HardwareInfo</td>
         <td>No</td>
         <td>A list of hardware components discovered by the <strong>diagnostic</strong> which will be enumerated with <strong>unique IDs</strong> that can be used for later reference in the diagnostic output.  This is an array of <em>HardwareInfo</em> messages, of which the elements are detailed below.</td>
     </tr>
     <tr>
-        <td>softwareInfos</td>
+        <td><em>softwareInfos</em></td>
         <td>JSON: array<br/>Message: list of SoftwareInfo</td>
         <td>No</td>
         <td>A list of software components discovered by the <strong>diagnostic</strong> which will be enumerated with <strong>unique IDs</strong> that can be used for later reference in diagnostic output. This is an array of <em>SoftwareInfo</em> messages, of which the elements are detailed below.</td>
@@ -1056,19 +1053,19 @@ An _error_ is an output **artifact** that reports a software, firmware, test or 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>symptom</td>
+        <td><em>symptom</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A short string of the software issued <strong>verdict</strong>.</td>
     </tr>
     <tr>
-        <td>message</td>
+        <td><em>message</em></td>
         <td>string</td>
         <td>No</td>
         <td>Detailed explanation why the <em>Error</em> gives the above symptom.</td>
     </tr>
     <tr>
-        <td>softwareInfoIds</td>
+        <td><em>softwareInfoIds</em></td>
         <td>JSON: array<br/>Message: list of string</td>
         <td>No</td>
         <td>A list of <em>software components</em> or <em>firmware components</em> to which the <em>Error</em> is associated. The software ID information can be found in the <em>DutInfo</em> field of <em>TestRunStart</em>.</td>
@@ -1104,7 +1101,7 @@ One common scenario where this is significant is in the area of a "cleanup" or "
 
 ##### Guidance on identifying software artifacts that were generated as part of the diagnostic execution
 
-In some edge-cases, an _error_ artifact requires being associated with a software entity that was produced as an artifact of the diagnostics execution itself. An example might be a particular executable which was compiled during the **diagnostic's** runtime, but did not exist at the invocation of the diagnostic, so a _SoftwareInfoId_ may not be known at the **diagnostic's** execution time. In this event, the **OCP specification** guidance is that the error should be directly attributed to the diagnostic software artifact itself, which can be included as an artifact in the _softwareInfo_ objects in the _DutInfo_ artifact. 
+In some edge-cases, an _error_ artifact requires being associated with a software entity that was produced as an artifact of the diagnostics execution itself. An example might be a particular executable which was compiled during the **diagnostic's** runtime, but did not exist at the invocation of the diagnostic, so a _SoftwareInfoId_ may not be known at the **diagnostic's** execution time. In this event, the **OCP specification** guidance is that the error should be directly attributed to the diagnostic software artifact itself, which can be included as an artifact in the _softwareInfo_ objects in the _DutInfo_ artifact.
 
 
 #### Extension
@@ -1125,15 +1122,15 @@ The _extension_ message type allows a test step to record any data record as lon
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Identifier for the <em>extension</em> message.</td>
     </tr>
     <tr>
-        <td>content</td>
+        <td><em>content</em></td>
         <td>JSON: object<br/>Message: <em>not specified</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Object message for the extension, this can be <strong><em>any</em></strong> valid nested JSON object.</td>
     </tr>
 </table>
@@ -1176,7 +1173,7 @@ For a compliant list of defined MIME types by the W3 please refer to [w3docs mim
 
 ##### Uniform Resource Identifier (URI)
 
-The required URI parameter is used to identify how the file can be accessed remotely or locally. The URI specification is covered in the [RFC 3986 Uniform Resource Identifier (URI) Generic Syntax](https://datatracker.ietf.org/doc/html/rfc3986) document.  
+The required URI parameter is used to identify how the file can be accessed remotely or locally. The URI specification is covered in the [RFC 3986 Uniform Resource Identifier (URI) Generic Syntax](https://datatracker.ietf.org/doc/html/rfc3986) document.
 
 For local files, the URI should take the format of a File Uri as defined in [RFC 8089](https://datatracker.ietf.org/doc/html/rfc8089), however, the following external [documentation](https://tools.ietf.org/id/draft-kerwin-file-scheme-07.html) provided by the IETF (Internet Engineering Task Force) is considered more complete and concise.
 
@@ -1232,37 +1229,37 @@ A few examples of common URI's are outlined below. Please refer to the external 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>displayName</td>
+        <td><em>displayName</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>User-friendly name of the file to be uploaded. This is intended to be displayed to the user or as output in a <strong>test executive</strong>.</td>
     </tr>
     <tr>
-        <td>uri</td>
+        <td><em>uri</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Specifies the specific URI that can be used to access the file remotely or locally.</td>
     </tr>
     <tr>
-        <td>description</td>
+        <td><em>description</em></td>
         <td>string</td>
         <td>No</td>
         <td>A description of the file and its contents.</td>
     </tr>
     <tr>
-        <td>contentType</td>
+        <td><em>contentType</em></td>
         <td>string</td>
         <td>No</td>
         <td>A MIME-type specifying the content contained within the file.</td>
     </tr>
     <tr>
-        <td>isSnapshot</td>
+        <td><em>isSnapshot</em></td>
         <td>boolean</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Indicates if the file is a temporary snapshot of the final output, or if it represents the complete file output.</td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: Metadata</td>
         <td>No</td>
         <td>A JSON object containing values which contain additional information about the file object.</td>
@@ -1305,13 +1302,13 @@ Provides information on a _hardware component_ in the system that is exercised o
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>hardwareInfoId</td>
+        <td><em>hardwareInfoId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td><strong>Unique identifier</strong> used to reference this hardware device in the diagnostic output.</td>
     </tr>
     <tr>
-        <td>computerSystem</td>
+        <td><em>computerSystem</em></td>
         <td>string</td>
         <td>No</td>
         <td>
@@ -1320,67 +1317,67 @@ Provides information on a _hardware component_ in the system that is exercised o
         </td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the hardware device.</td>
     </tr>
     <tr>
-        <td>location</td>
+        <td><em>location</em></td>
         <td>string</td>
         <td>No</td>
         <td>Location for a component. The source of the location is left up to the implementation of the <strong>diagnostic</strong>, but this is generally a location that a user would use to locate the device uniquely in a hardware system. This may be a silkscreen indicator (i.e. CPU0) or a unique location code.</td>
     </tr>
     <tr>
-        <td>odataId</td>
+        <td><em>odataId</em></td>
         <td>string</td>
         <td>No</td>
         <td>Indicates an odata.Id identifier for a redfish managed physical component.</td>
     </tr>
     <tr>
-        <td>partNumber</td>
+        <td><em>partNumber</em></td>
         <td>string</td>
         <td>No</td>
         <td>Part number for the hardware device. This may be an internal or external part number.</td>
     </tr>
     <tr>
-        <td>serialNumber</td>
+        <td><em>serialNumber</em></td>
         <td>string</td>
         <td>No</td>
         <td>Unique serial number for the hardware device.</td>
     </tr>
     <tr>
-        <td>manager</td>
+        <td><em>manager</em></td>
         <td>string</td>
         <td>No</td>
         <td>The name of the manager associated with the particular hardware component. This is typically an identifier for the baseband management controller or other OOB management device.</td>
     </tr>
     <tr>
-        <td>manufacturer</td>
+        <td><em>manufacturer</em></td>
         <td>string</td>
         <td>No</td>
         <td>Name of the device manufacturer.</td>
     </tr>
     <tr>
-        <td>manufacturerPartNumber</td>
+        <td><em>manufacturerPartNumber</em></td>
         <td>string</td>
         <td>No</td>
         <td>The manufacturer part number of the device.</td>
     </tr>
     <tr>
-        <td>partType</td>
+        <td><em>partType</em></td>
         <td>string</td>
         <td>No</td>
         <td>Provides a category to define a particular part type (i.e. GPU, CPU, DIMM, etc).</td>
     </tr>
     <tr>
-        <td>version</td>
+        <td><em>version</em></td>
         <td>string</td>
         <td>No</td>
         <td>The version of the hardware component.</td>
     </tr>
     <tr>
-        <td>revision</td>
+        <td><em>revision</em></td>
         <td>string</td>
         <td>No</td>
         <td>The revision of the hardware component.</td>
@@ -1434,21 +1431,21 @@ A log is an entry of free-form text documenting the output of a diagnostic execu
 
 <table>
     <tr>
-        <td>Attribute</td>
-        <td>Type</td>
-        <td>Required</td>
-        <td>Description</td>
+        <td><strong>Attribute</strong></td>
+        <td><strong>Type</strong></td>
+        <td><strong>Required</strong></td>
+        <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>severity</td>
+        <td><em>severity</em></td>
         <td>JSON: string<br/>Message: enum <em>Severity</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Indicates the significance of the log message.</td>
     </tr>
     <tr>
-        <td>message</td>
+        <td><em>message</em></td>
         <td>String</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Text string intended to aid in debugging or tracing of diagnostic execution.</td>
     </tr>
 </table>
@@ -1486,43 +1483,43 @@ A record of data collected during a **test step** execution. _Measurements_ (and
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Label of the <em>measurement</em>.</td>
     </tr>
     <tr>
-        <td>unit</td>
+        <td><em>unit</em></td>
         <td>string</td>
         <td>No</td>
         <td>Unit of measure for the <em>measurement</em> (e.g. volts, seconds, transfers/sec)</td>
     </tr>
     <tr>
-        <td>hardwareInfoId</td>
+        <td><em>hardwareInfoId</em></td>
         <td>string</td>
         <td>No</td>
         <td><strong>Unique ID</strong> of the <em>hardware device</em> to which the <em>measurement</em> information is associated.</td>
     </tr>
     <tr>
-        <td>subcomponent</td>
+        <td><em>subcomponent</em></td>
         <td>JSON: object<br/>Message: <em>Subcomponent</em></td>
         <td>No</td>
         <td>Additional information about a particular functional or physical element of the referenced hardware to which this <em>measurement</em> applies. See the <em>subcomponent</em> message for additional details.</td>
     </tr>
     <tr>
-        <td>validators</td>
+        <td><em>validators</em></td>
         <td>JSON: array<br/>Message: list of <em>Validator</em></td>
         <td>No</td>
         <td>Array of <em>validator</em> objects to be applied to the message. See the <em>Validator</em> section for additional information.</td>
     </tr>
     <tr>
-        <td>value</td>
+        <td><em>value</em></td>
         <td>String, number, boolean</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Value of the <em>measurement</em></td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: <em>Metadata</em></td>
         <td>No</td>
         <td>A collection of <em>metadata</em> associated with the <em>measurement</em>.</td>
@@ -1583,31 +1580,31 @@ A single _measurement_ contained in a time-based _MeasurementSeries_ message. A 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>index</td>
+        <td><em>index</em></td>
         <td>number (integer)</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Specifies a zero based offset indicating the order in which the <em>measurement</em> is located in the series.</td>
     </tr>
     <tr>
-        <td>measurementSeriesId</td>
+        <td><em>measurementSeriesId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Identifies the <em>MeasurementSeries</em> to which the <em>MeasurementSeriesElement</em> belongs via its <strong>unique</strong> measurement series id.</td>
     </tr>
     <tr>
-        <td>value</td>
+        <td><em>value</em></td>
         <td>string, number, boolean</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Value of the <em>measurement</em> in the <em>measurement series</em>.</td>
     </tr>
     <tr>
-        <td>timestamp</td>
+        <td><em>timestamp</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>An ISO formatted date time string indicating when the <em>measurement</em> was recorded from the perspective of the RTC of the <strong>device under test</strong>.</td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: <em>Metadata</em></td>
         <td>No</td>
         <td>Optional <em>metadata</em> concerning the <em>measurement series element</em>.</td>
@@ -1643,21 +1640,21 @@ Indicates the completion of a _measurement series_ in a **test step**.
 
 <table>
     <tr>
-        <td>Attribute</td>
-        <td>Type</td>
-        <td>Required</td>
-        <td>Description</td>
+        <td><strong>Attribute</strong></td>
+        <td><strong>Type</strong></td>
+        <td><strong>Required</strong></td>
+        <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>measurementSeriesId</td>
+        <td><em>measurementSeriesId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A <strong>test run</strong> scoped <strong>unique id</strong> which is used to identify data associated to the <em>measurement series</em>.</td>
     </tr>
     <tr>
-        <td>totalCount</td>
+        <td><em>totalCount</em></td>
         <td>number</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>The number of <em>measurement elements</em> in the completed <em>measurement series</em>.</td>
     </tr>
 </table>
@@ -1695,43 +1692,43 @@ Indicates the start of a new _measurement series_ in a **test step**. A _measure
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>measurementSeriesId</td>
+        <td><em>measurementSeriesId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A <strong>test run</strong> scoped <strong>unique id</strong> which is used to identify data associated to the <em>measurement series</em>.</td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the <em>measurement</em>.</td>
     </tr>
     <tr>
-        <td>unit</td>
+        <td><em>unit</em></td>
         <td>string</td>
         <td>No</td>
         <td>Unit of measure of the <em>element</em>.</td>
     </tr>
     <tr>
-        <td>hardwareInfoId</td>
+        <td><em>hardwareInfoId</em></td>
         <td>string</td>
         <td>No</td>
         <td><strong>Unique ID</strong> of the <em>hardware device</em> to which the measurement information is associated.</td>
     </tr>
     <tr>
-        <td>subcomponent</td>
+        <td><em>subcomponent</em></td>
         <td>JSON: object<br/>Message: <em>Subcomponent</em></td>
         <td>No</td>
         <td>Additional information about a particular functional or physical element of the referenced hardware to which this <em>measurement series</em> applies.</td>
     </tr>
     <tr>
-        <td>validators</td>
+        <td><em>validators</em></td>
         <td>JSON: array<br/>Message: list of <em>Validator</em></td>
         <td>No</td>
         <td>Array of <em>validators</em> that are applied against ALL elements of a <em>measurement series</em>.</td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: <em>Metadata</em></td>
         <td>No</td>
         <td>Optional <em>metadata</em> concerning the <em>measurement series</em>.</td>
@@ -1784,15 +1781,15 @@ Additional data concerning a _measurement_, _measurement series_, _validator_, _
 
 ##### Attributes
 
-<table style="width: 100%;">
+<table>
     <tr>
-        <td>Attribute</td>
-        <td>Type</td>
-        <td>Required</td>
-        <td>Description</td>
+        <td><strong>Attribute</strong></td>
+        <td><strong>Type</strong></td>
+        <td><strong>Required</strong></td>
+        <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td><em>&lt;various&gt;</em></td>
+        <td><strong><em>&lt;various&gt;</em></strong></td>
         <td>JSON: object<br/>Message: various</td>
         <td>No</td>
         <td>Any valid JSON object</td>
@@ -1928,9 +1925,9 @@ This object is intended primarily for future expansion for a genealogy structure
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>info</td>
+        <td><em>info</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A string containing information about the platform of the <strong>device under test</strong>.</td>
     </tr>
 </table>
@@ -1977,37 +1974,37 @@ Provides information about software that was discovered or exercised during the 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>softwareInfoId</td>
+        <td><em>softwareInfoId</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td><strong>Unique identifier</strong> used to reference this software component in the <strong>diagnostic</strong> output.</td>
     </tr>
     <tr>
-        <td>computerSystem</td>
+        <td><em>computerSystem</em></td>
         <td>string</td>
         <td>No</td>
         <td>Name of the computer system on which this software is executing.</td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the software component.</td>
     </tr>
     <tr>
-        <td>version</td>
+        <td><em>version</em></td>
         <td>string</td>
         <td>No</td>
         <td>Version of the software component.</td>
     </tr>
     <tr>
-        <td>revision</td>
+        <td><em>revision</em></td>
         <td>string</td>
         <td>No</td>
         <td>Revision of the software component.</td>
     </tr>
     <tr>
-        <td>softwareType</td>
+        <td><em>softwareType</em></td>
         <td>JSON: string<br/>Message: enum <em>SoftwareType</em></td>
         <td>No</td>
         <td>Optional field provided to categorize software into specific types that may be useful for post-analysis. This is expressed as a <em>SoftwareType</em> enumeration.</td>
@@ -2065,31 +2062,31 @@ The _subcomponent_ is very loosely defined and may refer to a physical device, l
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>type</td>
+        <td><em>type</em></td>
         <td>JSON: string<br/>Message: enum <em>SubcomponentType</em></td>
         <td>No</td>
         <td>An optional enumeration indicating the subcomponent type.</td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the functional block, signal, bus or element of the <em>hardwareId</em> to which the supporting data is applicable.</td>
     </tr>
     <tr>
-        <td>location</td>
+        <td><em>location</em></td>
         <td>string</td>
         <td>No</td>
         <td>A location identifier for the subcomponent.</td>
     </tr>
     <tr>
-        <td>version</td>
+        <td><em>version</em></td>
         <td>string</td>
         <td>No</td>
         <td>Version of the subcomponent.</td>
     </tr>
     <tr>
-        <td>revision</td>
+        <td><em>revision</em></td>
         <td>string</td>
         <td>No</td>
         <td>Revision of the subcomponent.</td>
@@ -2142,15 +2139,15 @@ In the event that an error or condition that occurs that would prevent this mess
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>status</td>
+        <td><em>status</em></td>
         <td>JSON: string<br/>Message: enum <em>TestStatus</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td><em>TestStatus</em> enumeration which specifies the execution status of the test run.</td>
     </tr>
     <tr>
-        <td>result</td>
+        <td><em>result</em></td>
         <td>JSON: string<br/>Message: enum <em>TestResult</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td><em>TestResult</em> enumeration which indicates the overall result of the test run.</td>
     </tr>
 </table>
@@ -2187,21 +2184,21 @@ The _TestRunStart_ artifact establishes the information pertaining to the scope 
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the <strong>diagnostic</strong> being executed.</td>
     </tr>
     <tr>
-        <td>version</td>
+        <td><em>version</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Version of the <strong>diagnostic</strong> being executed.</td>
     </tr>
     <tr>
-        <td>commandLine</td>
+        <td><em>commandLine</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>
             Full command line with arguments that was used to invoke the <strong>diagnostic</strong>.<br/>
             Note that this may be different from the <em>parameters</em> since they may be determined from a second level of interpolation based on implementation.<br/>
@@ -2209,9 +2206,9 @@ The _TestRunStart_ artifact establishes the information pertaining to the scope 
         </td>
     </tr>
     <tr>
-        <td>parameters</td>
+        <td><em>parameters</em></td>
         <td>JSON: object<br/>Message: <em>various</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>
             Object containing information about the state or configuration of the diagnostic as it executed.<br/>
             Typically parameters can be input from the command line, configuration files, or may be default values of the diagnostic.<br/>
@@ -2219,15 +2216,15 @@ The _TestRunStart_ artifact establishes the information pertaining to the scope 
         </td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object</td>
         <td>No</td>
         <td>Optional <em>metadata</em> concerning the test run.</td>
     </tr>
     <tr>
-        <td>dutInfo</td>
+        <td><em>dutInfo</em></td>
         <td>JSON: object<br/>Message: <em>DutInfo</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Collection of structured information obtained by the <strong>diagnostic</strong> concerning the <strong>system under test</strong>.</td>
     </tr>
 </table>
@@ -2308,9 +2305,9 @@ Artifact indicating the completion of a **test step**.
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>status</td>
+        <td><em>status</em></td>
         <td>JSON: string<br/>Message: enum <em>TestStatus</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td><em>TestStatus</em> enumeration expressing the overall status of the <strong>test step</strong>.</td>
     </tr>
 </table>
@@ -2347,9 +2344,9 @@ The _TestStepStart_ artifact contains all the information relating to the beginn
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>Name of the <strong>test step</strong></td>
     </tr>
 </table>
@@ -2386,25 +2383,25 @@ A _validator_ is the description of a comparison or evaluation of a _measurement
         <td><strong>Description</strong></td>
     </tr>
     <tr>
-        <td>name</td>
+        <td><em>name</em></td>
         <td>string</td>
         <td>No</td>
         <td>The name of the comparison being performed (i.e. checksum verification)</td>
     </tr>
     <tr>
-        <td>type</td>
+        <td><em>type</em></td>
         <td>JSON: string<br/>Message: <em>ValidatorType</em></td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>A supported validator/comparison type.</td>
     </tr>
     <tr>
-        <td>value</td>
+        <td><em>value</em></td>
         <td>JSON: string, number, boolean</td>
-        <td>Yes</td>
+        <td><strong>Yes</strong></td>
         <td>The value to use on the right side of the arithmetic comparison.</td>
     </tr>
     <tr>
-        <td>metadata</td>
+        <td><em>metadata</em></td>
         <td>JSON: object<br/>Message: <em>Metadata</em></td>
         <td>No</td>
         <td>Optional <em>metadata</em> about the <em>validator</em>.</td>
@@ -2412,7 +2409,7 @@ A _validator_ is the description of a comparison or evaluation of a _measurement
 </table>
 
 ---
-# TODO
+# TODO: duplicated with section on enums
 ---
 
 The following table indicates the value types that are supported for each _validator_.
