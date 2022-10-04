@@ -7,13 +7,16 @@
 #include "ocpdiag/core/results/results.h"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 
 #include "google/protobuf/empty.pb.h"
 #include "google/protobuf/struct.pb.h"
 #include "absl/flags/flag.h"
+#include "ocpdiag/core/results/output_receiver.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "pybind11_abseil/absl_casters.h"
 #include "pybind11_abseil/status_casters.h"
+#include "pybind11_protobuf/native_proto_caster.h"
 #include "pybind11_protobuf/wrapped_proto_caster.h"
 
 namespace ocpdiag::results {
@@ -33,6 +36,7 @@ void SetFlags(const bool ocpdiag_copy_results_to_stdout,
 
 PYBIND11_MODULE(_results, m) {
   pybind11::google::ImportStatusModule();
+  pybind11_protobuf::ImportNativeProtoCasters();
   pybind11_protobuf::ImportWrappedProtoCasters();
 
   using pybind11_protobuf::WithWrappedProtos;
@@ -167,6 +171,18 @@ PYBIND11_MODULE(_results, m) {
       .def("Id", &MeasurementSeries::Id)
       .def("Ended", &MeasurementSeries::Ended)
       .def("End", &MeasurementSeries::End);
+
+  // Define the output receiver in this module, because it needs to update the
+  // TestRun flags. In open-source builds it will be unable to modify these
+  // flags if defined in a different pybind module.
+  //
+  pybind11::class_<OutputReceiver>(m, "OutputReceiver")
+      .def(pybind11::init())
+      .def("__enter__", [](OutputReceiver* self) { return self; })
+      .def("__exit__",
+           [](OutputReceiver* self, pybind11::args) { self->Close(); })
+      .def("Iterate", &OutputReceiver::Iterate, pybind11::arg("callback"))
+      .def_property_readonly("model", &OutputReceiver::model);
 }
 
 }  // namespace ocpdiag::results

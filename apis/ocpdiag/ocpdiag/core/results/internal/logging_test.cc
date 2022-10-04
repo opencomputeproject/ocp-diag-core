@@ -28,6 +28,9 @@
 #include "ocpdiag/core/results/results.pb.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"
+#include "riegeli/base/base.h"
+#include "riegeli/bytes/fd_reader.h"
+#include "riegeli/records/record_reader.h"
 
 namespace ocpdiag {
 namespace results {
@@ -94,6 +97,16 @@ TEST(ArtifactWriter, Simple) {
     sequence_number: 0
   )pb";
   EXPECT_THAT(got, Partially(testing::EqualsProto(want)));
+
+  // Read from results file
+  riegeli::RecordReader reader(
+      riegeli::FdReader(fileno(file.ptr), riegeli::FdReaderBase::Options()
+                                              // Seek to beginning
+                                              .set_independent_pos(0)));
+  rpb::OutputArtifact file_got;
+  if (!reader.ReadRecord(file_got)) FAIL() << "couldn't read";
+  EXPECT_THAT(file_got, Partially(testing::EqualsProto(want)));
+  reader.Close();
 }
 
 //
@@ -164,6 +177,20 @@ TEST(ArtifactWriter, ThreadSafetyCheck) {
       thread.wait();
     }
   }  // writers fall out of scope and Flush/close file
+
+  // Read from results file
+  riegeli::RecordReader reader(
+      riegeli::FdReader(fileno(file.ptr), riegeli::FdReaderBase::Options()
+                                              // Seek to beginning
+                                              .set_independent_pos(0)));
+
+  int want_count = writer_copies * artifact_count;
+  int got_count = 0;
+  rpb::OutputArtifact got;
+  while (reader.ReadRecord(got)) {
+    got_count++;
+  }
+  EXPECT_EQ(got_count, want_count);
 }
 
 // Confirms that writer does not write after Close() and fails gracefully
@@ -175,6 +202,16 @@ TEST(ArtifactWriter, WriteFailAfterClose) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_step_artifact() = rpb::TestStepArtifact();
   writer.Write(out_pb);
+
+  // Expect empty outputs
+  riegeli::RecordReader reader(
+      riegeli::FdReader(fileno(file.ptr), riegeli::FdReaderBase::Options()
+                                              // Seek to beginning
+                                              .set_independent_pos(0)));
+  while (reader.ReadRecord(out_pb)) {
+    FAIL() << "unexpected record found in file: " << out_pb.DebugString();
+  }
+  EXPECT_TRUE(json.str().empty()) << "unexpected contents: " << json.str();
 }
 
 }  // namespace
