@@ -25,6 +25,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/flags/reflection.h"
+#include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
@@ -35,9 +37,7 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/mock_file_handler.h"
-#include "ocpdiag/core/results/internal/test_utils.h"
 #include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/testing/mock_results.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"
@@ -46,14 +46,12 @@ namespace ocpdiag {
 namespace results {
 namespace internal {
 
-using internal::ArtifactWriter;
-using internal::Now;
-using internal::TestFile;
 using ::ocpdiag::testing::EqualsProto;
 using ::ocpdiag::testing::ParseTextProtoOrDie;
 using ::ocpdiag::testing::Partially;
 using ::ocpdiag::testing::StatusIs;
 using ::testing::_;
+using ::testing::Contains;
 using ::testing::Return;
 
 namespace rpb = ::ocpdiag::results_pb;
@@ -104,88 +102,69 @@ constexpr char kMeasurementInfo[] =
   name: "measurement info" unit: "unit" hardware_info_id: "%s"
     )pb";
 
-// Convert JSONL to OutputArtifact proto, or fail test
-void toProtoOrFail(std::string s, rpb::OutputArtifact& out) {
-  ASSERT_OK(
-      AsAbslStatus(google::protobuf::util::JsonStringToMessage(std::move(s), &out)));
+rpb::OutputArtifact ParseJsonOrDie(absl::string_view json) {
+  rpb::OutputArtifact got;
+  CHECK_OK(AsAbslStatus(google::protobuf::util::JsonStringToMessage(json, &got)));
+  return got;
 }
 
-// Test fixture for shared, static helper methods and members
-// Class instead of free functions to simplify friending
-//
-class ResultsTest : public ::testing::Test {
- public:
-  static TestRun GenerateTestRun(std::string name,
-                                 std::shared_ptr<ArtifactWriter> w) {
-    return TestRun(name, w);
-  }
-
-  static HwRecord GenerateHwRecord(rpb::HardwareInfo info) {
-    DutInfo di("hostname");
-    return di.AddHardware(info);
-  }
-
-  static SwRecord GenerateSwRecord(rpb::SoftwareInfo info) {
-    DutInfo di("hostname");
-    return di.AddSoftware(info);
-  }
-
-  static TestStep GenerateTestStep(
-      TestRun* parent, std::string name,
-      std::shared_ptr<internal::ArtifactWriter> writer,
-      std::string customId = kStepIdDefault,
-      std::unique_ptr<internal::MockFileHandler> file_handler =
-          std::make_unique<internal::MockFileHandler>()) {
-    return TestStep(parent, customId, std::move(name), std::move(writer),
-                    std::move(file_handler));
-  }
-
-  static MeasurementSeries GenerateMeasurementSeries(
-      std::shared_ptr<internal::ArtifactWriter> writer) {
-    rpb::HardwareInfo hwinfo = ParseTextProtoOrDie(kHwRegistered);
-    HwRecord hw = GenerateHwRecord(hwinfo);
-    rpb::MeasurementInfo minfo = ParseTextProtoOrDie(kMeasurementInfo);
-    return MeasurementSeries(nullptr, kStepIdDefault, "series_id",
-                             std::move(writer), minfo);
-  }
-
+class ResultsTestBase : public ::testing::Test {
  protected:
-  ResultsTest() = default;
-  static void SetUpTestSuite() {}
-  void SetUp() {}
-  ~ResultsTest() override = default;
+  ResultsTestBase()
+      : output_filename_(absl::StrFormat(
+            "%s/ocpdiag_results_test", std::filesystem::temp_directory_path())) {
+    if (std::filesystem::exists(output_filename_))
+      CHECK(std::filesystem::remove(output_filename_));
+
+    absl::StatusOr<int> fd = OpenAndGetDescriptor(output_filename_);
+    CHECK_OK(fd.status());
+
+    writer_ = std::make_unique<ArtifactWriter>(*fd, &json_out_);
+  }
+
+  void IterateJsonOutput(std::function<void(rpb::OutputArtifact)> callback) {
+    std::string line;
+    while (true) {
+      std::getline(json_out_, line);
+      if (line.empty()) break;
+      (void)callback(ParseJsonOrDie(line));
+    }
+  }
+
+  // Finds a particular artifact in the results output. If more than one
+  // artifacts satisfy the condition, only the last one is returned.
+  absl::StatusOr<rpb::OutputArtifact> FindArtifact(
+      std::function<bool(const rpb::OutputArtifact &)> condition) {
+    std::optional<rpb::OutputArtifact> found;
+    IterateJsonOutput([&](rpb::OutputArtifact artifact) {
+      if (condition(artifact)) found = artifact;
+    });
+    if (!found.has_value()) return absl::NotFoundError("");
+    return std::move(*found);
+  }
+
+  // Like FindArtifact(), only it returns all artifacts that match.
+  std::vector<rpb::OutputArtifact> FindAllArtifacts(
+      std::function<bool(const rpb::OutputArtifact &)> condition) {
+    std::vector<rpb::OutputArtifact> found;
+    IterateJsonOutput([&](rpb::OutputArtifact artifact) {
+      if (condition(artifact)) found.push_back(artifact);
+    });
+    return found;
+  }
+
+  absl::FlagSaver flag_saver_;
+  std::string output_filename_;
+  std::stringstream json_out_;
+  std::unique_ptr<ArtifactWriter> writer_;
 };
 
 // Test fixture for TestRun
-class TestRunTest : public ::testing::Test {
- protected:
-  TestRunTest()
-      : artifact_writer_(std::make_shared<internal::ArtifactWriter>(
-            dup(tmpfile_.descriptor), &json_out_)),
-        test_(ResultsTest::GenerateTestRun("TestRunTest", artifact_writer_)) {}
-  void SetUp() { json_out_.clear(); }
-  ~TestRunTest() override = default;
-
-  std::stringstream json_out_;
-  TestFile tmpfile_;
-  std::shared_ptr<internal::ArtifactWriter> artifact_writer_;
-
-  rpb::OutputArtifact got_;
-  TestRun test_;
-  ResultApi api_;
-};
-
-TEST_F(TestRunTest, InitOnlyOnce) {
-  absl::StatusOr<std::unique_ptr<TestRun>> test =
-      api_.InitializeTestRun("orig");
-  ASSERT_OK(test);
-  absl::StatusOr<std::unique_ptr<TestRun>> dupe =
-      api_.InitializeTestRun("dupe");
-  ASSERT_THAT(dupe, StatusIs(absl::StatusCode::kAlreadyExists));
-}
+using TestRunTest = ResultsTestBase;
 
 TEST_F(TestRunTest, StartAndRegisterInfos) {
-  ASSERT_FALSE(test_.Started());
+  TestRun test("TestRunTest", std::move(writer_));
+  ASSERT_FALSE(test.Started());
   DutInfo di("host");
   DutInfo di2("host2");
   HwRecord hw = di.AddHardware(ParseTextProtoOrDie(kHwRegistered));
@@ -196,8 +175,7 @@ TEST_F(TestRunTest, StartAndRegisterInfos) {
   dutinfos.emplace_back(std::move(di));
   dutinfos.emplace_back(std::move(di2));
   google::protobuf::Empty params;
-  test_.StartAndRegisterInfos(dutinfos, params);
-  toProtoOrFail(json_out_.str(), got_);
+  test.StartAndRegisterInfos(dutinfos, params);
   std::string want = absl::StrFormat(
       R"pb(
         test_run_artifact {
@@ -221,60 +199,82 @@ TEST_F(TestRunTest, StartAndRegisterInfos) {
       params.SerializeAsString(),
       absl::StrFormat(kHwRegistered, hw.Data().hardware_info_id()),
       absl::StrFormat(kSwRegistered, sw.Data().software_info_id()));
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  EXPECT_NE(got_.test_run_artifact().test_run_start().version(), "");
-  ASSERT_TRUE(test_.Started());
+
+  // Read the test run start artifact and compare against expectations.
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact artifact) {
+        return artifact.test_run_artifact().has_test_run_start();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
+  EXPECT_NE(got.test_run_artifact().test_run_start().version(), "");
+  EXPECT_TRUE(test.Started());
+
+  // Now check the recordIO fileoutput. We validate this once and use the json
+  // output for the rest of the tests.
+  got.Clear();
+  ASSERT_OK(ParseRecordIo(output_filename_, [&](auto artifact) {
+    if (artifact.test_run_artifact().has_test_run_start()) got = artifact;
+    return true;
+  }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestRunTest, EndBeforeStart) {
-  ASSERT_FALSE(test_.Ended());
-  rpb::TestResult result = test_.End();
+  TestRun test("TestRunTest", std::move(writer_));
+  ASSERT_FALSE(test.Ended());
+  rpb::TestResult result = test.End();
   // Expect NOT_APPLICABLE since test was never started
   ASSERT_EQ(result, rpb::TestResult::NOT_APPLICABLE);
 }
 
 TEST_F(TestRunTest, EndAfterStart) {
-  ASSERT_FALSE(test_.Ended());
-  test_.StartAndRegisterInfos({});
-  rpb::TestResult result = test_.End();
-  ASSERT_TRUE(test_.Ended());
+  TestRun test("TestRunTest", std::move(writer_));
+  ASSERT_FALSE(test.Ended());
+  test.StartAndRegisterInfos({});
+  rpb::TestResult result = test.End();
+  ASSERT_TRUE(test.Ended());
   ASSERT_EQ(result, rpb::TestResult::PASS);
-  ASSERT_EQ(test_.Status(), rpb::TestStatus::COMPLETE);
+  ASSERT_EQ(test.Status(), rpb::TestStatus::COMPLETE);
+  test.End();
 
-  std::string line;
-  std::getline(json_out_, line);  // discard TestRunStart artifact
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact {
-      test_run_end { name: "TestRunTest" status: COMPLETE result: PASS }
-    }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  test_.GetWriter()->Close();
+  ASSERT_OK_AND_ASSIGN(auto got,
+                       FindArtifact([&](rpb::OutputArtifact artifact) {
+                         return artifact.test_run_artifact().has_test_run_end();
+                       }));
+  std::string want = R"pb(name: "TestRunTest" status: COMPLETE result: PASS)pb";
+  EXPECT_THAT(got.test_run_artifact().test_run_end(),
+              Partially(EqualsProto(want)));
 }
 
-// Even if TestRun::End() called multiple times, expect only 1 artifact
 TEST_F(TestRunTest, EndTwice) {
-  test_.End();
-  test_.End();
-  test_.GetWriter()->Close();
+  TestRun test("TestRunTest", std::move(writer_));
+  test.End();
+  test.End();
+
+  // We should only find one "end" artifact.
+  int got_count = 0;
+  IterateJsonOutput([&](rpb::OutputArtifact a) {
+    if (a.test_run_artifact().has_test_run_end()) got_count++;
+  });
+  EXPECT_EQ(got_count, 1);
 }
 
 // Expect default NOT_APPLICABLE:UNKNOWN
 TEST_F(TestRunTest, ResultCalcDefaults) {
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::UNKNOWN));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
 }
 
 // Expect NOT_APPLICABLE:SKIPPED if skipped and no errors emitted
 TEST_F(TestRunTest, ResultCalcSkip) {
-  rpb::TestResult result = test_.Skip();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  rpb::TestResult result = test.Skip();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::SKIPPED));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
@@ -282,11 +282,12 @@ TEST_F(TestRunTest, ResultCalcSkip) {
 
 // Expect NOT_APPLICABLE:ERROR even if skip called after error
 TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
-  test_.AddError("", "");
-  rpb::TestResult result = test_.Skip();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  test.AddError("", "");
+  rpb::TestResult result = test.Skip();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::ERROR));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
@@ -294,11 +295,12 @@ TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
 
 // Expect PASS:COMPLETE if started and no diags/errors emitted
 TEST_F(TestRunTest, ResultCalcPass) {
-  test_.StartAndRegisterInfos({});
-  rpb::TestResult result = test_.End();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  rpb::TestResult result = test.End();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::COMPLETE));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::PASS));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::PASS));
@@ -306,14 +308,14 @@ TEST_F(TestRunTest, ResultCalcPass) {
 
 // Expect FAIL:COMPLETE if started and fail diag emitted
 TEST_F(TestRunTest, ResultCalcAddFailDiag) {
-  test_.StartAndRegisterInfos({});
-  TestStep step = ResultsTest::GenerateTestStep(
-      &test_, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
-  step.AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
-  rpb::TestResult result = test_.End();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("");
+  step->AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
+  rpb::TestResult result = test.End();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::COMPLETE));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::FAIL));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::FAIL));
@@ -321,11 +323,12 @@ TEST_F(TestRunTest, ResultCalcAddFailDiag) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestRun
 TEST_F(TestRunTest, ResultCalcTestRunAddError) {
-  test_.AddError("", "");
-  rpb::TestResult result = test_.End();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  test.AddError("", "");
+  rpb::TestResult result = test.End();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::ERROR));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
@@ -333,165 +336,145 @@ TEST_F(TestRunTest, ResultCalcTestRunAddError) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestStep
 TEST_F(TestRunTest, ResultCalcTestStepAddError) {
-  test_.StartAndRegisterInfos({});
-  TestStep step = ResultsTest::GenerateTestStep(
-      &test_, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
-  step.AddError("", "", {});
-  rpb::TestResult result = test_.End();
-  EXPECT_EQ(rpb::TestStatus_Name(test_.Status()),
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("");
+  step->AddError("", "", {});
+  rpb::TestResult result = test.End();
+  EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::ERROR));
-  EXPECT_EQ(rpb::TestResult_Name(test_.Result()),
+  EXPECT_EQ(rpb::TestResult_Name(test.Result()),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
   EXPECT_EQ(rpb::TestResult_Name(result),
             rpb::TestResult_Name(rpb::TestResult::NOT_APPLICABLE));
 }
 
 TEST_F(TestRunTest, AddError) {
-  SwRecord swrec =
-      ResultsTest::GenerateSwRecord(ParseTextProtoOrDie(kSwRegistered));
-  test_.AddError("symptom", "msg");
+  TestRun test("TestRunTest", std::move(writer_));
+  test.AddError("symptom", "msg");
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   // Compare to what we expect (ignoring timestamp)
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact { error { symptom: "symptom" msg: "msg" } }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  std::string want =
+      R"pb(test_run_artifact { error { symptom: "symptom" msg: "msg" } })pb";
+  auto errors = FindAllArtifacts(
+      [&](rpb::OutputArtifact a) { return a.test_run_artifact().has_error(); });
+  EXPECT_THAT(errors, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, AddTag) {
-  test_.AddTag("Guten Tag");
-  toProtoOrFail(json_out_.str(), got_);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.AddTag("Guten Tag");
+  test.End();
   // Compare to what we expect (ignoring timestamp)
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact { tag { tag: "Guten Tag" } }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  std::string want =
+      absl::StrFormat(R"pb(test_run_artifact { tag { tag: "Guten Tag" } })pb");
+  auto tags = FindAllArtifacts(
+      [&](rpb::OutputArtifact a) { return a.test_run_artifact().has_tag(); });
+  EXPECT_THAT(tags, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, LogDebug) {
-  test_.LogDebug("my house has termites, please debug it");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact {
-      log { severity: DEBUG text: "my house has termites, please debug it" }
-    }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.LogDebug("m");
+  test.End();
+  auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
+    return a.test_run_artifact().log().severity() == rpb::Log::DEBUG;
+  });
+  std::string want =
+      R"pb(test_run_artifact { log { severity: DEBUG text: "m" } })pb";
+  EXPECT_THAT(logs, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, LogInfo) {
-  test_.LogInfo("Here, have an info");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact { log { severity: INFO text: "Here, have an info" } }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.LogInfo("m");
+  test.End();
+  auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
+    return a.test_run_artifact().log().severity() == rpb::Log::INFO;
+  });
+  std::string want =
+      R"pb(test_run_artifact { log { severity: INFO text: "m" } })pb";
+  EXPECT_THAT(logs, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, LogWarn) {
-  test_.LogWarn("this test is brand new, never warn");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact {
-      log { severity: WARNING text: "this test is brand new, never warn" }
-    }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.LogWarn("m");
+  test.End();
+  auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
+    return a.test_run_artifact().log().severity() == rpb::Log::WARNING;
+  });
+  std::string want =
+      R"pb(test_run_artifact { log { severity: WARNING text: "m" } })pb";
+  EXPECT_THAT(logs, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, LogError) {
-  test_.LogError("to err is human");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact { log { severity: ERROR text: "to err is human" } }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.LogError("m");
+  test.End();
+  auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
+    return a.test_run_artifact().log().severity() == rpb::Log::ERROR;
+  });
+  std::string want =
+      R"pb(test_run_artifact { log { severity: ERROR text: "m" } })pb";
+  EXPECT_THAT(logs, Contains(Partially(EqualsProto(want))));
 }
 
 TEST_F(TestRunTest, LogFatal) {
-  test_.LogFatal("What's my destiny? Fatal determine that");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_run_artifact {
-      log { severity: FATAL text: "What's my destiny? Fatal determine that" }
-    }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.LogFatal("m");
+  test.End();
+  auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
+    return a.test_run_artifact().log().severity() == rpb::Log::FATAL;
+  });
+  std::string want =
+      R"pb(test_run_artifact { log { severity: FATAL text: "m" } })pb";
+  EXPECT_THAT(logs, Contains(Partially(EqualsProto(want))));
   //
 }
 
 // Test fixture for TestStep
-class TestStepTest : public ::testing::Test {
- protected:
-  TestStepTest()
-      : artifact_writer_(std::make_shared<internal::ArtifactWriter>(
-            dup(tmpfile_.descriptor), &json_out_)),
-        parent_(ResultsTest::GenerateTestRun("TestRun", artifact_writer_)),
-        step_(ResultsTest::GenerateTestStep(&parent_, "TestStepTest",
-                                            artifact_writer_)) {}
-  void SetUp() { json_out_.clear(); }
-  ~TestStepTest() override = default;
-
-  testonly::FakeResultApi fake_api_;
-  std::stringstream json_out_;
-  TestFile tmpfile_;
-  std::shared_ptr<internal::ArtifactWriter> artifact_writer_;
-  TestRun parent_;
-  rpb::OutputArtifact got_;
-  TestStep step_;
-};
+using TestStepTest = ResultsTestBase;
+using TestStepDeathTest = TestStepTest;
 
 TEST_F(TestStepTest, Begin) {
   // This test also confirms that the readable stream from the child object
   // (TestStep) writes to the same buffer as the parent (TestRun), as expected.
-  auto artifact_writer_ =
-      std::make_shared<ArtifactWriter>(dup(tmpfile_.descriptor), &json_out_);
-  TestRun test = ResultsTest::GenerateTestRun("Begin", artifact_writer_);
+  TestRun test("TestRunTest", std::move(writer_));
   test.StartAndRegisterInfos({});
-  fake_api_.BeginTestStep(&test, "BeginTest").IgnoreError();
-
-  std::string line;
-  std::getline(json_out_, line);  // discard TestRunStart artifact
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  std::string want = absl::StrFormat(R"pb(
-    test_step_artifact {
-      test_step_start { name: "BeginTest" }
-      test_step_id: "0"
-    }
-  )pb");
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  test.BeginTestStep("TestStepTest");
+  test.End();
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_test_step_start();
+                       }));
+  EXPECT_THAT(
+      got, Partially(EqualsProto(R"pb(test_step_artifact {
+                                        test_step_start { name: "TestStepTest" }
+                                        test_step_id: "0"
+                                      })pb")));
 }
 
-TEST_F(TestStepTest, BeginWithNullParent) {
-  std::unique_ptr<TestRun> t = nullptr;
-  absl::StatusOr<std::unique_ptr<TestStep>> step =
-      fake_api_.BeginTestStep(t.get(), "invalid");
-  ASSERT_THAT(step, StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST_F(TestStepTest, BeginWithParentNotStarted) {
-  auto artifact_writer_ =
-      std::make_shared<ArtifactWriter>(dup(tmpfile_.descriptor), &json_out_);
-  TestRun test = ResultsTest::GenerateTestRun("Begin", artifact_writer_);
-  absl::StatusOr<std::unique_ptr<TestStep>> step =
-      fake_api_.BeginTestStep(&test, "invalid");
-  ASSERT_THAT(step, StatusIs(absl::StatusCode::kFailedPrecondition));
+TEST(TestStepDeathTest, BeginWithParentNotStarted) {
+  TestRun test("Begin", std::make_unique<ArtifactWriter>(-1, nullptr));
+  ASSERT_DEATH(test.BeginTestStep("invalid"), "");
 }
 
 TEST_F(TestStepTest, AddDiagnosis) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  fakeWriter->RegisterHwId(hw.Data().hardware_info_id());
-  TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddDiagnosis",
-                                                std::move(fakeWriter));
-  step.AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
+  DutInfo dut_info;
+  HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({dut_info});
+  auto step = test.BeginTestStep("AddDiagnosis");
+  step->AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   // Compare to what we expect (ignoring timestamp)
+  ASSERT_OK_AND_ASSIGN(auto got,
+                       FindArtifact([&](rpb::OutputArtifact artifact) {
+                         return artifact.test_step_artifact().has_diagnosis();
+                       }));
   std::string want = absl::StrFormat(R"pb(
                                        test_step_artifact {
                                          diagnosis {
@@ -504,37 +487,43 @@ TEST_F(TestStepTest, AddDiagnosis) {
                                        }
                                        sequence_number: 0
                                      )pb",
-                                     hw.Data().hardware_info_id(), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+                                     hw.Data().hardware_info_id(), step->Id());
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwNotRegistered));
-  step_.AddDiagnosis(rpb::Diagnosis::FAIL, "symptom", "add diag fail", {hw});
+  DutInfo dut_info;
+  HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddDiagnosis");
+  step->AddDiagnosis(rpb::Diagnosis::FAIL, "symptom", "add diag fail", {hw});
 
   std::vector<std::string> wants;
-  std::vector<rpb::OutputArtifact> gots_json;
-  std::vector<rpb::OutputArtifact> gots_file;
-  // Expect Error log artifact first.
-  std::string line;
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  gots_json.push_back(got_);
+
+  // Expect test step start.
   std::string want = absl::StrFormat(
+      R"pb(
+        test_step_artifact {
+          test_step_id: "%s"
+          test_step_start {}
+        }
+      )pb",
+      step->Id());
+  wants.push_back(want);
+
+  // Expect Error log artifact.
+  want = absl::StrFormat(
       R"pb(
         test_step_artifact {
           error { symptom: "%s" }
           test_step_id: "%s"
         }
       )pb",
-      kSympUnregHw, step_.Id());
+      kSympUnregHw, step->Id());
   wants.push_back(want);
 
   // Then expect diag result with missing hardware_info_id
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  gots_json.push_back(got_);
   want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -542,63 +531,81 @@ TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
           test_step_id: "%s"
         }
       )pb",
-      step_.Id());
+      step->Id());
   wants.push_back(want);
-  step_.GetWriter()->Close();
+  test.End();
+
+  auto gots = FindAllArtifacts(
+      [](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
+  ASSERT_EQ(wants.size(), gots.size());
+  for (size_t i = 0; i < wants.size(); i++)
+    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
 }
 
 TEST_F(TestStepTest, AddError) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  SwRecord sw =
-      ResultsTest::GenerateSwRecord(ParseTextProtoOrDie(kSwRegistered));
-  fakeWriter->RegisterSwId(sw.Data().software_info_id());
-  TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddError",
-                                                std::move(fakeWriter));
-  step.AddError("symptom", "add error success", {sw});
+  DutInfo dut_info;
+  SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({dut_info});
+  auto step = test.BeginTestStep("AddError");
+  step->AddError("symptom", "add error success", {swrec});
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   // Compare to what we expect (ignoring timestamp)
-  std::string want = absl::StrFormat(R"pb(
-                                       test_step_artifact {
-                                         error {
-                                           symptom: "symptom"
-                                           msg: "add error success"
-                                           software_info_id: "%s"
-                                         }
-                                         test_step_id: "%s"
-                                       }
-                                       sequence_number: 0
-                                     )pb",
-                                     sw.Data().software_info_id(), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  ASSERT_EQ(step.Status(), rpb::TestStatus::ERROR);
-  //
-  // the auto-calc is working
+  std::string want =
+      absl::StrFormat(R"pb(
+                        test_step_artifact {
+                          error {
+                            symptom: "symptom"
+                            msg: "add error success"
+                            software_info_id: "%s"
+                          }
+                          test_step_id: "%s"
+                        }
+                        sequence_number: 0
+                      )pb",
+                      swrec.Data().software_info_id(), step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
+  EXPECT_EQ(step->Status(), rpb::TestStatus::ERROR);
+  EXPECT_EQ(test.Status(), rpb::TestStatus::ERROR);
 }
 
 TEST_F(TestStepTest, AddErrorSwUnregistered) {
-  SwRecord sw =
-      ResultsTest::GenerateSwRecord(ParseTextProtoOrDie(kSwNotRegistered));
-  step_.AddError("symptom", "add error fail", {sw});
+  DutInfo dut_info;
+  SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwNotRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddError");
+  step->AddError("symptom", "add error fail", {swrec});
+  test.End();
+
+  // Expect test step start.
+  std::vector<std::string> wants;
+  std::string want = absl::StrFormat(
+      R"pb(
+        test_step_artifact {
+          test_step_id: "%s"
+          test_step_start {}
+        }
+      )pb",
+      step->Id());
+  wants.push_back(want);
 
   // Expect Error log artifact first.
-  std::string line;
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  std::string want = absl::StrFormat(
+  want = absl::StrFormat(
       R"pb(
         test_step_artifact {
           error { symptom: "%s" }
           test_step_id: "%s"
         }
       )pb",
-      kSympUnregSw, step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      kSympUnregSw, step->Id());
+  wants.push_back(want);
 
   // Then expect error result with missing software_info_id
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
   want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -606,19 +613,25 @@ TEST_F(TestStepTest, AddErrorSwUnregistered) {
           test_step_id: "%s"
         }
       )pb",
-      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  ASSERT_EQ(step_.Status(), rpb::TestStatus::ERROR);
+      step->Id());
+  wants.push_back(want);
+
+  auto gots = FindAllArtifacts(
+      [](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
+  ASSERT_EQ(wants.size(), gots.size());
+  for (size_t i = 0; i < wants.size(); i++) {
+    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
+  }
+  ASSERT_EQ(step->Status(), rpb::TestStatus::ERROR);
 }
 
 TEST_F(TestStepTest, AddMeasurement) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  fakeWriter->RegisterHwId(hw.Data().hardware_info_id());
-  TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
-                                                std::move(fakeWriter));
+  DutInfo dut_info;
+  HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({dut_info});
+  auto step = test.BeginTestStep("AddMeasurement");
+
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
   info.set_unit("units");
@@ -630,9 +643,9 @@ TEST_F(TestStepTest, AddMeasurement) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step.AddMeasurement(info, elem, &hw);
+  step->AddMeasurement(info, elem, &hw);
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -652,105 +665,126 @@ TEST_F(TestStepTest, AddMeasurement) {
           test_step_id: "%s"
         }
       )pb",
-      hw.Data().hardware_info_id(), now.seconds(), now.nanos(), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      hw.Data().hardware_info_id(), now.seconds(), now.nanos(), step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_measurement();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 // Expect Error artifact if MeasurementElement is mal-formed (Struct kind not
 // allowed)
 TEST_F(TestStepTest, AddMeasurementFail) {
-  testonly::MockTestStep mock_step;
-  mock_step.DelegateToReal();
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("step");
   rpb::MeasurementElement elem;
   *elem.mutable_value()->mutable_struct_value() = google::protobuf::Struct();
-  EXPECT_CALL(mock_step, AddError(absl::string_view(kSympProceduralErr), _, _))
-      .Times(1);
-  mock_step.AddMeasurement({}, elem, nullptr);
+  step->AddMeasurement({}, elem, nullptr);
+  test.End();
+
+  // This fails the test if an error was not found.
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemInvalidKind) {
+class ValidateMeasElemTest : public ResultsTestBase {
+ protected:
+  ValidateMeasElemTest() {
+    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
+
+    test_->StartAndRegisterInfos({});
+    step_ = test_->BeginTestStep("step");
+  }
+
+  std::unique_ptr<TestRun> test_;
+  std::unique_ptr<TestStep> step_;
+};
+
+TEST_F(ValidateMeasElemTest, InvalidKind) {
   rpb::MeasurementElement elem;
   *elem.mutable_value()->mutable_struct_value() = google::protobuf::Struct();
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(absl::StrContains(status.message(), "value of kind 'Struct'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemInvalidRangeKind) {
+TEST_F(ValidateMeasElemTest, InvalidRangeKind) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_bool_value(
       true);  // valid for values, but not range.
   elem.mutable_range()->mutable_maximum()->set_number_value(0);
   elem.mutable_range()->mutable_minimum()->set_number_value(0);
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(absl::StrContains(status.message(), "value of kind 'bool'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemInvalidRangeMinKind) {
+TEST_F(ValidateMeasElemTest, InvalidRangeMinKind) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_number_value(0);
   elem.mutable_range()->mutable_maximum()->set_number_value(0);
   elem.mutable_range()->mutable_minimum()->set_bool_value(true);
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(absl::StrContains(status.message(), "value of kind 'bool'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemInvalidRangeMaxKind) {
+TEST_F(ValidateMeasElemTest, InvalidRangeMaxKind) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_number_value(0);
   elem.mutable_range()->mutable_maximum()->set_null_value({});
   elem.mutable_range()->mutable_minimum()->set_number_value(0);
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(absl::StrContains(status.message(), "value of kind 'NullValue'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemValuesMismatch) {
+TEST_F(ValidateMeasElemTest, ValuesMismatch) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_bool_value(true);
   elem.mutable_valid_values()->mutable_values()->Add(google::protobuf::Value{});
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(
       absl::StrContains(status.message(), "value of kind 'kind not set'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemRangeMinMismatch) {
+TEST_F(ValidateMeasElemTest, RangeMinMismatch) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_string_value("");
   elem.mutable_range()->mutable_maximum()->set_string_value("");
   elem.mutable_range()->mutable_minimum()->set_number_value(0);
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(
       absl::StrContains(status.message(), "'double' does not equal 'string'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemRangeMaxMismatch) {
+TEST_F(ValidateMeasElemTest, RangeMaxMismatch) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_string_value("");
   elem.mutable_range()->mutable_maximum()->set_number_value(0);
   elem.mutable_range()->mutable_minimum()->set_string_value("");
-  absl::Status status = step_.ValidateMeasElem(elem);
+  absl::Status status = step_->ValidateMeasElem(elem);
   ASSERT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_TRUE(
       absl::StrContains(status.message(), "'double' does not equal 'string'"));
 }
 
-TEST_F(TestStepTest, ValidateMeasElemRangeMaxEmpty) {
+TEST_F(ValidateMeasElemTest, RangeMaxEmpty) {
   rpb::MeasurementElement elem;
   elem.mutable_value()->set_string_value("");
   elem.mutable_range()->mutable_minimum()->set_string_value("");
-  EXPECT_OK(step_.ValidateMeasElem(elem));
+  EXPECT_OK(step_->ValidateMeasElem(elem));
 }
 
 TEST_F(TestStepTest, AddMeasurementWithNullptr) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
-                                                std::move(fakeWriter));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddMeasurement");
+
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
   info.set_unit("units");
@@ -762,9 +796,9 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step.AddMeasurement(info, elem, nullptr);
+  step->AddMeasurement(info, elem, nullptr);
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -780,17 +814,20 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
           test_step_id: "%s"
         }
       )pb",
-      now.seconds(), now.nanos(), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      now.seconds(), now.nanos(), step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_measurement();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  TestStep step = ResultsTest::GenerateTestStep(&parent_, "AddMeasurement",
-                                                std::move(fakeWriter));
+  DutInfo dut_info;
+  HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddMeasurement");
+
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
   info.set_unit("units");
@@ -802,25 +839,30 @@ TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step.AddMeasurement(info, elem, &hw);
+  step->AddMeasurement(info, elem, &hw);
+  test.End();
+
+  std::vector<std::string> wants;
+  wants.push_back(absl::StrFormat(
+      R"pb(
+        test_step_artifact {
+          test_step_id: "%s"
+          test_step_start {}
+        }
+      )pb",
+      step->Id()));
 
   // Expect Error Log artifact
-  std::string line;
-  std::getline(json_out_, line);
-  std::string want = absl::StrFormat(
+  wants.push_back(absl::StrFormat(
       R"pb(
         test_step_artifact {
           error { symptom: "%s" }
           test_step_id: "%s"
         }
       )pb",
-      kSympUnregHw, step.Id());
-  toProtoOrFail(line, got_);
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      kSympUnregHw, step->Id()));
 
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
-  want = absl::StrFormat(
+  wants.push_back(absl::StrFormat(
       R"pb(
         test_step_artifact {
           measurement {
@@ -835,21 +877,25 @@ TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
           test_step_id: "%s"
         }
       )pb",
-      now.seconds(), now.nanos(), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      now.seconds(), now.nanos(), step->Id()));
+
+  auto gots = FindAllArtifacts(
+      [&](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
+  ASSERT_EQ(wants.size(), gots.size());
+  for (size_t i = 0; i < wants.size(); i++)
+    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
 }
 
 // Test AddFile on local CWD file, no file copy expected.
 TEST_F(TestStepTest, AddFile) {
-  auto fh = std::make_unique<internal::MockFileHandler>();
   // Make sure copy methods are not called.
+  auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).Times(0);
   EXPECT_CALL(*fh, CopyRemoteFile(_)).Times(0);
-  auto step =
-      ResultsTest::GenerateTestStep(nullptr, "step",
-                                    std::make_shared<internal::ArtifactWriter>(
-                                        dup(tmpfile_.descriptor), &json_out_),
-                                    kStepIdDefault, std::move(fh));
+
+  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddFile");
 
   std::error_code err;
   std::string cwd = std::filesystem::current_path(err);
@@ -861,56 +907,58 @@ TEST_F(TestStepTest, AddFile) {
   file.set_output_path(output_path);
   file.set_description("description");
   file.set_content_type("content type");
-  step.AddFile(file);
+  step->AddFile(file);
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          file {
-            upload_as_name: "upload name"
-            output_path: "%s"
-            description: "description"
-            content_type: "content type"
-          }
-          test_step_id: "%s"
-        }
-      )pb",
-      output_path, step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_file();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
+                       R"pb(
+                         test_step_artifact {
+                           file {
+                             upload_as_name: "upload name"
+                             output_path: "%s"
+                             description: "description"
+                             content_type: "content type"
+                           }
+                           test_step_id: "%s"
+                         }
+                       )pb",
+                       output_path, step->Id()))));
 }
 
 // expect local file copy
 TEST_F(TestStepTest, AddFileLocalCopy) {
-  auto fh = std::make_unique<internal::MockFileHandler>();
+  auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).WillOnce(Return(absl::OkStatus()));
-  auto step =
-      ResultsTest::GenerateTestStep(nullptr, "step",
-                                    std::make_shared<internal::ArtifactWriter>(
-                                        dup(tmpfile_.descriptor), &json_out_),
-                                    kStepIdDefault, std::move(fh));
-  rpb::File file;
-  // Set a local path not in test dir, so expects file copy.
-  file.set_output_path("/tmp/data/file");
-  step.AddFile(file);
 
-  // Skip proto output comparison, this is tested in FileHandler
+  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddFile");
+
+  // Set a local path not in test dir, so expect a file copy.
+  rpb::File file;
+  file.set_output_path("/tmp/temporary_file_testing_copies");
+  step->AddFile(file);
+  test.End();
+
+  // Skip proto output comparison, this is tested already
 }
 
 TEST_F(TestStepTest, AddFileFail) {
   auto fh = std::make_unique<internal::MockFileHandler>();
   EXPECT_CALL(*fh, CopyLocalFile(_, _))
       .WillOnce(Return(absl::UnknownError("")));
-  auto step =
-      ResultsTest::GenerateTestStep(nullptr, "step",
-                                    std::make_shared<internal::ArtifactWriter>(
-                                        dup(tmpfile_.descriptor), &json_out_),
-                                    kStepIdDefault, std::move(fh));
+
+  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddFile");
   rpb::File file;
   file.set_output_path("/tmp/data/file");
-  step.AddFile(file);
+  step->AddFile(file);
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -918,18 +966,21 @@ TEST_F(TestStepTest, AddFileFail) {
           test_step_id: "%s"
         }
       )pb",
-      step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, AddFileRemote) {
-  auto fh = std::make_unique<internal::MockFileHandler>();
+  auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::OkStatus()));
-  auto step =
-      ResultsTest::GenerateTestStep(nullptr, "step",
-                                    std::make_shared<internal::ArtifactWriter>(
-                                        dup(tmpfile_.descriptor), &json_out_),
-                                    kStepIdDefault, std::move(fh));
+
+  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddFileRemote");
+
   rpb::File file;
   file.set_upload_as_name("upload name");
   // mimic absolute path on remote node.
@@ -937,17 +988,17 @@ TEST_F(TestStepTest, AddFileRemote) {
   file.set_description("description");
   file.set_content_type("content type");
   file.set_node_address("node_address");
-  step.AddFile(file);
+  step->AddFile(file);
 }
 
 TEST_F(TestStepTest, AddFileRemoteFail) {
-  auto fh = std::make_unique<internal::MockFileHandler>();
+  auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::UnknownError("")));
-  auto step =
-      ResultsTest::GenerateTestStep(nullptr, "step",
-                                    std::make_shared<internal::ArtifactWriter>(
-                                        dup(tmpfile_.descriptor), &json_out_),
-                                    kStepIdDefault, std::move(fh));
+
+  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddFileRemote");
+
   rpb::File file;
   file.set_upload_as_name("upload name");
   // mimic absolute path on remote node.
@@ -955,9 +1006,9 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
   file.set_description("description");
   file.set_content_type("content type");
   file.set_node_address("node_address");
-  step.AddFile(file);
+  step->AddFile(file);
+  test.End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -965,15 +1016,22 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
           test_step_id: "%s"
         }
       )pb",
-      step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, AddArtifactExtension) {
-  google::protobuf::Empty extension;
-  step_.AddArtifactExtension("test extension", extension);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("AddArtifactExtension");
 
-  toProtoOrFail(json_out_.str(), got_);
+  google::protobuf::Empty extension;
+  step->AddArtifactExtension("test extension", extension);
+  test.End();
+
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -988,16 +1046,23 @@ TEST_F(TestStepTest, AddArtifactExtension) {
         }
         sequence_number: 0
       )pb",
-      extension.SerializeAsString(), step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      extension.SerializeAsString(), step->Id());
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_extension();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, End) {
-  ASSERT_FALSE(step_.Ended());
-  ASSERT_EQ(step_.Status(), rpb::TestStatus::UNKNOWN);
-  step_.End();
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
 
-  toProtoOrFail(json_out_.str(), got_);
+  ASSERT_FALSE(step->Ended());
+  ASSERT_EQ(step->Status(), rpb::TestStatus::UNKNOWN);
+  step->End();
+
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1006,22 +1071,33 @@ TEST_F(TestStepTest, End) {
         }
         sequence_number: 0
       )pb",
-      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-  ASSERT_EQ(step_.Status(), rpb::TestStatus::COMPLETE);
-  ASSERT_TRUE(step_.Ended());
+      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_test_step_end();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
+  ASSERT_EQ(step->Status(), rpb::TestStatus::COMPLETE);
+  ASSERT_TRUE(step->Ended());
 }
 
 TEST_F(TestStepTest, Skip) {
-  ASSERT_EQ(step_.Status(), rpb::TestStatus::UNKNOWN);
-  step_.Skip();
-  ASSERT_EQ(step_.Status(), rpb::TestStatus::SKIPPED);
-  ASSERT_TRUE(step_.Ended());
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+
+  ASSERT_EQ(step->Status(), rpb::TestStatus::UNKNOWN);
+  step->Skip();
+  ASSERT_EQ(step->Status(), rpb::TestStatus::SKIPPED);
+  ASSERT_TRUE(step->Ended());
 }
 
 TEST_F(TestStepTest, LogDebug) {
-  step_.LogDebug("my house has termites, please debug it");
-  toProtoOrFail(json_out_.str(), got_);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+  step->LogDebug("my house has termites, please debug it");
+  test.End();
+
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1029,27 +1105,40 @@ TEST_F(TestStepTest, LogDebug) {
           test_step_id: "%s"
         }
       )pb",
-      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_log();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, LogInfo) {
-  step_.LogInfo("Here, have an info");
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want =
-      absl::StrFormat(R"pb(
-                        test_step_artifact {
-                          log { severity: INFO text: "Here, have an info" }
-                          test_step_id: "%s"
-                        }
-                      )pb",
-                      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+  step->LogInfo("Here, have an info");
+  test.End();
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_log();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
+                       R"pb(
+                         test_step_artifact {
+                           log { severity: INFO text: "Here, have an info" }
+                           test_step_id: "%s"
+                         }
+                       )pb",
+                       step->Id()))));
 }
 
 TEST_F(TestStepTest, LogWarn) {
-  step_.LogWarn("this test is brand new, never warn");
-  toProtoOrFail(json_out_.str(), got_);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+  step->LogWarn("this test is brand new, never warn");
+  test.End();
+
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1057,13 +1146,20 @@ TEST_F(TestStepTest, LogWarn) {
           test_step_id: "%s"
         }
       )pb",
-      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_log();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, LogError) {
-  step_.LogError("to err is human");
-  toProtoOrFail(json_out_.str(), got_);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+  step->LogError("to err is human");
+  test.End();
+
   std::string want =
       absl::StrFormat(R"pb(
                         test_step_artifact {
@@ -1071,13 +1167,20 @@ TEST_F(TestStepTest, LogError) {
                           test_step_id: "%s"
                         }
                       )pb",
-                      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+                      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_log();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestStepTest, LogFatal) {
-  step_.LogFatal("What's my destiny? Fatal determine that");
-  toProtoOrFail(json_out_.str(), got_);
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});
+  auto step = test.BeginTestStep("TestStepTest");
+  step->LogFatal("What's my destiny? Fatal determine that");
+  test.End();
+
   std::string want =
       absl::StrFormat(R"pb(
                         test_step_artifact {
@@ -1088,8 +1191,11 @@ TEST_F(TestStepTest, LogFatal) {
                           test_step_id: "%s"
                         }
                       )pb",
-                      step_.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+                      step->Id());
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_log();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
   //
 }
 
@@ -1134,80 +1240,24 @@ TEST(DutInfoTest, ID_Uniqueness) {
       }
     });
   }
-  for (std::future<void>& thread : threads) {
+  for (std::future<void> &thread : threads) {
     thread.wait();
   }
   EXPECT_EQ(kWantCount, ids.size());
 }
 
-// Test fixture for MeasurementSeries
-class MeasurementSeriesTest : public ::testing::Test {
- protected:
-  MeasurementSeriesTest()
-      : series_(ResultsTest::GenerateMeasurementSeries(
-            std::make_shared<internal::ArtifactWriter>(dup(tmpfile_.descriptor),
-                                                       &json_out_))) {}
-  void SetUp() { json_out_.clear(); }
-  ~MeasurementSeriesTest() override = default;
+TEST_F(TestStepTest, BeginMeasurementSeriesHwUnregistered) {
+  DutInfo dut_info;
+  HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
 
-  testonly::FakeResultApi fake_api_;
-  std::stringstream json_out_;
-  TestFile tmpfile_;
-  rpb::OutputArtifact got_;
-  MeasurementSeries series_;
-};
+  TestRun test("TestRunTest", std::move(writer_));
+  test.StartAndRegisterInfos({});  // no dut info registered
+  auto step = test.BeginTestStep("TestStepTest");
 
-TEST_F(MeasurementSeriesTest, Begin) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwRegistered));
-  std::string hw_id = hw.Data().hardware_info_id();
-  fakeWriter->RegisterHwId(hw_id);
-  TestStep step = ResultsTest::GenerateTestStep(
-      nullptr, "fake_api_.BeginMeasurementSeries", std::move(fakeWriter));
-  rpb::MeasurementInfo minfo =
-      ParseTextProtoOrDie(absl::StrFormat(kMeasurementInfo, hw_id));
-  absl::StatusOr<std::unique_ptr<MeasurementSeries>> series =
-      fake_api_.BeginMeasurementSeries(&step, hw, minfo);
-  ASSERT_OK(series);
-  toProtoOrFail(json_out_.str(), got_);
-  std::string want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          measurement_series_start { measurement_series_id: "%s" info { %s } }
-          test_step_id: "%s"
-        }
-      )pb",
-      (*series)->Id(), absl::StrFormat(kMeasurementInfo, hw_id), step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
-}
+  std::unique_ptr<MeasurementSeries> series =
+      step->BeginMeasurementSeries(hw, ParseTextProtoOrDie(kMeasurementInfo));
+  test.End();
 
-// Asserts that a MeasurementSeries cannot be started with a step that already
-// ended.
-TEST_F(MeasurementSeriesTest, BeginFailAfterStepEnd) {
-  TestStep step = ResultsTest::GenerateTestStep(
-      nullptr, "", std::make_shared<internal::ArtifactWriter>(-1, nullptr));
-  step.End();
-  HwRecord hw = ResultsTest::GenerateHwRecord(rpb::HardwareInfo());
-  ASSERT_THAT(
-      fake_api_.BeginMeasurementSeries(&step, hw, rpb::MeasurementInfo()),
-      StatusIs(absl::StatusCode::kFailedPrecondition));
-}
-
-TEST_F(MeasurementSeriesTest, BeginHwUnregistered) {
-  auto fakeWriter =
-      std::make_shared<ArtifactWriter>(tmpfile_.descriptor, &json_out_);
-  TestStep step = ResultsTest::GenerateTestStep(
-      nullptr, "fake_api_.BeginMeasurementSeries", std::move(fakeWriter));
-  HwRecord hw =
-      ResultsTest::GenerateHwRecord(ParseTextProtoOrDie(kHwNotRegistered));
-  rpb::MeasurementInfo minfo = ParseTextProtoOrDie(kMeasurementInfo);
-  absl::StatusOr<std::unique_ptr<MeasurementSeries>> series =
-      fake_api_.BeginMeasurementSeries(&step, hw, minfo);
-  std::string line;
-  std::getline(json_out_, line);
-  toProtoOrFail(line, got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1215,25 +1265,72 @@ TEST_F(MeasurementSeriesTest, BeginHwUnregistered) {
           test_step_id: "%s"
         }
       )pb",
-      kSympUnregHw, step.Id());
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      kSympUnregHw, step->Id());
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
-TEST_F(MeasurementSeriesTest, BeginNullParent) {
-  std::unique_ptr<TestStep> s = nullptr;
-  rpb::MeasurementInfo info;
-  ASSERT_THAT(
-      fake_api_.BeginMeasurementSeries(
-          s.get(), ResultsTest::GenerateHwRecord(rpb::HardwareInfo()), info),
-      StatusIs(absl::StatusCode::kInvalidArgument));
+class MeasurementSeriesTest : public ResultsTestBase {
+ protected:
+  MeasurementSeriesTest() {
+    hw_ = dut_info_.AddHardware(ParseTextProtoOrDie(kHwRegistered));
+
+    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
+    test_->StartAndRegisterInfos({dut_info_});
+    step_ = test_->BeginTestStep("TestStepTest");
+  }
+
+  DutInfo dut_info_;
+  HwRecord hw_;
+
+  std::unique_ptr<TestRun> test_;
+  std::unique_ptr<TestStep> step_;
+};
+using MeasurementSeriesDeathTest = MeasurementSeriesTest;
+
+TEST_F(MeasurementSeriesTest, Begin) {
+  std::string hw_id = hw_.Data().hardware_info_id();
+
+  rpb::MeasurementInfo info =
+      ParseTextProtoOrDie(absl::StrFormat(kMeasurementInfo, hw_id));
+  std::unique_ptr<MeasurementSeries> series =
+      step_->BeginMeasurementSeries(hw_, info);
+  test_->End();
+
+  std::string want = absl::StrFormat(
+      R"pb(
+        test_step_artifact {
+          measurement_series_start { measurement_series_id: "%s" info { %s } }
+          test_step_id: "%s"
+        }
+      )pb",
+      series->Id(), absl::StrFormat(kMeasurementInfo, hw_id), step_->Id());
+
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact a) {
+        return a.test_step_artifact().has_measurement_series_start();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
+}
+
+// Asserts that a MeasurementSeries cannot be started with a step that already
+// ended.
+TEST_F(MeasurementSeriesDeathTest, BeginFailAfterStepEnd) {
+  step_->End();
+  ASSERT_DEATH(step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo()), "");
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithoutLimit) {
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value val;
   val.set_number_value(3.14);
-  series_.AddElement(val);
+  series->AddElement(val);
+  test_->End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1244,11 +1341,18 @@ TEST_F(MeasurementSeriesTest, AddElementWithoutLimit) {
           test_step_id: "%s"
         }
       )pb",
-      series_.Id(), kStepIdDefault);
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      series->Id(), kStepIdDefault);
+
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact a) {
+        return a.test_step_artifact().has_measurement_element();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithRange) {
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value val, min, max;
   rpb::MeasurementElement::Range range;
   min.set_number_value(3.13);
@@ -1256,9 +1360,9 @@ TEST_F(MeasurementSeriesTest, AddElementWithRange) {
   max.set_number_value(3.15);
   *range.mutable_minimum() = std::move(min);
   *range.mutable_maximum() = std::move(max);
-  series_.AddElementWithRange(val, range);
+  series->AddElementWithRange(val, range);
+  test_->End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1273,65 +1377,90 @@ TEST_F(MeasurementSeriesTest, AddElementWithRange) {
           test_step_id: "%s"
         }
       )pb",
-      series_.Id(), kStepIdDefault);
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      series->Id(), kStepIdDefault);
+
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact a) {
+        return a.test_step_artifact().has_measurement_element();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 // ERROR if Range used as limit for ListValue
 TEST_F(MeasurementSeriesTest, ValueKindListWithRangeLimit) {
-  testonly::MockTestStep step;
-  testonly::MockMeasurementSeries series(&step);
-  series.DelegateToReal();
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value val, list;
   val.set_number_value(0);
   *list.mutable_list_value()->add_values() = std::move(val);
-  EXPECT_CALL(step, AddError(absl::string_view(kSympProceduralErr), _, _))
-      .Times(1);
-  series.AddElementWithRange(list, {});
+  series->AddElementWithRange(list, {});
+  test_->End();
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_EQ(got.test_step_artifact().error().symptom(), kSympProceduralErr);
 }
 
 // ERROR if Value kinds don't match
 TEST_F(MeasurementSeriesTest, ValueKindMismatch) {
-  testonly::MockTestStep step;
-  testonly::MockMeasurementSeries series(&step);
-  series.DelegateToReal();
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value number_val, string_val;
   number_val.set_number_value(0);
   string_val.set_string_value("zero");
-  EXPECT_CALL(step, AddError(absl::string_view(kSympProceduralErr), _, _))
-      .Times(1);
-  series.AddElementWithValues(number_val, {string_val});
+  series->AddElementWithValues(number_val, {string_val});
+  test_->End();
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
+                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
+                       kSympProceduralErr))));
 }
 
 // ERROR if Value has no type
 TEST_F(MeasurementSeriesTest, ValueKindNoType) {
-  testonly::MockTestStep step;
-  testonly::MockMeasurementSeries series(&step);
-  series.DelegateToReal();
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value no_type;
-  EXPECT_CALL(step, AddError(absl::string_view(kSympProceduralErr), _, _))
-      .Times(1);
-  series.AddElementWithValues(no_type, {no_type});
+  series->AddElementWithValues(no_type, {no_type});
+  test_->End();
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
+                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
+                       kSympProceduralErr))));
 }
 
 // ERROR if Value has no type
 TEST_F(MeasurementSeriesTest, ValueKindRejectStruct) {
-  testonly::MockTestStep step;
-  testonly::MockMeasurementSeries series(&step);
-  series.DelegateToReal();
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value struct_type;
   *struct_type.mutable_struct_value() = google::protobuf::Struct();
-  EXPECT_CALL(step, AddError(absl::string_view(kSympProceduralErr), _, _))
-      .Times(1);
-  series.AddElementWithValues(struct_type, {struct_type});
+  series->AddElementWithValues(struct_type, {struct_type});
+  test_->End();
+
+  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
+                         return a.test_step_artifact().has_error();
+                       }));
+  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
+                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
+                       kSympProceduralErr))));
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithValidValues) {
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
   google::protobuf::Value val;
   val.set_number_value(3.14);
-  series_.AddElementWithValues(val, {val});
+  series->AddElementWithValues(val, {val});
+  test_->End();
 
-  toProtoOrFail(json_out_.str(), got_);
   std::string want = absl::StrFormat(
       R"pb(
         test_step_artifact {
@@ -1343,30 +1472,44 @@ TEST_F(MeasurementSeriesTest, AddElementWithValidValues) {
           test_step_id: "%s"
         }
       )pb",
-      series_.Id(), kStepIdDefault);
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+      series->Id(), kStepIdDefault);
+
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact a) {
+        return a.test_step_artifact().has_measurement_element();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 // Ensures MeasurementElements cannot be added to a series after it has ended.
 TEST_F(MeasurementSeriesTest, AddElementWithValuesFailAfterEnded) {
-  series_.End();
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  series->End();
+
   google::protobuf::Value val;
   rpb::MeasurementElement::Range range;
   range.mutable_maximum()->set_number_value(0);
   range.mutable_minimum()->set_number_value(0);
   val.set_number_value(0);
-  series_.AddElementWithValues(val, {val});
-  series_.AddElementWithRange(val, range);
-  // expect only 1 artifact from End(). The following will not parse if
-  // extra artifacts are added from AddElement*().
-  toProtoOrFail(json_out_.str(), got_);
+  series->AddElementWithValues(val, {val});
+  series->AddElementWithRange(val, range);
+  test_->End();
+
+  auto got = FindArtifact([&](rpb::OutputArtifact a) {
+    return a.test_step_artifact().has_measurement_element();
+  });
+  // We should not find any measurement elements.
+  EXPECT_FALSE(got.status().ok());
 }
 
 TEST_F(MeasurementSeriesTest, End) {
-  ASSERT_FALSE(series_.Ended());
-  series_.End();
-  ASSERT_TRUE(series_.Ended());
-  toProtoOrFail(json_out_.str(), got_);
+  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+
+  ASSERT_FALSE(series->Ended());
+  series->End();
+  ASSERT_TRUE(series->Ended());
+  test_->End();
+
   std::string want = absl::StrFormat(R"pb(
                                        test_step_artifact {
                                          measurement_series_end {
@@ -1376,8 +1519,12 @@ TEST_F(MeasurementSeriesTest, End) {
                                          test_step_id: "%s"
                                        }
                                      )pb",
-                                     series_.Id(), kStepIdDefault);
-  EXPECT_THAT(got_, Partially(EqualsProto(want)));
+                                     series->Id(), kStepIdDefault);
+  ASSERT_OK_AND_ASSIGN(
+      auto got, FindArtifact([&](rpb::OutputArtifact a) {
+        return a.test_step_artifact().has_measurement_series_end();
+      }));
+  EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 }  // namespace internal

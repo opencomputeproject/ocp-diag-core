@@ -18,8 +18,9 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
+#include "absl/log/log_entry.h"
 #include "absl/log/log_sink.h"
-#include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -46,16 +47,10 @@ class SwRecord;
 class TestRun;
 class TestStep;
 
-namespace internal {
-//
-class ResultsTest;
-}  // namespace internal
-
 namespace testonly {
-class FakeResultApi;
-class FakeTestRun;
-class FakeTestStep;
-class FakeMeasurementSeries;
+class MockTestRun;
+class MockTestStep;
+class MockMeasurementSeries;
 }  // namespace testonly
 
 extern const char kInvalidRecordId[];
@@ -64,11 +59,14 @@ extern const char kSympProceduralErr[];
 // Contains factory methods to create main Result API objects.
 // Note: for unit tests, use fake or mock provided in
 // 'ocpdiag/core/testing/mock_results.h'
+//
+// DEPRECATED - Create result objects directly and use OutputReceiver in unit
+// tests.
 class ResultApi {
  public:
   ResultApi() = default;
-  ResultApi(const ResultApi& other) {}
-  ResultApi& operator=(const ResultApi& other) = default;
+  ResultApi(const ResultApi& other) = delete;
+  ResultApi& operator=(const ResultApi& other) = delete;
   virtual ~ResultApi() = default;
 
 #ifndef SWIG
@@ -100,10 +98,16 @@ class ResultApi {
 // Intended use is to have one TestRun object per OCPDiag Test.
 class TestRun : public internal::LoggerInterface {
  public:
+  // Constructs a TestRun object. If the ArtifactWriter is not specified, it
+  // will use the global artifact writer. Normally you only need to provide the
+  // name, but other dependencies can be injected for unit tests.
+  TestRun(absl::string_view name,
+          std::unique_ptr<internal::ArtifactWriter> writer = nullptr,
+          std::unique_ptr<internal::FileHandler> file_handler =
+              std::make_unique<internal::FileHandler>());
 #ifndef SWIG
-  TestRun() = delete;
-  TestRun(TestRun&&);
-  TestRun& operator=(TestRun&&);
+  TestRun(const TestRun&) = delete;
+  TestRun& operator=(const TestRun&) = delete;
 #endif
   ~TestRun() override { End(); }
 
@@ -144,6 +148,8 @@ class TestRun : public internal::LoggerInterface {
   // fatal error have been called)
   virtual bool Ended() const;
 
+  virtual std::unique_ptr<TestStep> BeginTestStep(absl::string_view name);
+
   // Emits a Log artifact of Debug severity, associated with the TestRun.
   void LogDebug(absl::string_view msg) override;
   // Emits a Log artifact of Info severity, associated with the TestRun.
@@ -168,25 +174,22 @@ class TestRun : public internal::LoggerInterface {
   // Internal use only.
   std::string GenerateID();
 
-  // Internal use only.
-  std::shared_ptr<internal::ArtifactWriter> GetWriter() { return writer_; }
+ protected:
+  // DEPRECATED - This is a workaround that allows us to relax the singleton
+  // constraint on this class during unit tests. This is not normally required,
+  // because we can always instantiate multiple test runs as long as they don't
+  // overlap. But there are some older tests that do instantiate multiple test
+  // run objects at a time, because they relied on the historical FakeTestRun
+  // implementation. So this is a workaround until those tests can be updated.
+  //
+  //
+  static void SetEnforceSingleton(bool enforce);
 
  private:
-  friend ResultApi;  // only they can construct us
-  friend testonly::FakeResultApi;
-  friend testonly::FakeTestRun;
-  //
-  friend internal::ResultsTest;
-
-  // Returns a TestRun object if successful. This is meant to be called only
-  // once per test, and will fail if called a second time. `name`: a descriptive
-  // name for your test.
-  static absl::StatusOr<TestRun> Init(std::string name);
-
 #ifndef SWIG
-  TestRun(std::string name, std::shared_ptr<internal::ArtifactWriter> writer);
   enum class RunState { kNotStarted, kInProgress, kEnded };
 #endif
+
   // Emits the TestRunStart artifact without holding mutex lock.
   void EmitStartUnlocked(absl::Span<const DutInfo> dutinfos,
                          const google::protobuf::Message& params);
@@ -194,9 +197,11 @@ class TestRun : public internal::LoggerInterface {
                 absl::string_view msg) override;
 
   std::shared_ptr<internal::ArtifactWriter> writer_;
-  std::string name_;
+  std::unique_ptr<internal::FileHandler> file_handler_;
+  const std::string name_;
   internal::IntIncrementer step_id_;
-  mutable absl::Mutex mutex_;  // mutable allows const methods to acquire mutex.
+
+  mutable absl::Mutex mutex_;
   RunState state_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::TestResult result_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::TestStatus status_ ABSL_GUARDED_BY(mutex_);
@@ -206,9 +211,8 @@ class TestRun : public internal::LoggerInterface {
 class TestStep : public internal::LoggerInterface {
  public:
 #ifndef SWIG
-  TestStep() = delete;
-  TestStep(TestStep&&);
-  TestStep& operator=(TestStep&&);
+  TestStep(const TestStep&) = delete;
+  TestStep& operator=(const TestStep&) = delete;
 #endif
   ~TestStep() override { End(); }
 
@@ -278,37 +282,36 @@ class TestStep : public internal::LoggerInterface {
   std::string GenerateID();
 
   // Internal use only.
-  std::shared_ptr<internal::ArtifactWriter> GetWriter() { return writer_; }
-
-  // Internal use only.
   // Ensures that a MeasurementElement added to this Step is well-formed and has
   // valid Value kind.
   absl::Status ValidateMeasElem(
       const ocpdiag::results_pb::MeasurementElement&);
 
+  // Factory method to create a MeasurementSeries. Emits MeasurementSeriesStart
+  // artifact if successful.
+  std::unique_ptr<MeasurementSeries> BeginMeasurementSeries(
+      const HwRecord& record,
+      ocpdiag::results_pb::MeasurementInfo info);
+
  private:
-  friend ResultApi;  // only they can construct us
-  friend testonly::FakeTestStep;
-  //
-  friend internal::ResultsTest;
+  friend ResultApi;
+  friend TestRun;
+  friend testonly::MockTestStep;
 
-  // Factory to create a TestStep. Emits a TestStepStart artifact if successful.
-  static absl::StatusOr<TestStep> Begin(TestRun*, std::string name);
-
-  TestStep(TestRun* parent, std::string id, std::string name,
-           std::shared_ptr<internal::ArtifactWriter> writer,
-           std::unique_ptr<internal::FileHandler> file_handler =
-               std::make_unique<internal::FileHandler>());
+  TestStep() = default;
+  TestStep(TestRun& parent, absl::string_view id, absl::string_view name,
+           internal::ArtifactWriter& writer,
+           internal::FileHandler& file_handler);
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
-  TestRun* parent_;
-  std::shared_ptr<internal::ArtifactWriter> writer_;
-  std::unique_ptr<internal::FileHandler> file_handler_;
+  TestRun* parent_ = nullptr;
+  internal::ArtifactWriter* writer_ = nullptr;
+  internal::FileHandler* file_handler_ = nullptr;
   std::string name_;
   std::string id_;
   internal::IntIncrementer series_id_;
-  mutable absl::Mutex mutex_;  // mutable allows const methods to acquire mutex.
+  mutable absl::Mutex mutex_;
   ocpdiag::results_pb::TestStatus status_ ABSL_GUARDED_BY(mutex_);
   bool ended_ ABSL_GUARDED_BY(mutex_);
 };
@@ -401,9 +404,8 @@ class SwRecord {
 class MeasurementSeries {
  public:
 #ifndef SWIG
-  MeasurementSeries() = delete;
-  MeasurementSeries(MeasurementSeries&&);
-  MeasurementSeries& operator=(MeasurementSeries&&);
+  MeasurementSeries(const MeasurementSeries&) = delete;
+  MeasurementSeries& operator=(const MeasurementSeries&) = delete;
 #endif
   virtual ~MeasurementSeries() { End(); }
 
@@ -433,20 +435,14 @@ class MeasurementSeries {
   std::string Id() const { return series_id_; }
 
  private:
-  friend ResultApi;  // only they can construct us
-  friend testonly::FakeMeasurementSeries;
-  //
-  friend internal::ResultsTest;
+  friend ResultApi;
+  friend TestStep;
+  friend testonly::MockMeasurementSeries;
 
-  // Factory method to create a MeasurementSeries. Emits a
-  // MeasurementSeriesStart artifact if successful.
-  static absl::StatusOr<MeasurementSeries> Begin(
-      TestStep*, const HwRecord&,
-      ocpdiag::results_pb::MeasurementInfo);
-
-  MeasurementSeries(TestStep* parent, std::string step_id,
-                    std::string series_id,
-                    std::shared_ptr<internal::ArtifactWriter> writer,
+  MeasurementSeries() = default;
+  MeasurementSeries(TestStep& parent, absl::string_view step_id,
+                    absl::string_view series_id,
+                    internal::ArtifactWriter& writer,
                     ocpdiag::results_pb::MeasurementInfo);
   // If no values have yet been added to this series, sets the value kind rule.
   // `val`: the value to be added.
@@ -459,8 +455,8 @@ class MeasurementSeries {
   // that have been previously added.
   absl::Status CheckValueKind(const google::protobuf::Value&);
 
-  TestStep* parent_;
-  std::shared_ptr<internal::ArtifactWriter> writer_;
+  TestStep* parent_ = nullptr;
+  internal::ArtifactWriter* writer_ = nullptr;
   std::string step_id_;  // Id of parent Step
   std::string series_id_;
   internal::IntIncrementer element_count_;

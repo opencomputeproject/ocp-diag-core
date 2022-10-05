@@ -17,11 +17,10 @@
 #include "absl/strings/str_split.h"
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/examples/simple/params.pb.h"
+#include "ocpdiag/core/results/output_receiver.h"
 #include "ocpdiag/core/results/results.h"
-#include "ocpdiag/core/testing/mock_results.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
-#include "ocpdiag/core/testing/status_matchers.h"
 
 namespace ocpdiag {
 namespace example {
@@ -30,36 +29,29 @@ namespace {
 using ::ocpdiag::AsAbslStatus;
 using ::ocpdiag::testing::EqualsProto;
 using ::ocpdiag::testing::Partially;
-using ::ocpdiag::results::testonly::FakeTestStep;
 using ::ocpdiag::results_pb::Measurement;
 using ::ocpdiag::results_pb::OutputArtifact;
 
 TEST(TestAddAllMeasurementTypes, CheckAll) {
-  // Set up.
-  std::stringstream json_out;
-  FakeTestStep step("fake_step", &json_out);
+  results::OutputReceiver output;
+  {
+    results::TestRun test_run("test_run");
+    test_run.StartAndRegisterInfos({});
+    auto step = test_run.BeginTestStep("fake_step");
 
-  // Run AddAllTypeMeasurements.
-  ocpdiag::example::AddAllMeasurementTypes(&step, nullptr);
+    // Run AddAllTypeMeasurements.
+    ocpdiag::example::AddAllMeasurementTypes(step.get(), nullptr);
+  }
 
   // Check measurements.
-  std::vector<std::string> lines =
-      absl::StrSplit(json_out.str(), '\n');
-
   std::vector<Measurement> measurements;
-  google::protobuf::util::JsonParseOptions json_parse_options;
-  for (const std::string& line : lines) {
-    if (line.empty()) {
-      continue;
-    }
-    OutputArtifact artifact;
-    ASSERT_OK(
-        AsAbslStatus(JsonStringToMessage(line, &artifact, json_parse_options)));
+  output.Iterate([&](OutputArtifact artifact) {
     if (artifact.has_test_step_artifact() &&
         artifact.test_step_artifact().has_measurement()) {
       measurements.push_back(artifact.test_step_artifact().measurement());
     }
-  }
+    return true;
+  });
 
   std::vector<std::string> expected_measurements{
       // Null measurements.
@@ -138,10 +130,7 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
       )pb",
       // List measurements.
       R"pb(
-        info {
-          name: "list-measurement"
-          unit: "list-measurement-unit"
-        }
+        info { name: "list-measurement" unit: "list-measurement-unit" }
         element {
           measurement_series_id: ""
           value {
