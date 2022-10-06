@@ -6,8 +6,8 @@
 
 #include "ocpdiag/core/results/results.h"
 
-#include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
+#include <pybind11/pybind11.h>
 
 #include "google/protobuf/empty.pb.h"
 #include "google/protobuf/struct.pb.h"
@@ -17,7 +17,6 @@
 #include "pybind11_abseil/absl_casters.h"
 #include "pybind11_abseil/status_casters.h"
 #include "pybind11_protobuf/native_proto_caster.h"
-#include "pybind11_protobuf/wrapped_proto_caster.h"
 
 namespace ocpdiag::results {
 
@@ -37,13 +36,12 @@ void SetFlags(const bool ocpdiag_copy_results_to_stdout,
 PYBIND11_MODULE(_results, m) {
   pybind11::google::ImportStatusModule();
   pybind11_protobuf::ImportNativeProtoCasters();
-  pybind11_protobuf::ImportWrappedProtoCasters();
-
-  using pybind11_protobuf::WithWrappedProtos;
 
   m.def("SetResultsLibFlags", &SetFlags);
 
   m.doc() = "Bindings for the OCPDiag results library";
+
+  // DEPRECATED: Use TestRun().
   m.def(
       "InitTestRun",
       [](const std::string& name) {
@@ -51,17 +49,20 @@ PYBIND11_MODULE(_results, m) {
       },
       pybind11::arg("name"));
   pybind11::class_<TestRun>(m, "TestRun")
-      .def("StartAndRegisterInfos",
-           WithWrappedProtos([](TestRun& a, absl::Span<const DutInfo> dutinfos,
-                                const google::protobuf::Message* params) {
-             if (params == nullptr) {
-               a.StartAndRegisterInfos(dutinfos, google::protobuf::Empty());
-             } else {
-               a.StartAndRegisterInfos(dutinfos, *params);
-             }
-           }),
-           pybind11::arg("dutinfos"),
-           pybind11::arg("params").none(true) = pybind11::none())
+      .def(pybind11::init<absl::string_view>())
+      .def(
+          "StartAndRegisterInfos",
+          [](TestRun& a, absl::Span<const DutInfo> dutinfos,
+             const google::protobuf::Message* params) {
+            if (params == nullptr) {
+              a.StartAndRegisterInfos(dutinfos, google::protobuf::Empty());
+            } else {
+              a.StartAndRegisterInfos(dutinfos, *params);
+            }
+          },
+          pybind11::arg("dutinfos"),
+          pybind11::arg("params").none(true) = pybind11::none())
+      .def("BeginTestStep", &TestRun::BeginTestStep, pybind11::arg("name"))
       .def("End", [](TestRun& a) { return static_cast<int>(a.End()); })
       .def("Skip", [](TestRun& a) { return static_cast<int>(a.Skip()); })
       .def("AddError", &TestRun::AddError)
@@ -75,8 +76,12 @@ PYBIND11_MODULE(_results, m) {
       .def("LogInfo", &TestRun::LogInfo)
       .def("LogWarn", &TestRun::LogWarn)
       .def("LogError", &TestRun::LogError)
-      .def("LogFatal", &TestRun::LogFatal);
+      .def("LogFatal", &TestRun::LogFatal)
+      // These support using the TestRun as a Python context manager.
+      .def("__enter__", [](TestRun* self) { return self; })
+      .def("__exit__", [](TestRun* self, pybind11::args) { self->End(); });
 
+  // DEPRECATED: Use TestRun::BeginTestStep().
   m.def(
       "BeginTestStep",
       [](TestRun* parent, std::string name) {
@@ -85,6 +90,8 @@ PYBIND11_MODULE(_results, m) {
       pybind11::arg("parent"), pybind11::arg("name"));
 
   pybind11::class_<TestStep>(m, "TestStep")
+      .def("BeginMeasurementSeries", &TestStep::BeginMeasurementSeries,
+           pybind11::arg("hwrec"), pybind11::arg("info"))
       .def(
           "AddDiagnosis",
           [](TestStep& a, const int symptom_type, std::string symptom,
@@ -99,12 +106,11 @@ PYBIND11_MODULE(_results, m) {
       .def("AddError", &TestStep::AddError, pybind11::arg("symptom"),
            pybind11::arg("message"),
            pybind11::arg("records") = absl::Span<const SwRecord>{})
-      .def("AddMeasurement", WithWrappedProtos(&TestStep::AddMeasurement),
-           pybind11::arg("info"), pybind11::arg("elem"),
+      .def("AddMeasurement", &TestStep::AddMeasurement, pybind11::arg("info"),
+           pybind11::arg("elem"),
            pybind11::arg("hwRecord").none(true) = pybind11::none())
-      .def("AddFile", WithWrappedProtos(&TestStep::AddFile))
-      .def("AddArtifactExtension",
-           WithWrappedProtos(&TestStep::AddArtifactExtension))
+      .def("AddFile", &TestStep::AddFile)
+      .def("AddArtifactExtension", &TestStep::AddArtifactExtension)
       .def("LogDebug", &TestStep::LogDebug)
       .def("LogInfo", &TestStep::LogInfo)
       .def("LogWarn", &TestStep::LogWarn)
@@ -114,63 +120,46 @@ PYBIND11_MODULE(_results, m) {
       .def("Skip", &TestStep::Skip)
       .def("Ended", &TestStep::Ended)
       .def("Status", [](TestStep& a) { return static_cast<int>(a.Status()); })
-      .def("Id", &TestStep::Id);
+      .def("Id", &TestStep::Id)
+      // These support using the TestStep as a Python context manager.
+      .def("__enter__", [](TestStep* self) { return self; })
+      .def("__exit__", [](TestStep* self, pybind11::args) { self->End(); });
 
   pybind11::class_<DutInfo>(m, "DutInfo")
       .def(pybind11::init<std::string>())
-      .def("AddHardware", WithWrappedProtos(&DutInfo::AddHardware))
-      .def("AddSoftware", WithWrappedProtos(&DutInfo::AddSoftware))
+      .def("AddHardware", &DutInfo::AddHardware)
+      .def("AddSoftware", &DutInfo::AddSoftware)
       .def("AddPlatformInfo", &DutInfo::AddPlatformInfo)
       .def("Registered", &DutInfo::Registered)
-      .def("ToProto", WithWrappedProtos(&DutInfo::ToProto));
+      .def("ToProto", &DutInfo::ToProto);
 
-  pybind11::class_<HwRecord>(m, "HwRecord")
-      .def("Data", WithWrappedProtos(&HwRecord::Data));
-  pybind11::class_<SwRecord>(m, "SwRecord")
-      .def("Data", WithWrappedProtos(&SwRecord::Data));
+  pybind11::class_<HwRecord>(m, "HwRecord").def("Data", &HwRecord::Data);
+  pybind11::class_<SwRecord>(m, "SwRecord").def("Data", &SwRecord::Data);
 
-  m.def("BeginMeasurementSeries",
-        WithWrappedProtos(
-            [](TestStep* parent, const HwRecord& hwrecord,
-               ocpdiag::results_pb::MeasurementInfo info) {
-              return ResultApi().BeginMeasurementSeries(parent, hwrecord, info);
-            }),
-        pybind11::arg("parent"), pybind11::arg("hwrecord"),
-        pybind11::arg("info"));
+  // DEPRECATED: Use TestStep::BeginMeasurementSeries().
+  m.def(
+      "BeginMeasurementSeries",
+      [](TestStep* parent, const HwRecord& hwrecord,
+         ocpdiag::results_pb::MeasurementInfo info) {
+        return ResultApi().BeginMeasurementSeries(parent, hwrecord, info);
+      },
+      pybind11::arg("parent"), pybind11::arg("hwrecord"),
+      pybind11::arg("info"));
   pybind11::class_<MeasurementSeries>(m, "MeasurementSeries")
-      .def(
-          "AddElement",
-          WithWrappedProtos(
-              static_cast<void (MeasurementSeries::*)(google::protobuf::Value)>(
-                  &MeasurementSeries::AddElement)),
-          "Adds a element without a limit")
-      .def("AddElementWithRange",
-           WithWrappedProtos(
-               static_cast<void (MeasurementSeries::*)(
-                   google::protobuf::Value,
-                   ocpdiag::results_pb::MeasurementElement::Range)>(
-                   &MeasurementSeries::AddElementWithRange)),
+      .def("AddElement",
+           static_cast<void (MeasurementSeries::*)(google::protobuf::Value)>(
+               &MeasurementSeries::AddElement),
+           "Adds a element without a limit")
+      .def("AddElementWithRange", &MeasurementSeries::AddElementWithRange,
            "Adds a range element")
-      // Wrapped protos don't play well with Spans, so the (horrible) workaround
-      // is to take in a vector rather than span, convert the wrapped vector
-      // to a native vector, then pass that through.
-      .def(
-          "AddElementWithValues",
-          WithWrappedProtos(
-              [](MeasurementSeries& a, google::protobuf::Value v,
-                 const std::vector<pybind11_protobuf::WrappedProto<
-                     google::protobuf::Value, pybind11_protobuf::kValue>>& vs) {
-                std::vector<google::protobuf::Value> new_values;
-                new_values.reserve(vs.size());
-                for (const auto& val : vs) {
-                  new_values.push_back(val.proto);
-                }
-                a.AddElementWithValues(v, new_values);
-              }),
-          "Adds a value element")
+      .def("AddElementWithValues", &MeasurementSeries::AddElementWithValues,
+           "Adds a value element")
       .def("Id", &MeasurementSeries::Id)
       .def("Ended", &MeasurementSeries::Ended)
-      .def("End", &MeasurementSeries::End);
+      .def("End", &MeasurementSeries::End)
+      .def("__enter__", [](MeasurementSeries* self) { return self; })
+      .def("__exit__",
+           [](MeasurementSeries* self, pybind11::args) { self->End(); });
 
   // Define the output receiver in this module, because it needs to update the
   // TestRun flags. In open-source builds it will be unable to modify these

@@ -48,6 +48,7 @@ cc_test(
         ":simple_lib",
         "//ocpdiag/core/compat:status_converters",
         "//ocpdiag/core/results",
+        "//ocpdiag/core/results:output_receiver",
         "//ocpdiag/core/results:results_cc_proto",
         "//ocpdiag/core/testing:mock_results",
         "//ocpdiag/core/testing:proto_matchers",
