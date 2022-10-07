@@ -127,7 +127,7 @@ class ArtifactWriter {
     void FlushFileBuffer() ABSL_LOCKS_EXCLUDED(mutex_);
   };
 
-  std::shared_ptr<WriterProxy> proxy_;
+  std::unique_ptr<WriterProxy> proxy_;
 };
 
 // For writing Log artifacts
