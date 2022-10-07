@@ -42,9 +42,11 @@ cc_library(
         "//ocpdiag/core/results/internal:logging",
         "//ocpdiag/core/results/internal:utils",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:log_entry",
         "@com_google_absl//absl/log:log_sink",
         "@com_google_absl//absl/log:log_sink_registry",
         "@com_google_absl//absl/memory",
@@ -62,17 +64,18 @@ cc_test(
     name = "results_test",
     srcs = ["results_test.cc"],
     deps = [
+        ":recordio_iterator",
         ":results",
         ":results_cc_proto",
         "//ocpdiag/core/compat:status_converters",
         "//ocpdiag/core/results/internal:logging",
         "//ocpdiag/core/results/internal:mock_file_handler",
-        "//ocpdiag/core/results/internal:test_utils",
-        "//ocpdiag/core/testing:mock_results",
         "//ocpdiag/core/testing:parse_text_proto",
         "//ocpdiag/core/testing:proto_matchers",
         "//ocpdiag/core/testing:status_matchers",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/flags:reflection",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -80,9 +83,6 @@ cc_test(
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
-        "@com_google_riegeli//riegeli/base",
-        "@com_google_riegeli//riegeli/bytes:fd_reader",
-        "@com_google_riegeli//riegeli/records:record_reader",
     ],
 )
 
@@ -119,21 +119,18 @@ cc_test(
 
 cc_library(
     name = "output_receiver",
+    testonly = 1,
     srcs = ["output_receiver.cc"],
     hdrs = ["output_receiver.h"],
     deps = [
         ":output_model",
+        ":recordio_iterator",
         ":results",
         ":results_cc_proto",
         "//ocpdiag/core/results/internal:logging",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:reflection",
-        "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/synchronization",
     ],
 )
 
@@ -146,8 +143,31 @@ cc_test(
         ":output_receiver",
         ":results",
         ":results_cc_proto",
-        "//ocpdiag/core/compat:status_macros",
-        "//ocpdiag/core/testing:status_matchers",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "recordio_iterator",
+    testonly = 1,
+    hdrs = ["recordio_iterator.h"],
+    deps = [
+        "@com_google_absl//absl/log:check",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/records:record_reader",
+    ],
+)
+
+cc_test(
+    name = "recordio_iterator_test",
+    srcs = [
+        "recordio_iterator_test.cc",
+    ],
+    deps = [
+        ":recordio_iterator",
+        ":results_cc_proto",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_riegeli//riegeli/bytes:fd_writer",
+        "@com_google_riegeli//riegeli/records:record_writer",
     ],
 )

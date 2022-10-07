@@ -7,18 +7,16 @@
 """Tests for ocpdiag.core.results.python.results."""
 
 import faulthandler
-import io
 import unittest
 
+from absl.testing import absltest
 from google.protobuf import empty_pb2
 from google.protobuf import struct_pb2
 from google.protobuf import timestamp_pb2
-from google3.net.proto2.contrib.pyutil import compare
-from google.protobuf import json_format
 from google.protobuf import text_format
 from ocpdiag.core.results import results_pb2
+from ocpdiag.core.results.python import output_receiver
 from ocpdiag.core.results.python import results
-from ocpdiag.core.results.python import resultstestpy
 
 HWREGISTERED = """
   hardware_info_id: "%s"
@@ -52,27 +50,6 @@ MEASUREMENTINFO = """
   """
 
 
-class OutputReceiverTest(unittest.TestCase):
-
-  def test_model_inside_context(self):
-    with results.OutputReceiver() as receiver:
-      test_run = results.InitTestRun("Test")
-      test_run.End()
-
-      # Test that the model is populated.
-      self.assertIsNotNone(receiver.model.end)
-
-    # Iterate through the output, outside of the managed context.
-    self.cnt = 0
-
-    def count_artifacts(unused_artifact: results_pb2.OutputArtifact) -> bool:
-      self.cnt += 1
-      return True
-
-    receiver.Iterate(count_artifacts)
-    self.assertEqual(self.cnt, 2)  # 1 start + 1 end
-
-
 class DutInfoTest(unittest.TestCase):
 
   def testDutInfoHwInfo(self):
@@ -81,13 +58,7 @@ class DutInfoTest(unittest.TestCase):
     hwinfo.name = "hardware_part"
     dutinfo.AddHardware(hwinfo)
     out = dutinfo.ToProto()
-    want = text_format.Parse(
-        """hostname: "sitd"
-           hardware_components {
-             hardware_info_id: "0"
-             name: "hardware_part"
-           }""", results_pb2.DutInfo())
-    compare.assertProto2Equal(self, want, out)
+    self.assertEqual(out.hardware_components[0].name, "hardware_part")
 
   def testDutInfoSwInfo(self):
     dutinfo = results.DutInfo("sitd")
@@ -95,569 +66,223 @@ class DutInfoTest(unittest.TestCase):
     swinfo.name = "linux"
     dutinfo.AddSoftware(swinfo)
     out = dutinfo.ToProto()
-    want = text_format.Parse(
-        """hostname: "sitd"
-           software_infos {
-             software_info_id: "0"
-             name: "linux"
-           }""", results_pb2.DutInfo())
-    compare.assertProto2Equal(self, want, out)
+    self.assertEqual(out.software_infos[0].name, "linux")
 
   def testDutInfoPlatform(self):
     dutinfo = results.DutInfo("sitd")
     dutinfo.AddPlatformInfo("something")
     out = dutinfo.ToProto()
-    want = text_format.Parse(
-        """hostname: "sitd"
-           platform_info {
-             info: "something"
-           }""", results_pb2.DutInfo())
-    compare.assertProto2Equal(self, want, out)
+    self.assertEqual(out.platform_info.info, ["something"])
 
 
-class TestRunTest(unittest.TestCase):
+# A base class that collects the test result output.
+class ResultsTestBase(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self.results_test = resultstestpy.ResultsTest()
-    self.runner = self.results_test.InitializeTestRun("TestRunTest")
+    self.output = output_receiver.OutputReceiver()
+    self.test_run = results.TestRun("ResultsTest", self.output.artifact_writer)
 
-  def tearDown(self):
-    super().tearDown()
-    _ = self.runner.End()
+
+class TestRunTest(ResultsTestBase):
 
   def testTestRunEnd(self):
-    self.assertFalse(self.runner.Ended())
-    self.runner.StartAndRegisterInfos([])
-    result = self.runner.End()
-    self.assertTrue(self.runner.Ended())
-    self.assertEqual(result, results_pb2.TestResult.PASS)
-    self.assertEqual(self.runner.Status(), results_pb2.TestStatus.COMPLETE)
+    with self.test_run as test_run:
+      self.assertFalse(test_run.Ended())
+      test_run.StartAndRegisterInfos([])
+      result = test_run.End()
+      self.assertTrue(test_run.Ended())
+      self.assertEqual(result, results_pb2.TestResult.PASS)
+      self.assertEqual(test_run.Status(), results_pb2.TestStatus.COMPLETE)
 
   def testTestRunSkip(self):
-    self.assertEqual(self.runner.Status(), results_pb2.TestStatus.UNKNOWN)
-    result = self.runner.Skip()
-    self.assertEqual(self.runner.Status(), results_pb2.TestStatus.SKIPPED)
-    self.assertEqual(result, results_pb2.TestResult.NOT_APPLICABLE)
+    with self.test_run as test_run:
+      self.assertEqual(test_run.Status(), results_pb2.TestStatus.UNKNOWN)
+      result = test_run.Skip()
+      self.assertEqual(test_run.Status(), results_pb2.TestStatus.SKIPPED)
+      self.assertEqual(result, results_pb2.TestResult.NOT_APPLICABLE)
 
   def testTestRunAddError(self):
-    self.runner.AddError("symptom", "msg")
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self,
-        """test_run_artifact { error { symptom: "symptom" msg: "msg"} }""", got)
+    with self.test_run as test_run:
+      test_run.AddError("symptom", "msg")
+
+    self.assertEqual(len(self.output.model.errors), 1)
+    self.assertEqual(self.output.model.errors[0].symptom, "symptom")
 
   def testTestRunAddTag(self):
-    tag = "Guten Tag"
-    self.runner.AddTag(tag)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self, """test_run_artifact { tag { tag: "Guten Tag" } }""", got)
+    with self.test_run as test_run:
+      test_run.AddTag("T")
 
-  def testTestRunDebug(self):
-    msg = "my house has termites, please debug it"
-    self.runner.LogDebug(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self, """test_run_artifact {
-      log { severity: DEBUG text: "my house has termites, please debug it" }
-    }""", got)
+    self.assertEqual(len(self.output.model.tags), 1)
+    self.assertEqual(self.output.model.tags[0].tag, "T")
 
-  def testTestRunInfo(self):
-    msg = "my house has termites, please debug it"
-    self.runner.LogInfo(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self, """test_run_artifact {
-      log { severity: INFO text: "my house has termites, please debug it" }
-    }""", got)
+  def testTestRunLogs(self):
+    with self.test_run as test_run:
+      test_run.LogDebug("A")
+      test_run.LogInfo("B")
+      test_run.LogWarn("C")
+      test_run.LogError("D")
+      test_run.LogFatal("E")
 
-  def testTestRunWraning(self):
-    msg = "my house has termites, please debug it"
-    self.runner.LogWarn(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self, """test_run_artifact {
-      log { severity: WARNING text: "my house has termites, please debug it" }
-    }""", got)
-
-  def testTestRunFatal(self):
-    msg = "my house has termites, please debug it"
-    self.runner.LogFatal(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    compare.assertProto2Contains(
-        self, """test_run_artifact {
-      log { severity: FATAL text: "my house has termites, please debug it" }
-    }""", got)
+    self.assertEqual(len(self.output.model.logs), 5)
+    self.assertEqual(self.output.model.logs[results_pb2.Log.DEBUG][0].text, "A")
+    self.assertEqual(self.output.model.logs[results_pb2.Log.INFO][0].text, "B")
+    self.assertEqual(self.output.model.logs[results_pb2.Log.WARNING][0].text,
+                     "C")
+    self.assertEqual(self.output.model.logs[results_pb2.Log.ERROR][0].text, "D")
+    self.assertEqual(self.output.model.logs[results_pb2.Log.FATAL][0].text, "E")
 
   def testTestRunStartAndRegisterInfos(self):
-    self.assertFalse(self.runner.Started())
-    d0 = results.DutInfo("host0")
-    hw = d0.AddHardware(
-        text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
-    sw = d0.AddSoftware(
-        text_format.Parse(SWREGISTERED, results_pb2.SoftwareInfo()))
-    d0.AddPlatformInfo("plugin:something")
-    # pay attention d0, d1 not valid after this call, this may not good
-    self.runner.StartAndRegisterInfos([d0])
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    hwinfo = HWREGISTERED % hw.Data().hardware_info_id
-    swinfo = SWREGISTERED % sw.Data().software_info_id
-    want = """test_run_artifact {
-          test_run_start {
-            name: "TestRunTest"
-            parameters {
-              type_url: "type.googleapis.com/google.protobuf.Empty"
-            }
-            dut_info {
-              hostname: "host0"
-              hardware_components { %s }
-              software_infos { %s }
-              platform_info { info: "plugin:something" }
-            }
-          }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(self, want % (hwinfo, swinfo), got)
+    with self.test_run as test_run:
+      self.assertFalse(test_run.Started())
+      d0 = results.DutInfo("host0")
+      d0.AddHardware(
+          text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
+      d0.AddSoftware(
+          text_format.Parse(SWREGISTERED, results_pb2.SoftwareInfo()))
+      d0.AddPlatformInfo("plugin:something")
+      # pay attention d0, d1 not valid after this call, this may not good
+      test_run.StartAndRegisterInfos([d0])
+
+    self.assertEqual(
+        len(self.output.model.start.dut_info[0].hardware_components), 1)
+    self.assertEqual(len(self.output.model.start.dut_info[0].software_infos), 1)
 
 
-class TestRunStep(unittest.TestCase):
-
-  def setUp(self):
-    super().setUp()
-    self.results_test = resultstestpy.ResultsTest()
-    self.runner = self.results_test.InitializeTestRun("TestRunTest")
-    self.step = self.results_test.CreateTestStep(self.runner, "TestStepTest",
-                                                 "0")
-
-  def tearDown(self):
-    super().tearDown()
-    self.step.End()
-    _ = self.runner.End()
+class TestRunStep(ResultsTestBase):
 
   def testTestStepBegin(self):
-    self.runner.StartAndRegisterInfos([])
-    results.BeginTestStep(self.runner, "BeginTest")
-    buf = io.StringIO(self.results_test.GetJsonReadableOutput())
-    # skip first line
-    buf.readline()
-    line1 = buf.readline()
-    got = json_format.Parse(line1, results_pb2.OutputArtifact())
-    _ = self.runner.End()
-    compare.assertProto2Contains(
-        self, """test_step_artifact {
-      test_step_start { name: "BeginTest" }
-      test_step_id: "0"
-    }""", got)
+    with self.test_run as test_run:
+      test_run.StartAndRegisterInfos([])
+      test_run.BeginTestStep("TestStepTest")
+
+    self.assertIn("0", self.output.model.steps.keys())
+    self.assertEqual(self.output.model.steps["0"].start.name, "TestStepTest")
 
   def testTestStepAddDiagnosis(self):
-    dutinfo = results.DutInfo("hostname")
-    hw = dutinfo.AddHardware(
-        text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
-    self.results_test.RegisterHwId(hw.Data().hardware_info_id)
-    self.step.AddDiagnosis(results_pb2.Diagnosis.PASS, "symptom",
-                           "add diag success", [hw])
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-              diagnosis {
-                symptom: "symptom"
-                type: PASS
-                msg: "add diag success"
-                hardware_info_id: "%s"
-              }
-           }
-           sequence_number: 0""" % (
-               hw.Data().hardware_info_id)
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
+    with self.test_run as test_run:
+      dutinfo = results.DutInfo("hostname")
+      hw = dutinfo.AddHardware(
+          text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
+      test_run.StartAndRegisterInfos([dutinfo])
 
-  def testTestStepAddDiagnosisWithoutHwRecord(self):
-    self.step.AddDiagnosis(results_pb2.Diagnosis.PASS, "symptom",
-                           "add diag success")
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-              diagnosis {
-                symptom: "symptom"
-                type: PASS
-                msg: "add diag success"
-              }
-           }
-           sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.AddDiagnosis(results_pb2.Diagnosis.PASS, "symptom",
+                          "add diag success", [hw])
+
+    self.assertEqual(self.output.model.steps["0"].diagnoses[0].type,
+                     results_pb2.Diagnosis.PASS)
 
   def testTestStepAddError(self):
-    dutinfo = results.DutInfo("hostname")
-    sw = dutinfo.AddSoftware(
-        text_format.Parse(SWREGISTERED, results_pb2.SoftwareInfo()))
-    self.results_test.RegisterSwId(sw.Data().software_info_id)
-    self.step.AddError("symptom", "add error success", [sw])
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-              error {
-                symptom: "symptom"
-                msg: "add error success"
-                software_info_id: "%s"
-              }
-            }
-            sequence_number: 0""" % (
-                sw.Data().software_info_id)
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
+    with self.test_run as test_run:
+      dutinfo = results.DutInfo("hostname")
+      sw = dutinfo.AddSoftware(
+          text_format.Parse(SWREGISTERED, results_pb2.SoftwareInfo()))
+      test_run.StartAndRegisterInfos([dutinfo])
 
-  def testTestStepAddErrorWithoutSwRecord(self):
-    self.step.AddError("symptom", "add error success")
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-              error {
-                symptom: "symptom"
-                msg: "add error success"
-              }
-            }
-            sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.AddError("symptom", "add error success", [sw])
+    errors = self.output.model.steps["0"].errors
+    self.assertEqual(len(errors), 1)
+    self.assertEqual(errors[0].msg, "add error success")
 
   def testTestStepAddMeasurement(self):
-    dutinfo = results.DutInfo("hostname")
-    val = struct_pb2.Value(number_value=3.14)
-    now = timestamp_pb2.Timestamp()
-    elem = results_pb2.MeasurementElement(value=val, dut_timestamp=now)
-    elem.valid_values.values.append(val)
-    hw = dutinfo.AddHardware(
-        text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
-    self.results_test.RegisterHwId(hw.Data().hardware_info_id)
-    info = results_pb2.MeasurementInfo(name="measurement info", unit="unit")
-    self.step.AddMeasurement(info, elem, hw)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement {
-            info {
-              name: "measurement info"
-              unit: "unit"
-              hardware_info_id: "%s"
-            }
-            element {
-              measurement_series_id: ""
-              value { number_value: 3.14 }
-              valid_values { values { number_value: 3.14 } }
-            }
-          }
-        }""" % (
-            hw.Data().hardware_info_id)
-    compare.assertProto2Contains(
-        self,
-        want,
-        got,
-        ignored_fields=[
-            "test_step_artifact.test_step_id",
-            "test_step_artifact.measurement.element.dut_timestamp"
-        ])
+    with self.test_run as test_run:
+      dutinfo = results.DutInfo("hostname")
+      hw = dutinfo.AddHardware(
+          text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
+      test_run.StartAndRegisterInfos([dutinfo])
 
-  def testTestStepAddMeasurementWithNullptr(self):
-    val = struct_pb2.Value(number_value=3.14)
-    now = timestamp_pb2.Timestamp()
-    elem = results_pb2.MeasurementElement(value=val, dut_timestamp=now)
-    elem.valid_values.values.append(val)
-    info = results_pb2.MeasurementInfo(name="measurement info", unit="unit")
-    self.step.AddMeasurement(info, elem, None)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement {
-            info {
-              name: "measurement info"
-              unit: "unit"
-            }
-            element {
-              measurement_series_id: ""
-              value { number_value: 3.14 }
-              valid_values { values { number_value: 3.14 } }
-            }
-          }
-        }"""
-    compare.assertProto2Contains(
-        self,
-        want,
-        got,
-        ignored_fields=[
-            "test_step_artifact.test_step_id",
-            "test_step_artifact.measurement.element.dut_timestamp"
-        ])
+      val = struct_pb2.Value(number_value=3.14)
+      now = timestamp_pb2.Timestamp()
+      elem = results_pb2.MeasurementElement(value=val, dut_timestamp=now)
+      elem.valid_values.values.append(val)
 
-  def testTestStepAddMeasurementWithDefualt(self):
-    val = struct_pb2.Value(number_value=3.14)
-    now = timestamp_pb2.Timestamp()
-    elem = results_pb2.MeasurementElement(value=val, dut_timestamp=now)
-    elem.valid_values.values.append(val)
-    info = results_pb2.MeasurementInfo(name="measurement info", unit="unit")
-    self.step.AddMeasurement(info, elem)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement {
-            info {
-              name: "measurement info"
-              unit: "unit"
-            }
-            element {
-              measurement_series_id: ""
-              value { number_value: 3.14 }
-              valid_values { values { number_value: 3.14 } }
-            }
-          }
-        }"""
-    compare.assertProto2Contains(
-        self,
-        want,
-        got,
-        ignored_fields=[
-            "test_step_artifact.test_step_id",
-            "test_step_artifact.measurement.element.dut_timestamp"
-        ])
+      info = results_pb2.MeasurementInfo(name="measurement info", unit="unit")
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.AddMeasurement(info, elem, hw)
+
+    measurements = self.output.model.steps["0"].measurements
+    self.assertEqual(len(measurements), 1)
+    self.assertEqual(measurements[0].info.name, "measurement info")
 
   def testTestStepAddFile(self):
-    file = results_pb2.File(
-        upload_as_name="upload name",
-        output_path="out path",
-        description="description",
-        content_type="content type")
-    self.step.AddFile(file)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          file {
-            upload_as_name: "upload name"
-            output_path: "out path"
-            description: "description"
-            content_type: "content type"
-          }
-        }"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
+    with self.test_run as test_run:
+      test_run.StartAndRegisterInfos([])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.AddFile(
+            results_pb2.File(
+                upload_as_name="upload name",
+                output_path="out path",
+                description="description",
+                content_type="content type"))
+
+    files = self.output.model.steps["0"].files
+    self.assertEqual(len(files), 1)
+    self.assertEqual(files[0].upload_as_name, "upload name")
 
   def testTestStepAddArtifactExtension(self):
     extension = empty_pb2.Empty()
-    self.step.AddArtifactExtension("test extension", extension)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          extension {
-            name: "test extension"
-            extension {
-              type_url: "type.googleapis.com/google.protobuf.Empty"
-              value: "%s"
-            }
-          }
-        }
-        sequence_number: 0""" % (
-            extension.SerializeToString())
-    compare.assertProto2Contains(
-        self,
-        want,
-        got,
-        ignored_fields=[
-            "test_step_artifact.test_step_id",
-            "test_step_artifact.extension.extension"
-        ])
+    with self.test_run as test_run:
+      test_run.StartAndRegisterInfos([])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.AddArtifactExtension("test extension", extension)
 
-  def testTestStepEnd(self):
-    self.assertFalse(self.step.Ended())
-    self.assertEqual(self.step.Status(), results_pb2.TestStatus.UNKNOWN)
-    self.step.End()
-    self.assertTrue(self.step.Ended())
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          test_step_end { name: "TestStepTest" status: COMPLETE }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
+    extensions = self.output.model.steps["0"].artifact_extensions
+    self.assertEqual(len(extensions), 1)
+    self.assertEqual(extensions[0].name, "test extension")
 
   def testTestStepSkip(self):
-    self.assertEqual(self.step.Status(), results_pb2.TestStatus.UNKNOWN)
-    self.step.Skip()
-    self.assertEqual(self.step.Status(), results_pb2.TestStatus.SKIPPED)
+    with self.test_run as test_run:
+      test_run.StartAndRegisterInfos([])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        self.assertEqual(step.Status(), results_pb2.TestStatus.UNKNOWN)
+        step.Skip()
+        self.assertEqual(step.Status(), results_pb2.TestStatus.SKIPPED)
 
   def testTestStepDebug(self):
-    msg = "my house has termites, please debug it"
-    self.step.LogDebug(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          log { severity: DEBUG text: "my house has termites, please debug it" }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
+    with self.test_run as test_run:
+      test_run.StartAndRegisterInfos([])
+      with test_run.BeginTestStep("TestStepTest") as step:
+        step.LogDebug("A")
+        step.LogInfo("B")
+        step.LogWarn("C")
+        step.LogError("D")
+        step.LogFatal("E")
 
-  def testTestStepInfo(self):
-    msg = "my house has termites, please debug it"
-    self.step.LogInfo(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          log { severity: INFO text: "my house has termites, please debug it" }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
-
-  def testTestStepWraning(self):
-    msg = "my house has termites, please debug it"
-    self.step.LogWarn(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          log { severity: WARNING text: "my house has termites, please debug it" }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
-
-  def testTestStepFatal(self):
-    msg = "my house has termites, please debug it"
-    self.step.LogFatal(msg)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          log { severity: FATAL text: "my house has termites, please debug it" }
-        }
-        sequence_number: 0"""
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=[
-            "test_step_artifact.test_step_id",
-        ])
+    logs = self.output.model.steps["0"].logs
+    self.assertEqual(len(logs), 5)
+    self.assertEqual(logs[results_pb2.Log.DEBUG][0].text, "A")
+    self.assertEqual(logs[results_pb2.Log.INFO][0].text, "B")
+    self.assertEqual(logs[results_pb2.Log.WARNING][0].text, "C")
+    self.assertEqual(logs[results_pb2.Log.ERROR][0].text, "D")
+    self.assertEqual(logs[results_pb2.Log.FATAL][0].text, "E")
 
 
-class TestMeasurementSeries(unittest.TestCase):
-
-  def setUp(self):
-    super().setUp()
-    self.results_test = resultstestpy.ResultsTest()
-    info = text_format.Parse(MEASUREMENTINFO, results_pb2.MeasurementInfo())
-    self.series = self.results_test.CreateMeasurementSeries(info)
-
-  def tearDown(self):
-    super().tearDown()
-    self.series.End()
+class TestMeasurementSeries(ResultsTestBase):
 
   def testMeasurementSeriesBegin(self):
-    step = self.results_test.CreateTestStep(None, "TestMeasurementSeries", "0")
-    d0 = results.DutInfo("host")
-    hw = d0.AddHardware(
-        text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
-    hw_id = hw.Data().hardware_info_id
-    self.results_test.RegisterHwId(hw_id)
-    infostr = MEASUREMENTINFO % (hw_id)
-    info = text_format.Parse(infostr, results_pb2.MeasurementInfo())
-    series = results.BeginMeasurementSeries(step, hw, info)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    step.End()
-    series.End()
-    want = """test_step_artifact {
-           measurement_series_start { measurement_series_id: "%s" info { %s } }
-           test_step_id: "%s"
-         }
-        sequence_number: 0""" % (series.Id(), infostr, step.Id())
-    compare.assertProto2Contains(self, want, got)
+    with self.test_run as test_run:
+      dut_info = results.DutInfo("host")
+      hw = dut_info.AddHardware(
+          text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
+      hw_id = hw.Data().hardware_info_id
+      test_run.StartAndRegisterInfos([dut_info])
+      with test_run.BeginTestStep("TestMeasurementSeries") as step:
+        infostr = MEASUREMENTINFO % (hw_id)
+        info = text_format.Parse(infostr, results_pb2.MeasurementInfo())
+        with step.BeginMeasurementSeries(hw, info) as measurement_series:
+          measurement_series.AddElement(struct_pb2.Value(number_value=3.14))
 
-  def testMeasurementSeriesAddElement(self):
-    val = struct_pb2.Value(number_value=3.14)
-    self.series.AddElement(val)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement_element {
-            measurement_series_id: "%s"
-            value { number_value: 3.14 }
-          }
-        }""" % (
-            self.series.Id())
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
-
-  def testMeasurementSeriesAddElementWithRange(self):
-    val_max = struct_pb2.Value(number_value=3.15)
-    val_min = struct_pb2.Value(number_value=3.13)
-    val = struct_pb2.Value(number_value=3.14)
-    nrange = results_pb2.MeasurementElement.Range(
-        maximum=val_max, minimum=val_min)
-    self.series.AddElementWithRange(val, nrange)
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement_element {
-            measurement_series_id: "%s"
-            value { number_value: 3.14 }
-            range {
-              maximum { number_value: 3.15 }
-              minimum { number_value: 3.13 }
-            }
-          }
-        }""" % (
-            self.series.Id())
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
-
-  def testMeasurementSeriesAddElementWithValues(self):
-    val = struct_pb2.Value(number_value=3.14)
-    self.series.AddElementWithValues(val, [val])
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """test_step_artifact {
-          measurement_element {
-            measurement_series_id: "%s"
-            value { number_value: 3.14 }
-            valid_values { values { number_value: 3.14 } }
-          }
-        }""" % (
-            self.series.Id())
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
-
-  def testMeasurementSeriesEnd(self):
-    self.assertFalse(self.series.Ended())
-    self.series.End()
-    self.assertTrue(self.series.Ended())
-    got = json_format.Parse(self.results_test.GetJsonReadableOutput(),
-                            results_pb2.OutputArtifact())
-    want = """
-    test_step_artifact {
-      measurement_series_end {
-        measurement_series_id: "%s"
-        total_measurement_count: 0
-        }
-      }""" % (
-          self.series.Id())
-    compare.assertProto2Contains(
-        self, want, got, ignored_fields=["test_step_artifact.test_step_id"])
+    measurement_series = self.output.model.steps["0"].measurement_series
+    self.assertEqual(len(measurement_series), 1)
+    series_output = list(measurement_series.values())[0]
+    self.assertEqual(series_output.start.info.name, "measurement info")
+    self.assertEqual(len(series_output.measurement_elements), 1)
+    self.assertEqual(series_output.measurement_elements[0].value.number_value,
+                     3.14)
 
 
 if __name__ == "__main__":
   faulthandler.enable()
-  unittest.main()
+  absltest.main()

@@ -20,7 +20,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ocpdiag/core/compat/status_converters.h"
@@ -37,11 +36,9 @@ namespace results {
 
 using internal::ArtifactWriter;
 using internal::TestFile;
-using ::ocpdiag::testing::EqualsProto;
 using ::ocpdiag::testing::IsOkAndHolds;
 using ::ocpdiag::testing::Partially;
 using ::ocpdiag::testing::StatusIs;
-using ::testing::Pointwise;
 
 namespace {
 
@@ -109,29 +106,6 @@ TEST(ArtifactWriter, Simple) {
   reader.Close();
 }
 
-//
-TEST(ArtifactWriter, MultipleWritersInOrder) {
-  std::vector<rpb::OutputArtifact> wants;
-  std::vector<rpb::OutputArtifact> gots;
-  TestFile file;
-  std::stringstream json_stream;
-  {
-    ArtifactWriter writer1(dup(fileno(file.ptr)), &json_stream);
-    ArtifactWriter writer2 = writer1;
-    rpb::OutputArtifact out_pb;
-    rpb::TestStepArtifact* step_pb = out_pb.mutable_test_step_artifact();
-    rpb::Log* log_pb = step_pb->mutable_log();
-    step_pb->set_test_step_id("76");
-    log_pb->set_text("Hello, ");
-    writer1.Write(out_pb);
-    wants.push_back(out_pb);
-
-    log_pb->set_text("World!");
-    writer2.Write(out_pb);
-    wants.push_back(out_pb);
-  }  // writers fall out of scope and Flush/close file
-}
-
 // Confirms that all newline '\n' characters are escaped '\\n'.
 // And that all escaped newline '\\n' characters are ignored.
 TEST(ArtifactWriter, replace_newlines) {
@@ -159,13 +133,9 @@ TEST(ArtifactWriter, ThreadSafetyCheck) {
   const int writer_copies = 20;
   const int artifact_count = 1000;
   {
-    ArtifactWriter root_writer(dup(fileno(file.ptr)), nullptr);
-    std::array<ArtifactWriter, writer_copies> writers;
-    for (int i = 0; i < writer_copies; i++) {
-      writers[i] = root_writer;
-    }
+    ArtifactWriter writer(dup(fileno(file.ptr)), nullptr);
     std::vector<std::future<void>> threads;
-    for (auto& writer : writers) {
+    for (int i = 0; i < writer_copies; i++) {
       threads.push_back(std::async(std::launch::async, [&] {
         for (int i = 0; i < artifact_count; i++) {
           rpb::OutputArtifact out_pb;
@@ -173,10 +143,8 @@ TEST(ArtifactWriter, ThreadSafetyCheck) {
         }
       }));
     }
-    for (std::future<void>& thread : threads) {
-      thread.wait();
-    }
-  }  // writers fall out of scope and Flush/close file
+    for (std::future<void>& thread : threads) thread.wait();
+  }  // writer falls out of scope and Flush/close file
 
   // Read from results file
   riegeli::RecordReader reader(
@@ -187,9 +155,7 @@ TEST(ArtifactWriter, ThreadSafetyCheck) {
   int want_count = writer_copies * artifact_count;
   int got_count = 0;
   rpb::OutputArtifact got;
-  while (reader.ReadRecord(got)) {
-    got_count++;
-  }
+  while (reader.ReadRecord(got)) got_count++;
   EXPECT_EQ(got_count, want_count);
 }
 

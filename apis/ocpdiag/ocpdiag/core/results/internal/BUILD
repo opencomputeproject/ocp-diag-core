@@ -27,7 +27,6 @@ cc_library(
     hdrs = ["logging.h"],
     deps = [
         "//ocpdiag/core/compat:status_converters",
-        "//ocpdiag/core/params:utils",
         "//ocpdiag/core/results:results_cc_proto",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/cleanup",
