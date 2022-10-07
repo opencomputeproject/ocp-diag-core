@@ -150,3 +150,28 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "recordio_iterator",
+    testonly = 1,
+    hdrs = ["recordio_iterator.h"],
+    deps = [
+        "@com_google_absl//absl/log:check",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/records:record_reader",
+    ],
+)
+
+cc_test(
+    name = "recordio_iterator_test",
+    srcs = [
+        "recordio_iterator_test.cc",
+    ],
+    deps = [
+        ":recordio_iterator",
+        ":results_cc_proto",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_riegeli//riegeli/bytes:fd_writer",
+        "@com_google_riegeli//riegeli/records:record_writer",
+    ],
+)
