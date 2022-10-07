@@ -22,62 +22,51 @@ def SetResultsLibFlags(
   ...
 
 
+# DEPRECATED: Use TestRun().
 def InitTestRun(name: Text) -> TestRun:
   ...
 
 
-class TestRun:
+class MeasurementSeries:
 
-  def StartAndRegisterInfos(self,
-                            dutinfos: List[DutInfo],
-                            params: Optional[message.Message] = ...) -> None:
+  def __enter__(self) -> MeasurementSeries:
     ...
 
-  def End(self) -> results_pb2.TestResult:
+  def __exit__(self, *args):
     ...
 
-  def Skip(self) -> results_pb2.TestResult:
+  def AddElement(self, value: struct_pb2.Value) -> None:
     ...
 
-  def AddError(self, symptom: Text, message: Text) -> None:
+  def AddElementWithRange(self, val: struct_pb2.Value,
+                          range: results_pb2.MeasurementElement.Range) -> None:
     ...
 
-  def AddTag(self, tag: Text) -> None:
+  def AddElementWithValues(self, val: struct_pb2.Value,
+                           valid_values: List[struct_pb2.Value]) -> None:
     ...
 
-  def Status(self) -> results_pb2.TestStatus:
-    ...
-
-  def Result(self) -> results_pb2.TestStatus:
-    ...
-
-  def Started(self) -> bool:
+  def Id(self) -> Text:
     ...
 
   def Ended(self) -> bool:
     ...
 
-  def LogDebug(self, msg: Text) -> None:
+  def End(self) -> None:
     ...
-
-  def LogInfo(self, msg: Text) -> None:
-    ...
-
-  def LogWarn(self, msg: Text) -> None:
-    ...
-
-  def LogError(self, msg: Text) -> None:
-    ...
-
-  def LogFatal(self, msg: Text) -> None:
-    ...
-
-
-def BeginTestStep(parent: TestRun, name: Text) -> TestStep:
-  ...
 
 
 class TestStep:
+
+  def __enter__(self) -> TestStep:
+    ...
+
+  def __exit__(self, *args):
+    ...
+
+  def BeginMeasurementSeries(
+      hwrec: HwRecord, info: results_pb2.MeasurementInfo) -> MeasurementSeries:
+    ...
 
   def AddDiagnosis(self,
                    type: results_pb2.Diagnosis.Type,
@@ -136,6 +125,70 @@ class TestStep:
     ...
 
 
+class TestRun:
+
+  def __init__(self, name: str):
+    ...
+
+  def __enter__(self) -> TestRun:
+    ...
+
+  def __exit__(self, *args):
+    ...
+
+  def StartAndRegisterInfos(self,
+                            dutinfos: List[DutInfo],
+                            params: Optional[message.Message] = ...) -> None:
+    ...
+
+  def BeginTestStep(name: str) -> TestStep:
+    ...
+
+  def End(self) -> results_pb2.TestResult:
+    ...
+
+  def Skip(self) -> results_pb2.TestResult:
+    ...
+
+  def AddError(self, symptom: Text, message: Text) -> None:
+    ...
+
+  def AddTag(self, tag: Text) -> None:
+    ...
+
+  def Status(self) -> results_pb2.TestStatus:
+    ...
+
+  def Result(self) -> results_pb2.TestStatus:
+    ...
+
+  def Started(self) -> bool:
+    ...
+
+  def Ended(self) -> bool:
+    ...
+
+  def LogDebug(self, msg: Text) -> None:
+    ...
+
+  def LogInfo(self, msg: Text) -> None:
+    ...
+
+  def LogWarn(self, msg: Text) -> None:
+    ...
+
+  def LogError(self, msg: Text) -> None:
+    ...
+
+  def LogFatal(self, msg: Text) -> None:
+    ...
+
+
+# DEPRECATED: Use TestRun.BeginTestStep().
+def BeginTestStep(parent: TestRun, name: Text) -> TestStep:
+  ...
+
+
 class DutInfo:
 
   def __init__(self, name: Text):
@@ -169,33 +222,11 @@ class SwRecord:
     ...
 
 
+# DEPRECATED: Use TestStep.BeginMeasurementSeries.
 def BeginMeasurementSeries(
     parent: TestStep, hw: HwRecord,
     info: results_pb2.MeasurementInfo) -> MeasurementSeries:
   ...
-
-
-class MeasurementSeries:
-
-  def AddElement(self, value: struct_pb2.Value) -> None:
-    ...
-
-  def AddElementWithRange(self, val: struct_pb2.Value,
-                          range: results_pb2.MeasurementElement.Range) -> None:
-    ...
-
-  def AddElementWithValues(self, val: struct_pb2.Value,
-                           valid_values: List[struct_pb2.Value]) -> None:
-    ...
-
-  def Id(self) -> Text:
-    ...
-
-  def Ended(self) -> bool:
-    ...
-
-  def End(self) -> None:
-    ...
 
 
 class OutputReceiver:
