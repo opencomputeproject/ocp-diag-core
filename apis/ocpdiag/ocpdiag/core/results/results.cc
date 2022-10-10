@@ -811,23 +811,29 @@ void TestStep::WriteLog(ocpdiag::results_pb::Log::Severity severity,
   writer_->Write(out);
 }
 
-// Initialize static members
-internal::IntIncrementer DutInfo::hw_uuid_;
-internal::IntIncrementer DutInfo::sw_uuid_;
+internal::IntIncrementer& DutInfo::GetHardwareIdSource() {
+  static auto& incrementer = *new internal::IntIncrementer();
+  return incrementer;
+}
+
+internal::IntIncrementer& DutInfo::GetSoftwareIdSource() {
+  static auto& incrementer = *new internal::IntIncrementer();
+  return incrementer;
+}
 
 void DutInfo::AddPlatformInfo(std::string info) {
   *proto_.mutable_platform_info()->mutable_info()->Add() = std::move(info);
 }
 
 HwRecord DutInfo::AddHardware(rpb::HardwareInfo info) {
-  info.set_hardware_info_id(absl::StrCat(hw_uuid_.Next()));
+  info.set_hardware_info_id(absl::StrCat(GetHardwareIdSource().Next()));
   HwRecord ret(info);
   *proto_.add_hardware_components() = std::move(info);
   return ret;
 }
 
 SwRecord DutInfo::AddSoftware(rpb::SoftwareInfo info) {
-  info.set_software_info_id(absl::StrCat(sw_uuid_.Next()));
+  info.set_software_info_id(absl::StrCat(GetSoftwareIdSource().Next()));
   SwRecord ret(info);
   *proto_.add_software_infos() = std::move(info);
   return ret;

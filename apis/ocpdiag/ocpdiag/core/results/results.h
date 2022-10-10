@@ -341,8 +341,8 @@ class DutInfo {
   ocpdiag::results_pb::DutInfo proto_;
   bool registered_;
   // Shall be globally unique within the binary, even across TestRun objects.
-  static internal::IntIncrementer hw_uuid_;
-  static internal::IntIncrementer sw_uuid_;
+  static internal::IntIncrementer &GetHardwareIdSource();
+  static internal::IntIncrementer &GetSoftwareIdSource();
 };
 
 // A handle to a HardwareInfo that has been added to a DutInfo.
