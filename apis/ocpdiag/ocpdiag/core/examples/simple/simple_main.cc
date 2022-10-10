@@ -40,7 +40,8 @@ constexpr char kGoodHardware[] = "my hardware is good!";
 constexpr char kFirstStep[] = "my_first_step";
 constexpr char kSecondStep[] = "my_second_step";
 
-void FillHwInfo(HardwareInfo* hw_info, const bool has_component) {
+void FillHwInfo(HardwareInfo* hw_info, const bool has_component,
+                const bool complete_fru) {
   hw_info->set_arena("myArena");
   hw_info->set_name("myName");
   hw_info->set_manufacturer("myManufacturer");
@@ -48,10 +49,12 @@ void FillHwInfo(HardwareInfo* hw_info, const bool has_component) {
   hw_info->set_part_type("myPartType");
 
   ComponentLocation* fru_location = hw_info->mutable_fru_location();
-  fru_location->set_serial_number("myFruSerial");
+  if (complete_fru) {
+    fru_location->set_serial_number("myFruSerial");
+    fru_location->set_devpath("MyFruDevpath");
+  }
   fru_location->set_blockpath("MyFruBlockpath");
   fru_location->set_odata_id("MyFruOdataId");
-  fru_location->set_devpath("MyFruDevpath");
 
   if (has_component) {
     ComponentLocation* component_location =
@@ -110,13 +113,20 @@ int main(int argc, char* argv[]) {
 
   HardwareInfo hw_info_with_fru;
 
-  FillHwInfo(&hw_info_with_fru, /* has_component = */false);
+  FillHwInfo(&hw_info_with_fru, /* has_component = */ false,
+             /* complete_fru = */ true);
   HwRecord hw_record_with_fru = dut_info.AddHardware(hw_info_with_fru);
 
   HardwareInfo hw_info_with_component;
-  FillHwInfo(&hw_info_with_component, /* has_component = */true);
+  FillHwInfo(&hw_info_with_component, /* has_component = */ true,
+             /* complete_fru = */ true);
   HwRecord hw_record_with_component =
       dut_info.AddHardware(hw_info_with_component);
+
+  HardwareInfo hw_info_missing_fru;
+  FillHwInfo(&hw_info_missing_fru, /* has_component = */ true,
+             /* complete_fru = */ false);
+  HwRecord hw_record_missing_fru = dut_info.AddHardware(hw_info_missing_fru);
 
   // Build the sw info.
   SoftwareInfo sw_info;
@@ -188,6 +198,11 @@ int main(int argc, char* argv[]) {
       ocpdiag::results_pb::Diagnosis_Type::Diagnosis_Type_PASS,
       "my_test-good-myHardwareWithComponentLocation", kGoodHardware,
       {hw_record_with_component});
+
+  step2->AddDiagnosis(
+      ocpdiag::results_pb::Diagnosis_Type::Diagnosis_Type_PASS,
+      "my_test-good-myHardwareWithMissingFruFields", kGoodHardware,
+      {hw_record_missing_fru});
 
   // Demonstrate MeasurementSeries
   MeasurementInfo meas_info;
