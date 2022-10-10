@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "google/protobuf/descriptor.h"
@@ -56,7 +57,6 @@ class ArtifactWriter {
   ArtifactWriter(int output_file_desc, bool also_print_to_stdout = false);
   // This ctor intended for use only in tests.
   ArtifactWriter(int output_file_desc, std::ostream* readable_out);
-  virtual ~ArtifactWriter() = default;
 
   // Write the artifact to output file/stream, if any.
   void Write(ocpdiag::results_pb::OutputArtifact&,
@@ -66,7 +66,7 @@ class ArtifactWriter {
   void Flush();
 
   // Checks whether a hardware_info_id is registered with the writer
-  virtual bool IsHwRegistered(absl::string_view i) const {
+  bool IsHwRegistered(absl::string_view i) const {
     if (proxy_ == nullptr) {
       return false;
     }
@@ -74,7 +74,7 @@ class ArtifactWriter {
   }
 
   // Checks whether a software_info_id is registered with the writer
-  virtual bool IsSwRegistered(absl::string_view i) const {
+  bool IsSwRegistered(absl::string_view i) const {
     if (proxy_ == nullptr) {
       return false;
     }
@@ -117,6 +117,10 @@ class ArtifactWriter {
     absl::flat_hash_set<std::string> registered_hw_;
     absl::flat_hash_set<std::string> registered_sw_;
 
+    // DO NOT SUBMIT
+    // std::unordered_set<std::string> registered_hw_;
+    // std::unordered_set<std::string> registered_sw_;
+
     absl::Mutex mutex_;
     int sequence_num_ ABSL_GUARDED_BY(mutex_);
     std::ostream* readable_out_ ABSL_GUARDED_BY(mutex_);
@@ -134,7 +138,7 @@ class ArtifactWriter {
 class LoggerInterface {
  private:
   virtual void WriteLog(ocpdiag::results_pb::Log::Severity,
-                        absl::string_view msg) = 0;
+                absl::string_view msg) = 0;
 
  public:
   virtual ~LoggerInterface() = default;
