@@ -56,7 +56,6 @@ class ArtifactWriter {
   ArtifactWriter(int output_file_desc, bool also_print_to_stdout = false);
   // This ctor intended for use only in tests.
   ArtifactWriter(int output_file_desc, std::ostream* readable_out);
-  virtual ~ArtifactWriter() = default;
 
   // Write the artifact to output file/stream, if any.
   void Write(ocpdiag::results_pb::OutputArtifact&,
@@ -66,7 +65,7 @@ class ArtifactWriter {
   void Flush();
 
   // Checks whether a hardware_info_id is registered with the writer
-  virtual bool IsHwRegistered(absl::string_view i) const {
+  bool IsHwRegistered(absl::string_view i) const {
     if (proxy_ == nullptr) {
       return false;
     }
@@ -74,7 +73,7 @@ class ArtifactWriter {
   }
 
   // Checks whether a software_info_id is registered with the writer
-  virtual bool IsSwRegistered(absl::string_view i) const {
+  bool IsSwRegistered(absl::string_view i) const {
     if (proxy_ == nullptr) {
       return false;
     }
