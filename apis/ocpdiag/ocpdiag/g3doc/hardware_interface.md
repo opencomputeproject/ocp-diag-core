@@ -3,7 +3,7 @@
 
 
 <!--*
-freshness: { owner: 'yuanlinw' reviewed: '2022-03-22' }
+freshness: { owner: 'troywang' reviewed: '2022-10-11' }
 *-->
 
 This page describes how to define and use the OCPDiag Hardware Interface.
