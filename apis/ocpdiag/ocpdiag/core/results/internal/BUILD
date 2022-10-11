@@ -52,8 +52,8 @@ cc_library(
     srcs = ["file_handler.cc"],
     hdrs = ["file_handler.h"],
     deps = [
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_factory_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:remote_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:remote_factory_cc",
         "//ocpdiag/core/results:results_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
@@ -69,8 +69,8 @@ cc_library(
     hdrs = ["mock_file_handler.h"],
     deps = [
         ":file_handler",
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:mock_remote_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:remote_cc",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
     ],
@@ -103,8 +103,8 @@ cc_test(
     deps = [
         ":file_handler",
         ":mock_file_handler",
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:mock_remote_cc",
-        "//ocpdiag/core/hwinterface/lib/off_dut_machine_interface:remote_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:mock_remote_cc",
+        "//ocpdiag/core/lib/off_dut_machine_interface:remote_cc",
         "//ocpdiag/core/testing:parse_text_proto",
         "//ocpdiag/core/testing:proto_matchers",
         "//ocpdiag/core/testing:status_matchers",
