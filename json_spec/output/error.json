@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/error",
+    "title": "Error",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "symptom": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "message": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "softwareInfoIds": {
+            "description": "TODO: link to md doc",
+            "$comment": "this may need additional schema to make it an ID",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": [
+        "symptom"
+    ],
+    "additionalProperties": false
+}

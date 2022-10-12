@@ -1,0 +1,53 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testRunArtifact",
+    "title": "Test run artifact",
+    "description": "TODO: link to md doc",
+    "oneOf": [
+        {
+            "properties": {
+                "testRunStart": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testRunStart"
+                }
+            },
+            "required": [
+                "testRunStart"
+            ]
+        },
+        {
+            "properties": {
+                "testRunEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testRunEnd"
+                }
+            },
+            "required": [
+                "testRunEnd"
+            ]
+        },
+        {
+            "properties": {
+                "log": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/log"
+                }
+            },
+            "required": [
+                "log"
+            ]
+        },
+        {
+            "properties": {
+                "error": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/error"
+                }
+            },
+            "required": [
+                "error"
+            ]
+        }
+    ],
+    "unevaluatedProperties": false
+}

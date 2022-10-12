@@ -1,0 +1,16 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testStepStart",
+    "title": "Test step start",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "name": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        }
+    },
+    "required": [
+        "name"
+    ],
+    "additionalProperties": false
+}

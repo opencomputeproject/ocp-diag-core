@@ -1,0 +1,46 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/subcomponent",
+    "title": "Subcomponent",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "type": {
+            "description": "TODO: link to md doc",
+            "$ref": "#/$defs/type"
+        },
+        "name": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "location": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "version": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "revision": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        }
+    },
+    "required": [
+        "name"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "type": {
+            "description": "TODO: link to md doc",
+            "type": "string",
+            "enum": [
+                "UNSPECIFIED",
+                "ASIC",
+                "ASIC-SUBSYSTEM",
+                "BUS",
+                "FUNCTION",
+                "CONNECTOR"
+            ]
+        }
+    }
+}

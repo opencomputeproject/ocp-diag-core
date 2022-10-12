@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testRunEnd",
+    "title": "Test run end",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "status": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/testStatus"
+        },
+        "result": {
+            "description": "TODO: link to md doc",
+            "$ref": "#/$defs/testResult"
+        }
+    },
+    "required": [
+        "status",
+        "result"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "testResult": {
+            "description": "TODO: link to md doc",
+            "type": "string",
+            "enum": [
+                "NOT_APPLICABLE",
+                "PASS",
+                "FAIL"
+            ]
+        }
+    }
+}

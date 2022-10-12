@@ -1,0 +1,47 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testRunStart",
+    "title": "Test run start",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "name": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "version": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "commandLine": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "parameters": {
+            "description": "TODO: link to md doc",
+            "$ref": "#/$defs/parameters"
+        },
+        "dutInfo": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/dutInfo"
+        },
+        "metadata": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "name",
+        "version",
+        "commandLine",
+        "parameters",
+        "dutInfo"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "parameters": {
+            "$comment": "will be extracted in the future, when spec is published",
+            "description": "TODO: link to md doc",
+            "type": "object"
+        }
+    }
+}

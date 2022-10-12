@@ -1,0 +1,156 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/testStepArtifact",
+    "title": "Step artifact",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "testStepId": {
+            "description": "TODO: link to md",
+            "type": "string"
+        }
+    },
+    "required": [
+        "testStepId"
+    ],
+    "unevaluatedProperties": false,
+    "oneOf": [
+        {
+            "properties": {
+                "testStepStart": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepStart"
+                }
+            },
+            "required": [
+                "testStepStart"
+            ]
+        },
+        {
+            "properties": {
+                "testStepEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/testStepEnd"
+                }
+            },
+            "required": [
+                "testStepEnd"
+            ]
+        },
+        {
+            "properties": {
+                "measurement": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/measurement"
+                }
+            },
+            "required": [
+                "measurement"
+            ]
+        },
+        {
+            "properties": {
+                "measurementSeriesStart": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/measurementSeriesStart"
+                }
+            },
+            "required": [
+                "measurementSeriesStart"
+            ]
+        },
+        {
+            "properties": {
+                "measurementSeriesEnd": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/measurementSeriesEnd"
+                }
+            },
+            "required": [
+                "measurementSeriesEnd"
+            ]
+        },
+        {
+            "properties": {
+                "measurementSeriesElement": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/measurementSeriesElement"
+                }
+            },
+            "required": [
+                "measurementSeriesElement"
+            ]
+        },
+        {
+            "properties": {
+                "error": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/error"
+                }
+            },
+            "required": [
+                "error"
+            ]
+        },
+        {
+            "properties": {
+                "log": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/log"
+                }
+            },
+            "required": [
+                "log"
+            ]
+        },
+        {
+            "properties": {
+                "diagnosis": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/diagnosis"
+                }
+            },
+            "required": [
+                "diagnosis"
+            ]
+        },
+        {
+            "properties": {
+                "file": {
+                    "description": "TODO: link to md",
+                    "$ref": "/opencomputeproject/ocp-diag-core/file"
+                }
+            },
+            "required": [
+                "file"
+            ]
+        },
+        {
+            "properties": {
+                "extension": {
+                    "$ref": "#/$defs/extension"
+                }
+            },
+            "required": [
+                "extension"
+            ]
+        }
+    ],
+    "$defs": {
+        "extension": {
+            "properties": {
+                "name": {
+                    "description": "TODO: link to md",
+                    "type": "string"
+                },
+                "content": {
+                    "description": "TODO: link to md",
+                    "type": "object"
+                }
+            },
+            "required": [
+                "name",
+                "content"
+            ]
+        }
+    }
+}

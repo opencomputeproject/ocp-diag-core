@@ -1,0 +1,44 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/diagnosis",
+    "title": "Diagnosis",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "verdict": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "type": {
+            "description": "TODO: link to md",
+            "$ref": "#/$defs/type"
+        },
+        "message": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "hardwareInfoId": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "subcomponent": {
+            "description": "TODO: link to md",
+            "$ref": "/opencomputeproject/ocp-diag-core/subcomponent"
+        }
+    },
+    "required": [
+        "verdict",
+        "type"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "type": {
+            "description": "TODO: link to md doc",
+            "type": "string",
+            "enum": [
+                "PASS",
+                "FAIL",
+                "UNKNOWN"
+            ]
+        }
+    }
+}

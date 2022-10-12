@@ -1,0 +1,38 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/file",
+    "title": "File",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "displayName": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "uri": {
+            "$comment": "maybe this should be more constrained",
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "description": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "contentType": {
+            "description": "TODO: link to md",
+            "type": "string"
+        },
+        "isSnapshot": {
+            "description": "TODO: link to md",
+            "type": "boolean"
+        },
+        "metadata": {
+            "description": "TODO: link to md",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "displayName",
+        "uri",
+        "isSnapshot"
+    ]
+}

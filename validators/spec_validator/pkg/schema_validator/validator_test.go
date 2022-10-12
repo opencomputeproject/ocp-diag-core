@@ -7,36 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateBytesSimpleRunArtifact(t *testing.T) {
+func TestSchemaVersion(t *testing.T) {
 	json := `{
-		"testRunArtifact": {
-			"log": {
-				"text": "log text",
-				"timestampMs": 0,
-				"severity": "INFO"
-			},
-			"meta": {
-				"version": "0.0"
-			}
+		"schemaVersion": {
+			"major": 2,
+			"minor": 0
 		},
-
 		"sequenceNumber": 0,
-		"timestamp": "2021-10-19T22:59:20+00:00"
-	}`
-
-	err := validateString(t, json)
-	require.NoError(t, err)
-}
-
-func TestValidateBytesSimpleStepArtifact(t *testing.T) {
-	json := `{
-		"testStepArtifact": {
-			"testStepId": "1",
-			"error": {
-				"message": "some error"
-			}
-		},
-		"sequenceNumber": 42,
 		"timestamp": "2021-10-19T22:59:20+00:00"
 	}`
 
@@ -50,6 +27,7 @@ func TestValidateBytesComplexRunArtifact(t *testing.T) {
 			"testRunStart": {
 				"name": "Error Monitor",
 				"version": "392747070",
+				"commandLine": "",
 				"parameters": {
 					"@type": "type.googleapis.com/meltan.error_monitor.Params",
 					"pollingIntervalSecs": 1,
@@ -123,18 +101,13 @@ func TestValidateBytesInvalid(t *testing.T) {
 		"testRunArtifact": {
 			"log": {
 				"text": "log text",
-				"timestampMs": 0,
 				"severity": "INFO"
-			},
-			"meta": {
-				"version": "0.0"
 			}
 		},
 		"testStepArtifact": {
 			"testStepId": "1",
 			"log": {
 				"text": "log text",
-				"timestampMs": 0,
 				"severity": "INFO"
 			}
 		},
@@ -147,8 +120,363 @@ func TestValidateBytesInvalid(t *testing.T) {
 	require.ErrorAs(t, err, &ve)
 }
 
+func TestRunLogSimple(t *testing.T) {
+	json := `{
+		"testRunArtifact": {
+			"log": {
+				"message": "log text",
+				"severity": "INFO"
+			}
+		},
+		"sequenceNumber": 0,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepLogSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepId": "1",
+			"log": {
+				"message": "log text",
+				"severity": "INFO"
+			}
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestRunErrorSimple(t *testing.T) {
+	json := `{
+		"testRunArtifact": {
+			"error": {
+				"symptom": "test-symptom"
+			}
+		},
+		"sequenceNumber": 0,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepErrorSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepId": "1",
+			"error": {
+				"message": "log text",
+				"symptom": "test-symptom",
+				"softwareInfoIds": [
+					"1"
+				]
+			}
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepFileSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepId": "1",
+			"file": {
+				"displayName": "mem_cfg_log",
+				"uri": "file:///root/mem_cfg_log",
+				"description": "DIMM configuration settings.",
+				"contentType": "text/plain",
+				"isSnapshot": false
+			}
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2021-10-19T22:59:20+00:00"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepDiagnosisSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"diagnosis": {
+				"verdict": "mlc-intranode-bandwidth-pass",
+				"type": "PASS",
+				"message": "intranode bandwidth within threshold.",
+				"hardwareInfoId": "1",
+				"subcomponent": {
+					"type": "BUS",
+					"name": "QPI1",
+					"location": "CPU-3-2-3",
+					"version": "1",
+					"revision": "0"
+				}
+			},
+			"testStepId": "1"
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2022-07-25T02:15:58.296032Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepExtensionSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"extension": {
+				"name": "extension example",
+				"content": {
+					"@type": "ExampleExtension",
+					"stringField": "example string",
+					"numberField": "42"
+				}
+			},
+			"testStepId": "2321"
+		},
+		"sequenceNumber": 600,
+		"timestamp": "2022-07-26T02:34:06.249683Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestRunStartSimple(t *testing.T) {
+	json := `{
+		"testRunArtifact": {
+			"testRunStart": {
+				"name": "mlc_test",
+				"version": "1.0",
+				"commandLine": "mlc/mlc --use_default_thresholds=true --data_collection_mode=true",
+				"parameters": {
+					"max_bandwidth": 7200.0,
+					"mode": "fast_mode",
+					"data_collection_mode": true,
+					"min_bandwidth": 700.0,
+					"use_default_thresholds": true
+				},
+				"dutInfo": {
+					"id": "1",
+					"hostname": "ocp_lab_0222",
+					"platformInfos": [
+						{
+							"info": "memory_optimized"
+						}
+					],
+					"softwareInfos": [
+						{
+							"softwareInfoId": "1",
+							"computerSystem": "primary_node",
+							"softwareType": "FIRMWARE",
+							"name": "bmc_firmware",
+							"version": "10",
+							"revision": "11"
+						}
+					],
+					"hardwareInfos": [
+						{
+							"hardwareInfoId": "1",
+							"computerSystem": "primary_node",
+							"manager": "bmc0",
+							"name": "primary node",
+							"location": "MB/DIMM_A1",
+							"odataId": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+							"partNumber": "P03052-091",
+							"serialNumber": "HMA2022029281901",
+							"manufacturer": "hynix",
+							"manufacturerPartNumber": "HMA84GR7AFR4N-VK",
+							"partType": "DIMM",
+							"version": "1",
+							"revision": "2"
+						}
+					]
+				}
+			}
+		},
+		"sequenceNumber": 1,
+		"timestamp": "2022-07-25T04:49:25.262947Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestRunEndSimple(t *testing.T) {
+	json := `{
+		"testRunArtifact": {
+			"testRunEnd": {
+				"status": "COMPLETE",
+				"result": "PASS"
+			}
+		},
+		"sequenceNumber": 100,
+		"timestamp": "2022-07-25T04:49:25.262947Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepStartSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepStart": {
+				"name": "intranode-bandwidth-check"
+			},
+			"testStepId": "22"
+		},
+		"sequenceNumber": 200,
+		"timestamp": "2022-07-25T04:56:42.249367Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestStepEndSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"testStepEnd": {
+				"status": "COMPLETE"
+			},
+			"testStepId": "22"
+		},
+		"sequenceNumber": 200,
+		"timestamp": "2022-07-25T04:54:41.292679Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestMeasurementWithValidatorSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurement": {
+				"name": "measured-fan-speed-100",
+				"unit": "RPM",
+				"hardwareInfoId": "5",
+				"subcomponent": {
+					"name": "FAN1",
+					"location": "F0_1",
+					"version": "1",
+					"revision": "1",
+					"type": "UNSPECIFIED"
+				},
+				"validators": [
+					{
+						"name": "80mm_fan_upper_limit",
+						"type": "LESS_THAN_OR_EQUAL",
+						"value": 11000.0
+					},
+					{
+						"name": "80mm_fan_lower_limit",
+						"type": "GREATER_THAN_OR_EQUAL",
+						"value": 8000.0
+					}
+				],
+				"value": 100221.0
+			},
+			"testStepId": "300"
+		},
+		"sequenceNumber": 400,
+		"timestamp": "2022-07-26T02:16:10.393209Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestMeasurementSeriesStartSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurementSeriesStart": {
+				"measurementSeriesId": "0",
+				"name": "measured-fan-speed-100",
+				"unit": "RPM",
+				"hardwareInfoId": "5",
+				"subcomponent": {
+					"name": "FAN1",
+					"location": "F0_1",
+					"version": "1",
+					"revision": "1",
+					"type": "UNSPECIFIED"
+				},
+				"validators": [
+					{
+						"name": "80mm_fan_upper_limit",
+						"type": "LESS_THAN_OR_EQUAL",
+						"value": 11000.0
+					},
+					{
+						"name": "80mm_fan_lower_limit",
+						"type": "GREATER_THAN_OR_EQUAL",
+						"value": 8000.0
+					}
+				]
+			},
+			"testStepId": "33"
+		},
+		"sequenceNumber": 300,
+		"timestamp": "2022-07-26T02:04:02.083679Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestMeasurementSeriesEndSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurementSeriesEnd": {
+				"measurementSeriesId": "2",
+				"totalCount": 51
+			},
+			"testStepId": "231"
+		},
+		"sequenceNumber": 300,
+		"timestamp": "2022-07-26T02:16:10.393209Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
+func TestMeasurementSeriesElementSimple(t *testing.T) {
+	json := `{
+		"testStepArtifact": {
+			"measurementSeriesElement": {
+				"index": 144,
+				"measurementSeriesId": "12",
+				"value": 100219.5,
+				"timestamp": "2022-07-26T02:45:00.102414Z"
+			},
+			"testStepId": "45398"
+		},
+		"sequenceNumber": 700,
+		"timestamp": "2022-07-26T02:45:00.097896Z"
+	}`
+
+	err := validateString(t, json)
+	require.NoError(t, err)
+}
+
 func validateString(t *testing.T, json string) error {
-	const schema string = "../../../../json_spec/results_spec.json"
+	const schema string = "../../../../json_spec/output/root.json"
 
 	sv, err := New(schema)
 	require.NoError(t, err)

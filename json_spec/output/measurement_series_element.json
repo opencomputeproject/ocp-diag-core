@@ -1,0 +1,41 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/measurementSeriesElement",
+    "title": "Measurement series element",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "index": {
+            "description": "TODO: link to md doc",
+            "type": "integer",
+            "minimum": 0
+        },
+        "value": {
+            "description": "TODO: link to md doc",
+            "type": [
+                "string",
+                "boolean",
+                "number"
+            ]
+        },
+        "timestamp": {
+            "description": "TODO: link to spec md link",
+            "type": "string",
+            "format": "date-time"
+        },
+        "measurementSeriesId": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "metadata": {
+            "description": "TODO: link to md doc",
+            "$ref": "/opencomputeproject/ocp-diag-core/metadata"
+        }
+    },
+    "required": [
+        "index",
+        "value",
+        "timestamp",
+        "measurementSeriesId"
+    ],
+    "additionalProperties": false
+}
