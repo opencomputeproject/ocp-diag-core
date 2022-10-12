@@ -4,11 +4,11 @@
     "title": "Dut info",
     "description": "TODO: link to md doc",
     "properties": {
-        "id": {
+        "dutInfoId": {
             "description": "TODO: link to md doc",
             "type": "string"
         },
-        "hostname": {
+        "name": {
             "description": "TODO: link to md doc",
             "type": "string"
         },

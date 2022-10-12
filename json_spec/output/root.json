@@ -7,8 +7,7 @@
         "sequenceNumber": {
             "description": "TODO: link to spec md link",
             "type": "integer",
-            "minimum": 0,
-            "maximum": 2147483647
+            "minimum": 0
         },
         "timestamp": {
             "description": "TODO: link to spec md link",
