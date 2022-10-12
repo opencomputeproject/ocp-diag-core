@@ -18,8 +18,6 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
-#include "absl/log/log_entry.h"
-#include "absl/log/log_sink.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -56,10 +54,15 @@ class MockMeasurementSeries;
 extern const char kInvalidRecordId[];
 extern const char kSympProceduralErr[];
 
+namespace internal {
+// Returns the global artifact writer object.
+internal::ArtifactWriter& GetGlobalArtifactWriter();
+}  // namespace internal
+
 // Contains factory methods to create main Result API objects.
 // Note: for unit tests, use fake or mock provided in
 // 'ocpdiag/core/testing/mock_results.h'
-//
+// asdfa asdf
 // DEPRECATED - Create result objects directly and use OutputReceiver in unit
 // tests.
 class ResultApi {
@@ -99,10 +102,11 @@ class TestRun : public internal::LoggerInterface {
   // Constructs a TestRun object. If the ArtifactWriter is not specified, it
   // will use the global artifact writer. Normally you only need to provide the
   // name, but other dependencies can be injected for unit tests.
-  TestRun(absl::string_view name,
-          std::unique_ptr<internal::ArtifactWriter> writer = nullptr,
-          std::unique_ptr<internal::FileHandler> file_handler =
-              std::make_unique<internal::FileHandler>());
+  TestRun(
+      absl::string_view name,
+      internal::ArtifactWriter& writer = internal::GetGlobalArtifactWriter(),
+      std::unique_ptr<internal::FileHandler> file_handler =
+          std::make_unique<internal::FileHandler>());
   TestRun(const TestRun&) = delete;
   TestRun& operator=(const TestRun&) = delete;
   ~TestRun() override { End(); }
@@ -190,7 +194,7 @@ class TestRun : public internal::LoggerInterface {
 
   std::string GenerateID();
 
-  std::shared_ptr<internal::ArtifactWriter> writer_;
+  internal::ArtifactWriter &writer_;
   std::unique_ptr<internal::FileHandler> file_handler_;
   const std::string name_;
   internal::IntIncrementer step_id_;
@@ -452,48 +456,6 @@ class MeasurementSeries {
   // first value added to the series.
   google::protobuf::Value value_kind_rule_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::MeasurementInfo info_;
-};
-
-// Custom ABSL LogSink that redirect the ABSL log to the global ArtifactWriter.
-class LogSink : public absl::LogSink {
- public:
-  // Registers the LogSink with ABSL. You only need to call this once.
-  static void RegisterWithAbsl();
-
-  // Logs the given message to the global artifact writer.
-  static void LogToArtifactWriter(
-      absl::string_view msg,
-      ocpdiag::results_pb::Log::Severity severity);
-
-  // Log function that directly logs the message with ArtifactWriter. This will
-  // allow logging without TestRun or TestStep.
-  void Send(const absl::LogEntry& entry) final;
-};
-
-// This class manages the global artifact writer.
-class GlobalArtifactWriterManager {
- public:
-  // Returns a reference to the global manager. The artifact writer will be
-  // initialized with a default instance.
-  static GlobalArtifactWriterManager& Get();
-
-  // Returns the global artifact writer. Sharing the ownership ensures that
-  // references to the returned object will still be valid even if someone
-  // re-initializes the global writer.
-  std::shared_ptr<internal::ArtifactWriter> writer();
-
-  // Updates the global artifact writer to use the provided one. If nullptr is
-  // provided (the default) then a default one is created.
-  //
-  // It should be uncommon to update the global artifact writer, but it is
-  // supported for unit tests.
-  void SetWriter(std::unique_ptr<internal::ArtifactWriter> writer = nullptr);
-
- private:
-  GlobalArtifactWriterManager();
-
-  absl::Mutex mutex_;
-  std::shared_ptr<internal::ArtifactWriter> writer_ ABSL_GUARDED_BY(mutex_);
 };
 
 }  // namespace results
