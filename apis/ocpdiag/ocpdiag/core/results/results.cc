@@ -26,6 +26,8 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
+#include "absl/log/log_entry.h"
+#include "absl/log/log_sink.h"
 #include "absl/log/log_sink_registry.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
@@ -169,14 +171,60 @@ class MergedTypeResolver final : public google::protobuf::util::TypeResolver {
   std::unique_ptr<google::protobuf::util::TypeResolver> resolver_;
 };
 
-std::unique_ptr<internal::ArtifactWriter> NewArtifactWriterOrDie() {
-  absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
-      absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
-  CHECK_OK(fd.status());
-  std::ostream* stream =
-      absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout) ? &std::cout : nullptr;
-  return std::make_unique<internal::ArtifactWriter>(*fd, stream);
-}
+// Custom ABSL LogSink that redirect the ABSL log to the global ArtifactWriter.
+class LogSink : public absl::LogSink {
+ public:
+  // Registers the LogSink with ABSL. You only need to call this once.
+  static void RegisterWithAbsl() {
+    // The LogSink is stored as a global static variable, which is initialized
+    // once in a thread-safe manner.
+    static LogSink* log_sink = []() {
+      auto* ret = new LogSink();
+      if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
+        absl::AddLogSink(ret);
+      }
+      return ret;
+    }();
+    (void)log_sink;  // suppress unused variable warning
+  }
+
+  // Logs the given message to the global artifact writer.
+  static void LogToArtifactWriter(
+      absl::string_view msg,
+      ocpdiag::results_pb::Log::Severity severity) {
+    rpb::Log log_pb;
+    log_pb.set_text(std::string(msg));
+    log_pb.set_severity(severity);
+    rpb::TestRunArtifact run_pb;
+    *run_pb.mutable_log() = std::move(log_pb);
+    rpb::OutputArtifact out_pb;
+    *out_pb.mutable_test_run_artifact() = std::move(run_pb);
+
+    internal::GetGlobalArtifactWriter().Write(out_pb);
+  }
+
+  // Log function that directly logs the message with ArtifactWriter. This will
+  // allow logging without TestRun or TestStep.
+  void Send(const absl::LogEntry& entry) final {
+    absl::string_view text = entry.text_message_with_prefix();
+    switch (entry.log_severity()) {
+      case absl::LogSeverity::kInfo:
+        LogToArtifactWriter(text, rpb::Log::INFO);
+        return;
+      case absl::LogSeverity::kWarning:
+        LogToArtifactWriter(text, rpb::Log::WARNING);
+        return;
+      case absl::LogSeverity::kError:
+        LogToArtifactWriter(text, rpb::Log::ERROR);
+        return;
+      case absl::LogSeverity::kFatal:
+        LogToArtifactWriter(text, rpb::Log::FATAL);
+        return;
+    }
+    std::cerr << "Unknown ABSL log severity: " << entry.log_severity()
+              << std::endl;
+  }
+};
 
 // This ensures we can only have one test run object at a time.
 ABSL_CONST_INIT absl::Mutex singleton_mutex(absl::kConstInit);
@@ -185,74 +233,22 @@ bool enforce_singleton ABSL_GUARDED_BY(singleton_mutex) = true;
 
 }  // namespace
 
-GlobalArtifactWriterManager::GlobalArtifactWriterManager()
-    : writer_(NewArtifactWriterOrDie()) {}
+namespace internal {
 
-GlobalArtifactWriterManager& GlobalArtifactWriterManager::Get() {
-  static auto& manager = *new GlobalArtifactWriterManager;
-  return manager;
-}
-
-std::shared_ptr<internal::ArtifactWriter>
-GlobalArtifactWriterManager::writer() {
-  absl::MutexLock lock(&mutex_);
-  return writer_;
-}
-
-void GlobalArtifactWriterManager::SetWriter(
-    std::unique_ptr<internal::ArtifactWriter> writer) {
-  if (writer == nullptr) writer = NewArtifactWriterOrDie();
-
-  absl::MutexLock lock(&mutex_);
-  writer_ = std::move(writer);
-}
-
-void LogSink::LogToArtifactWriter(
-    absl::string_view msg,
-    ocpdiag::results_pb::Log::Severity severity) {
-  rpb::Log log_pb;
-  log_pb.set_text(std::string(msg));
-  log_pb.set_severity(severity);
-  rpb::TestRunArtifact run_pb;
-  *run_pb.mutable_log() = std::move(log_pb);
-  rpb::OutputArtifact out_pb;
-  *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-
-  GlobalArtifactWriterManager::Get().writer()->Write(out_pb);
-}
-
-void LogSink::Send(const absl::LogEntry& entry) {
-  absl::string_view text = entry.text_message_with_prefix();
-  switch (entry.log_severity()) {
-    case absl::LogSeverity::kInfo:
-      LogToArtifactWriter(text, rpb::Log::INFO);
-      return;
-    case absl::LogSeverity::kWarning:
-      LogToArtifactWriter(text, rpb::Log::WARNING);
-      return;
-    case absl::LogSeverity::kError:
-      LogToArtifactWriter(text, rpb::Log::ERROR);
-      return;
-    case absl::LogSeverity::kFatal:
-      LogToArtifactWriter(text, rpb::Log::FATAL);
-      return;
-  }
-  std::cerr << "Unknown ABSL log severity: " << entry.log_severity()
-            << std::endl;
-}
-
-void LogSink::RegisterWithAbsl() {
-  // The LogSink is stored as a global static variable, which is initialized
-  // once in a thread-safe manner.
-  static LogSink* log_sink = []() {
-    auto* ret = new LogSink();
-    if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
-      absl::AddLogSink(ret);
-    }
-    return ret;
+internal::ArtifactWriter& GetGlobalArtifactWriter() {
+  static auto& writer = *[] {
+    absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
+        absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
+    CHECK_OK(fd.status());
+    std::ostream* stream = absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout)
+                               ? &std::cout
+                               : nullptr;
+    return new internal::ArtifactWriter(*fd, stream);
   }();
-  (void)log_sink;  // suppress unused variable warning
+  return writer;
 }
+
+}  // namespace internal
 
 absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
     std::string name) {
@@ -281,26 +277,19 @@ void TestRun::SetEnforceSingleton(bool enforce) {
 }
 
 TestRun::TestRun(absl::string_view name,
-                 std::unique_ptr<internal::ArtifactWriter> writer,
+                 internal::ArtifactWriter &writer,
                  std::unique_ptr<internal::FileHandler> file_handler)
-    : writer_(std::move(writer)),
+    : writer_(writer),
       file_handler_(std::move(file_handler)),
       name_(name),
       state_(RunState::kNotStarted),
       result_(ocpdiag::results_pb::TestResult::NOT_APPLICABLE),
       status_(ocpdiag::results_pb::TestStatus::UNKNOWN) {
   LogSink::RegisterWithAbsl();
-  {
-    absl::MutexLock lock(&singleton_mutex);
-    CHECK(!enforce_singleton || !singleton_initialized)
-        << "Only one TestRun object can be active at a time within a program";
-    singleton_initialized = true;
-  }
-
-  if (writer_ == nullptr) {
-    // Use the global artifact writer by default if nothing was specified.
-    writer_ = GlobalArtifactWriterManager::Get().writer();
-  }
+  absl::MutexLock lock(&singleton_mutex);
+  CHECK(!enforce_singleton || !singleton_initialized)
+      << "Only one TestRun object can be active at a time within a program";
+  singleton_initialized = true;
 }
 
 void TestRun::StartAndRegisterInfos(absl::Span<const DutInfo> infos,
@@ -336,10 +325,10 @@ if (false) {
   for (auto& info : dutinfos) {
     auto info_pb = info.ToProto();
     for (const auto& hw : info_pb.hardware_components()) {
-      writer_->RegisterHwId(hw.hardware_info_id());
+      writer_.RegisterHwId(hw.hardware_info_id());
     }
     for (const auto& sw : info_pb.software_infos()) {
-      writer_->RegisterSwId(sw.software_info_id());
+      writer_.RegisterSwId(sw.software_info_id());
     }
     start_pb.mutable_dut_info()->Add(std::move(info_pb));
   }
@@ -349,8 +338,8 @@ if (false) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
   MergedTypeResolver resolver(params.GetDescriptor()->file()->pool());
-  writer_->Write(out_pb, &resolver);
-  writer_->Flush();
+  writer_.Write(out_pb, &resolver);
+  writer_.Flush();
 }
 
 rpb::TestResult TestRun::End() ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -388,8 +377,8 @@ rpb::TestResult TestRun::End() ABSL_LOCKS_EXCLUDED(mutex_) {
       *run_pb.mutable_test_run_end() = std::move(end_pb);
       rpb::OutputArtifact out_pb;
       *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-      writer_->Write(out_pb);
-      writer_->Flush();
+      writer_.Write(out_pb);
+      writer_.Flush();
       break;
     }
   }
@@ -423,7 +412,7 @@ void TestRun::AddError(absl::string_view symptom, absl::string_view message)
   *run_pb.mutable_error() = std::move(err_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
+  writer_.Write(out_pb);
   absl::MutexLock lock(&mutex_);
   status_ = rpb::TestStatus::ERROR;
   result_ = rpb::TestResult::NOT_APPLICABLE;
@@ -436,7 +425,7 @@ void TestRun::AddTag(absl::string_view tag) {
   *run_pb.mutable_tag() = std::move(tag_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
+  writer_.Write(out_pb);
 }
 
 rpb::TestStatus TestRun::Status() const ABSL_LOCKS_EXCLUDED(mutex_) {
@@ -500,7 +489,7 @@ void TestRun::WriteLog(ocpdiag::results_pb::Log::Severity severity,
   *run_pb.mutable_log() = std::move(log_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
+  writer_.Write(out_pb);
 }
 
 std::unique_ptr<TestStep> TestRun::BeginTestStep(absl::string_view name) {
@@ -516,11 +505,11 @@ std::unique_ptr<TestStep> TestRun::BeginTestStep(absl::string_view name) {
   step_pb.set_test_step_id(id);
   rpb::OutputArtifact out;
   *out.mutable_test_step_artifact() = std::move(step_pb);
-  writer_->Write(out);
-  writer_->Flush();
+  writer_.Write(out);
+  writer_.Flush();
 
   return absl::WrapUnique(
-      new TestStep(*this, id, name, *writer_, *file_handler_));
+      new TestStep(*this, id, name, writer_, *file_handler_));
 }
 
 TestStep::TestStep(TestRun& parent, absl::string_view id,
