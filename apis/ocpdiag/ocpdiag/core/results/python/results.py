@@ -19,7 +19,6 @@ from ._results import *  # pylint:disable=wildcard-import
 from ._results import SetResultsLibFlags
 from absl import app
 from absl import flags
-from ocpdiag.core.results.python import output_model  # pylint:disable=unused-import
 
 # Define the flags with identical names to corresponding c++ flags.
 _OCPDIAG_COPY_RESULTS_TO_STDOUT = flags.DEFINE_boolean(
