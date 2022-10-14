@@ -42,13 +42,6 @@ absl::StatusOr<int> OpenAndGetDescriptor(absl::string_view filepath);
 // Returns a globally cached TypeResolver for the generated pool.
 google::protobuf::util::TypeResolver* GeneratedResolver();
 
-// Parses a binary recordIO file of output artifacts and executes the callback
-// on each record. Touches all output until the callback returns "false".
-absl::Status ParseRecordIo(
-    absl::string_view filepath,
-    std::function<bool(ocpdiag::results_pb::OutputArtifact)>
-        callback);
-
 // Handles emission of OutputArtifacts for OCPDiag tests.
 class ArtifactWriter {
  public:
