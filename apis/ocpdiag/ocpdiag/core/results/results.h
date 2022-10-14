@@ -18,8 +18,6 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
-#include "absl/log/log_entry.h"
-#include "absl/log/log_sink.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -55,6 +53,11 @@ class MockMeasurementSeries;
 
 extern const char kInvalidRecordId[];
 extern const char kSympProceduralErr[];
+
+namespace internal {
+// Returns the global artifact writer object.
+internal::ArtifactWriter& GetGlobalArtifactWriter();
+}  // namespace internal
 
 // Contains factory methods to create main Result API objects.
 // Note: for unit tests, use fake or mock provided in
@@ -99,13 +102,14 @@ class TestRun : public internal::LoggerInterface {
   // Constructs a TestRun object. If the ArtifactWriter is not specified, it
   // will use the global artifact writer. Normally you only need to provide the
   // name, but other dependencies can be injected for unit tests.
-  TestRun(absl::string_view name,
-          std::unique_ptr<internal::ArtifactWriter> writer = nullptr,
-          std::unique_ptr<internal::FileHandler> file_handler =
-              std::make_unique<internal::FileHandler>());
+  TestRun(
+      absl::string_view name,
+      internal::ArtifactWriter& writer = internal::GetGlobalArtifactWriter(),
+      std::unique_ptr<internal::FileHandler> file_handler =
+          std::make_unique<internal::FileHandler>());
   TestRun(const TestRun&) = delete;
   TestRun& operator=(const TestRun&) = delete;
-  ~TestRun() override { End(); }
+  ~TestRun() override;
 
   // Emits a TestRunStart artifact and registers the DutInfos.
   // No additional DutInfos can be registered after this point.
@@ -190,7 +194,10 @@ class TestRun : public internal::LoggerInterface {
 
   std::string GenerateID();
 
-  std::shared_ptr<internal::ArtifactWriter> writer_;
+  ocpdiag::results_pb::TestResult Finalize()
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
+  internal::ArtifactWriter& writer_;
   std::unique_ptr<internal::FileHandler> file_handler_;
   const std::string name_;
   internal::IntIncrementer step_id_;
@@ -199,6 +206,7 @@ class TestRun : public internal::LoggerInterface {
   RunState state_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::TestResult result_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::TestStatus status_ ABSL_GUARDED_BY(mutex_);
+  bool has_test_step_ ABSL_GUARDED_BY(mutex_);
 };
 
 // TestStep is a logical subdivision of a TestRun.
@@ -211,7 +219,7 @@ class TestStep : public internal::LoggerInterface {
 
   TestStep(const TestStep&) = delete;
   TestStep& operator=(const TestStep&) = delete;
-  ~TestStep() override { End(); }
+  ~TestStep() override;
 
   // Emits a Diagnosis artifact. A FAIL type also sets TestRun result to FAIL,
   // unless an Error artifact has been emitted before this.
@@ -263,9 +271,6 @@ class TestStep : public internal::LoggerInterface {
   // Emits a TestStepEnd artifact
   virtual void End();
 
-  // Skips and ends the step.
-  virtual void Skip();
-
   // Returns true if End() or Skip() have been called
   bool Ended() const;
 
@@ -295,6 +300,8 @@ class TestStep : public internal::LoggerInterface {
 
   std::string GenerateID();
 
+  void Finalize() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
   TestRun* parent_ = nullptr;
   internal::ArtifactWriter* writer_ = nullptr;
   internal::FileHandler* file_handler_ = nullptr;
@@ -304,6 +311,7 @@ class TestStep : public internal::LoggerInterface {
   mutable absl::Mutex mutex_;
   ocpdiag::results_pb::TestStatus status_ ABSL_GUARDED_BY(mutex_);
   bool ended_ ABSL_GUARDED_BY(mutex_);
+  bool has_diagnosis_ ABSL_GUARDED_BY(mutex_);
 };
 
 // Organizes DUT related info such as hardware, software, and platform
@@ -341,8 +349,8 @@ class DutInfo {
   ocpdiag::results_pb::DutInfo proto_;
   bool registered_;
   // Shall be globally unique within the binary, even across TestRun objects.
-  static internal::IntIncrementer &GetHardwareIdSource();
-  static internal::IntIncrementer &GetSoftwareIdSource();
+  static internal::IntIncrementer& GetHardwareIdSource();
+  static internal::IntIncrementer& GetSoftwareIdSource();
 };
 
 // A handle to a HardwareInfo that has been added to a DutInfo.
@@ -392,7 +400,7 @@ class MeasurementSeries {
  public:
   MeasurementSeries(const MeasurementSeries&) = delete;
   MeasurementSeries& operator=(const MeasurementSeries&) = delete;
-  virtual ~MeasurementSeries() { End(); }
+  virtual ~MeasurementSeries();
 
   // Emits a MeasurementElement artifact with valid range limit.
   // Acceptable Value kinds: string, number
@@ -438,7 +446,8 @@ class MeasurementSeries {
           valid_kinds);
   // Verifies that a Value added to this series matches the 'kind' of others
   // that have been previously added.
-  absl::Status CheckValueKind(const google::protobuf::Value&);
+  absl::Status CheckValueKind(const google::protobuf::Value&)
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   TestStep* parent_ = nullptr;
   internal::ArtifactWriter* writer_ = nullptr;
@@ -452,48 +461,6 @@ class MeasurementSeries {
   // first value added to the series.
   google::protobuf::Value value_kind_rule_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::MeasurementInfo info_;
-};
-
-// Custom ABSL LogSink that redirect the ABSL log to the global ArtifactWriter.
-class LogSink : public absl::LogSink {
- public:
-  // Registers the LogSink with ABSL. You only need to call this once.
-  static void RegisterWithAbsl();
-
-  // Logs the given message to the global artifact writer.
-  static void LogToArtifactWriter(
-      absl::string_view msg,
-      ocpdiag::results_pb::Log::Severity severity);
-
-  // Log function that directly logs the message with ArtifactWriter. This will
-  // allow logging without TestRun or TestStep.
-  void Send(const absl::LogEntry& entry) final;
-};
-
-// This class manages the global artifact writer.
-class GlobalArtifactWriterManager {
- public:
-  // Returns a reference to the global manager. The artifact writer will be
-  // initialized with a default instance.
-  static GlobalArtifactWriterManager& Get();
-
-  // Returns the global artifact writer. Sharing the ownership ensures that
-  // references to the returned object will still be valid even if someone
-  // re-initializes the global writer.
-  std::shared_ptr<internal::ArtifactWriter> writer();
-
-  // Updates the global artifact writer to use the provided one. If nullptr is
-  // provided (the default) then a default one is created.
-  //
-  // It should be uncommon to update the global artifact writer, but it is
-  // supported for unit tests.
-  void SetWriter(std::unique_ptr<internal::ArtifactWriter> writer = nullptr);
-
- private:
-  GlobalArtifactWriterManager();
-
-  absl::Mutex mutex_;
-  std::shared_ptr<internal::ArtifactWriter> writer_ ABSL_GUARDED_BY(mutex_);
 };
 
 }  // namespace results

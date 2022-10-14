@@ -9,7 +9,6 @@ from typing import Callable, Text, List, Optional
 from google.protobuf import struct_pb2
 from google.protobuf import message
 from ocpdiag.core.results import results_pb2
-from ocpdiag.core.results.python import output_model
 
 
 def SetResultsLibFlags(
@@ -27,13 +26,11 @@ def InitTestRun(name: Text) -> TestRun:
   ...
 
 
+class ArtifactWriter:
+  ...
+
+
 class MeasurementSeries:
-
-  def __enter__(self) -> MeasurementSeries:
-    ...
-
-  def __exit__(self, *args):
-    ...
 
   def AddElement(self, value: struct_pb2.Value) -> None:
     ...
@@ -58,14 +55,9 @@ class MeasurementSeries:
 
 class TestStep:
 
-  def __enter__(self) -> TestStep:
-    ...
-
-  def __exit__(self, *args):
-    ...
-
   def BeginMeasurementSeries(
-      hwrec: HwRecord, info: results_pb2.MeasurementInfo) -> MeasurementSeries:
+      self, hwrec: HwRecord,
+      info: results_pb2.MeasurementInfo) -> MeasurementSeries:
     ...
 
   def AddDiagnosis(self,
@@ -112,9 +104,6 @@ class TestStep:
   def End(self) -> None:
     ...
 
-  def Skip(self) -> None:
-    ...
-
   def Ended(self) -> bool:
     ...
 
@@ -130,10 +119,7 @@ class TestRun:
   def __init__(self, name: str):
     ...
 
-  def __enter__(self) -> TestRun:
-    ...
-
-  def __exit__(self, *args):
+  def __init__(self, name: str, artifact_writer: ArtifactWriter):
     ...
 
   def StartAndRegisterInfos(self,
@@ -141,7 +127,7 @@ class TestRun:
                             params: Optional[message.Message] = ...) -> None:
     ...
 
-  def BeginTestStep(name: str) -> TestStep:
+  def BeginTestStep(self, name: str) -> TestStep:
     ...
 
   def End(self) -> results_pb2.TestResult:
@@ -227,22 +213,3 @@ def BeginMeasurementSeries(
     parent: TestStep, hw: HwRecord,
     info: results_pb2.MeasurementInfo) -> MeasurementSeries:
   ...
-
-
-class OutputReceiver:
-
-  def __init__(self):
-    ...
-
-  def __enter__(self) -> OutputReceiver:
-    ...
-
-  def __exit__(self, *args):
-    ...
-
-  @property
-  def model(self) -> output_model.TestRunOutput:
-    ...
-
-  def Iterate(callback: Callable[[results_pb2.OutputArtifact], bool]):
-    ...
