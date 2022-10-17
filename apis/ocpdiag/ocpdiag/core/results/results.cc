@@ -26,6 +26,8 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/log/check.h"
+#include "absl/log/log_entry.h"
+#include "absl/log/log_sink.h"
 #include "absl/log/log_sink_registry.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
@@ -39,6 +41,7 @@
 #include "absl/types/span.h"
 #include "ocpdiag/core/compat/status_macros.h"
 #include "ocpdiag/core/params/utils.h"
+#include "ocpdiag/core/results/calculator.h"
 #include "ocpdiag/core/results/internal/file_handler.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/utils.h"
@@ -169,14 +172,60 @@ class MergedTypeResolver final : public google::protobuf::util::TypeResolver {
   std::unique_ptr<google::protobuf::util::TypeResolver> resolver_;
 };
 
-std::unique_ptr<internal::ArtifactWriter> NewArtifactWriterOrDie() {
-  absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
-      absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
-  CHECK_OK(fd.status());
-  std::ostream* stream =
-      absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout) ? &std::cout : nullptr;
-  return std::make_unique<internal::ArtifactWriter>(*fd, stream);
-}
+// Custom ABSL LogSink that redirect the ABSL log to the global ArtifactWriter.
+class LogSink : public absl::LogSink {
+ public:
+  // Registers the LogSink with ABSL. You only need to call this once.
+  static void RegisterWithAbsl() {
+    // The LogSink is stored as a global static variable, which is initialized
+    // once in a thread-safe manner.
+    static LogSink* log_sink = []() {
+      auto* ret = new LogSink();
+      if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
+        absl::AddLogSink(ret);
+      }
+      return ret;
+    }();
+    (void)log_sink;  // suppress unused variable warning
+  }
+
+  // Logs the given message to the global artifact writer.
+  static void LogToArtifactWriter(
+      absl::string_view msg,
+      ocpdiag::results_pb::Log::Severity severity) {
+    rpb::Log log_pb;
+    log_pb.set_text(std::string(msg));
+    log_pb.set_severity(severity);
+    rpb::TestRunArtifact run_pb;
+    *run_pb.mutable_log() = std::move(log_pb);
+    rpb::OutputArtifact out_pb;
+    *out_pb.mutable_test_run_artifact() = std::move(run_pb);
+
+    internal::GetGlobalArtifactWriter().Write(out_pb);
+  }
+
+  // Log function that directly logs the message with ArtifactWriter. This will
+  // allow logging without TestRun or TestStep.
+  void Send(const absl::LogEntry& entry) final {
+    absl::string_view text = entry.text_message_with_prefix();
+    switch (entry.log_severity()) {
+      case absl::LogSeverity::kInfo:
+        LogToArtifactWriter(text, rpb::Log::INFO);
+        return;
+      case absl::LogSeverity::kWarning:
+        LogToArtifactWriter(text, rpb::Log::WARNING);
+        return;
+      case absl::LogSeverity::kError:
+        LogToArtifactWriter(text, rpb::Log::ERROR);
+        return;
+      case absl::LogSeverity::kFatal:
+        LogToArtifactWriter(text, rpb::Log::FATAL);
+        return;
+    }
+    std::cerr << "Unknown ABSL log severity: " << entry.log_severity()
+              << std::endl;
+  }
+};
 
 // This ensures we can only have one test run object at a time.
 ABSL_CONST_INIT absl::Mutex singleton_mutex(absl::kConstInit);
@@ -185,74 +234,22 @@ bool enforce_singleton ABSL_GUARDED_BY(singleton_mutex) = true;
 
 }  // namespace
 
-GlobalArtifactWriterManager::GlobalArtifactWriterManager()
-    : writer_(NewArtifactWriterOrDie()) {}
+namespace internal {
 
-GlobalArtifactWriterManager& GlobalArtifactWriterManager::Get() {
-  static auto& manager = *new GlobalArtifactWriterManager;
-  return manager;
-}
-
-std::shared_ptr<internal::ArtifactWriter>
-GlobalArtifactWriterManager::writer() {
-  absl::MutexLock lock(&mutex_);
-  return writer_;
-}
-
-void GlobalArtifactWriterManager::SetWriter(
-    std::unique_ptr<internal::ArtifactWriter> writer) {
-  if (writer == nullptr) writer = NewArtifactWriterOrDie();
-
-  absl::MutexLock lock(&mutex_);
-  writer_ = std::move(writer);
-}
-
-void LogSink::LogToArtifactWriter(
-    absl::string_view msg,
-    ocpdiag::results_pb::Log::Severity severity) {
-  rpb::Log log_pb;
-  log_pb.set_text(std::string(msg));
-  log_pb.set_severity(severity);
-  rpb::TestRunArtifact run_pb;
-  *run_pb.mutable_log() = std::move(log_pb);
-  rpb::OutputArtifact out_pb;
-  *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-
-  GlobalArtifactWriterManager::Get().writer()->Write(out_pb);
-}
-
-void LogSink::Send(const absl::LogEntry& entry) {
-  absl::string_view text = entry.text_message_with_prefix();
-  switch (entry.log_severity()) {
-    case absl::LogSeverity::kInfo:
-      LogToArtifactWriter(text, rpb::Log::INFO);
-      return;
-    case absl::LogSeverity::kWarning:
-      LogToArtifactWriter(text, rpb::Log::WARNING);
-      return;
-    case absl::LogSeverity::kError:
-      LogToArtifactWriter(text, rpb::Log::ERROR);
-      return;
-    case absl::LogSeverity::kFatal:
-      LogToArtifactWriter(text, rpb::Log::FATAL);
-      return;
-  }
-  std::cerr << "Unknown ABSL log severity: " << entry.log_severity()
-            << std::endl;
-}
-
-void LogSink::RegisterWithAbsl() {
-  // The LogSink is stored as a global static variable, which is initialized
-  // once in a thread-safe manner.
-  static LogSink* log_sink = []() {
-    auto* ret = new LogSink();
-    if (absl::GetFlag(FLAGS_alsologtoocpdiagresults)) {
-      absl::AddLogSink(ret);
-    }
-    return ret;
+internal::ArtifactWriter& GetGlobalArtifactWriter() {
+  static auto& writer = *[] {
+    absl::StatusOr<int> fd = internal::OpenAndGetDescriptor(
+        absl::GetFlag(FLAGS_ocpdiag_results_filepath).c_str());
+    CHECK_OK(fd.status());
+    std::ostream* stream = absl::GetFlag(FLAGS_ocpdiag_copy_results_to_stdout)
+                               ? &std::cout
+                               : nullptr;
+    return new internal::ArtifactWriter(*fd, stream);
   }();
-  (void)log_sink;  // suppress unused variable warning
+  return writer;
 }
+
+}  // namespace internal
 
 absl::StatusOr<std::unique_ptr<TestRun>> ResultApi::InitializeTestRun(
     std::string name) {
@@ -280,32 +277,21 @@ void TestRun::SetEnforceSingleton(bool enforce) {
   enforce_singleton = enforce;
 }
 
-TestRun::TestRun(absl::string_view name,
-                 std::unique_ptr<internal::ArtifactWriter> writer,
+TestRun::TestRun(absl::string_view name, internal::ArtifactWriter& writer,
                  std::unique_ptr<internal::FileHandler> file_handler)
-    : writer_(std::move(writer)),
+    : writer_(writer),
       file_handler_(std::move(file_handler)),
       name_(name),
-      state_(RunState::kNotStarted),
-      result_(ocpdiag::results_pb::TestResult::NOT_APPLICABLE),
-      status_(ocpdiag::results_pb::TestStatus::UNKNOWN) {
+      state_(RunState::kNotStarted) {
   LogSink::RegisterWithAbsl();
-  {
-    absl::MutexLock lock(&singleton_mutex);
-    CHECK(!enforce_singleton || !singleton_initialized)
-        << "Only one TestRun object can be active at a time within a program";
-    singleton_initialized = true;
-  }
-
-  if (writer_ == nullptr) {
-    // Use the global artifact writer by default if nothing was specified.
-    writer_ = GlobalArtifactWriterManager::Get().writer();
-  }
+  absl::MutexLock lock(&singleton_mutex);
+  CHECK(!enforce_singleton || !singleton_initialized)
+      << "Only one TestRun object can be active at a time within a program";
+  singleton_initialized = true;
 }
 
 void TestRun::StartAndRegisterInfos(absl::Span<const DutInfo> infos,
-                                    const google::protobuf::Message& params)
-    ABSL_LOCKS_EXCLUDED(mutex_) {
+                                    const google::protobuf::Message& params) {
   absl::MutexLock lock(&mutex_);
   if (state_ != RunState::kNotStarted) {
     std::cerr << "Ignoring request to start test \"" << name_
@@ -314,6 +300,7 @@ void TestRun::StartAndRegisterInfos(absl::Span<const DutInfo> infos,
   }
   state_ = RunState::kInProgress;
   EmitStartUnlocked(infos, params);
+  result_calculator_.NotifyStartRun();
 }
 
 void TestRun::EmitStartUnlocked(absl::Span<const DutInfo> dutinfos,
@@ -336,10 +323,10 @@ if (false) {
   for (auto& info : dutinfos) {
     auto info_pb = info.ToProto();
     for (const auto& hw : info_pb.hardware_components()) {
-      writer_->RegisterHwId(hw.hardware_info_id());
+      writer_.RegisterHwId(hw.hardware_info_id());
     }
     for (const auto& sw : info_pb.software_infos()) {
-      writer_->RegisterSwId(sw.software_info_id());
+      writer_.RegisterSwId(sw.software_info_id());
     }
     start_pb.mutable_dut_info()->Add(std::move(info_pb));
   }
@@ -349,73 +336,48 @@ if (false) {
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
   MergedTypeResolver resolver(params.GetDescriptor()->file()->pool());
-  writer_->Write(out_pb, &resolver);
-  writer_->Flush();
+  writer_.Write(out_pb, &resolver);
+  writer_.Flush();
 }
 
-rpb::TestResult TestRun::End() ABSL_LOCKS_EXCLUDED(mutex_) {
+rpb::TestResult TestRun::End() {
   absl::MutexLock lock(&mutex_);
-  switch (state_) {
-    case RunState::kEnded:
-      break;
-    case RunState::kNotStarted: {
-      // Emit TestRunStart and set status to SKIPPED if no previous errors.
-      EmitStartUnlocked({}, google::protobuf::Empty());
-      if (status_ != rpb::TestStatus::ERROR) {
-        // ERROR status takes highest priority, and so should not be
-        // overridden.
-        status_ = rpb::TestStatus::SKIPPED;
-        result_ = rpb::TestResult::NOT_APPLICABLE;
-      }
-      ABSL_FALLTHROUGH_INTENDED;  // Also emit TestRunEnd
-    }
-    case RunState::kInProgress: {
-      // Calculate final test result and status.
-      if (status_ == rpb::TestStatus::UNKNOWN) {
-        status_ = rpb::TestStatus::COMPLETE;
-        if (result_ == rpb::TestResult::NOT_APPLICABLE) {
-          result_ = rpb::TestResult::PASS;
-        }
-      }
-      state_ = RunState::kEnded;
+  if (state_ == RunState::kEnded) return result_calculator_.result();
 
-      // Emit TestRunEnd artifact
-      rpb::TestRunEnd end_pb;
-      end_pb.set_name(name_);
-      end_pb.set_status(status_);
-      end_pb.set_result(result_);
-      rpb::TestRunArtifact run_pb;
-      *run_pb.mutable_test_run_end() = std::move(end_pb);
-      rpb::OutputArtifact out_pb;
-      *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-      writer_->Write(out_pb);
-      writer_->Flush();
-      break;
-    }
+  if (state_ == RunState::kNotStarted) {
+    // Emit TestRunStart automatically.
+    EmitStartUnlocked({}, google::protobuf::Empty());
   }
+  state_ = RunState::kEnded;
+  result_calculator_.Finalize();
+
+  // Emit TestRunEnd artifact
+  rpb::TestRunEnd end_pb;
+  end_pb.set_name(name_);
+  end_pb.set_status(result_calculator_.status());
+  end_pb.set_result(result_calculator_.result());
+  rpb::TestRunArtifact run_pb;
+  *run_pb.mutable_test_run_end() = std::move(end_pb);
+  rpb::OutputArtifact out_pb;
+  *out_pb.mutable_test_run_artifact() = std::move(run_pb);
+  writer_.Write(out_pb);
+  writer_.Flush();
 
   // Clear the singleton guard now that the test run is over.
   absl::MutexLock singleton_lock(&singleton_mutex);
   singleton_initialized = false;
-  return result_;
+  return result_calculator_.result();
 }
 
-rpb::TestResult TestRun::Skip() ABSL_LOCKS_EXCLUDED(mutex_) {
-  absl::ReleasableMutexLock l(&mutex_);
-  if (status_ != rpb::TestStatus::UNKNOWN) {
-    return result_;
-  }
-  status_ = rpb::TestStatus::SKIPPED;
-  result_ = rpb::TestResult::NOT_APPLICABLE;
-  l.Release();
+rpb::TestResult TestRun::Skip() {
+  result_calculator_.NotifySkip();
   return End();
 }
 
 //
 // since registration may not have happened. Should TestRunStart/End be
 // emitted too?
-void TestRun::AddError(absl::string_view symptom, absl::string_view message)
-    ABSL_LOCKS_EXCLUDED(mutex_) {
+void TestRun::AddError(absl::string_view symptom, absl::string_view message) {
   rpb::Error err_pb;
   err_pb.set_symptom(std::string(symptom));
   err_pb.set_msg(std::string(message));
@@ -423,10 +385,8 @@ void TestRun::AddError(absl::string_view symptom, absl::string_view message)
   *run_pb.mutable_error() = std::move(err_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
-  absl::MutexLock lock(&mutex_);
-  status_ = rpb::TestStatus::ERROR;
-  result_ = rpb::TestResult::NOT_APPLICABLE;
+  writer_.Write(out_pb);
+  result_calculator_.NotifyError();
 }
 
 void TestRun::AddTag(absl::string_view tag) {
@@ -436,25 +396,23 @@ void TestRun::AddTag(absl::string_view tag) {
   *run_pb.mutable_tag() = std::move(tag_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
+  writer_.Write(out_pb);
 }
 
-rpb::TestStatus TestRun::Status() const ABSL_LOCKS_EXCLUDED(mutex_) {
-  absl::MutexLock lock(&mutex_);
-  return status_;
+rpb::TestStatus TestRun::Status() const {
+  return result_calculator_.status();
 }
 
-rpb::TestResult TestRun::Result() const ABSL_LOCKS_EXCLUDED(mutex_) {
-  absl::MutexLock lock(&mutex_);
-  return result_;
+rpb::TestResult TestRun::Result() const {
+  return result_calculator_.result();
 }
 
-bool TestRun::Started() const ABSL_LOCKS_EXCLUDED(mutex_) {
+bool TestRun::Started() const {
   absl::MutexLock lock(&mutex_);
   return state_ == RunState::kInProgress;
 }
 
-bool TestRun::Ended() const ABSL_LOCKS_EXCLUDED(mutex_) {
+bool TestRun::Ended() const {
   absl::MutexLock lock(&mutex_);
   return state_ == RunState::kEnded;
 }
@@ -473,23 +431,7 @@ void TestRun::LogFatal(absl::string_view msg) {
   WriteLog(rpb::Log::FATAL, msg);
 }
 
-void TestRun::ProcessStepError() ABSL_LOCKS_EXCLUDED(mutex_) {
-  absl::MutexLock lock(&mutex_);
-  if (status_ == rpb::TestStatus::UNKNOWN) {
-    status_ = rpb::TestStatus::ERROR;
-    result_ = rpb::TestResult::NOT_APPLICABLE;
-  }
-}
-
-void TestRun::ProcessFailDiag() ABSL_LOCKS_EXCLUDED(mutex_) {
-  absl::MutexLock lock(&mutex_);
-  if (result_ == rpb::TestResult::NOT_APPLICABLE &&
-      status_ == rpb::TestStatus::UNKNOWN) {
-    result_ = rpb::TestResult::FAIL;
-  }
-}
-
-std::string TestRun::GenerateID() { return absl::StrCat(step_id_.Next()); }
+std::string TestRun::NewTestStepId() { return absl::StrCat(step_id_.Next()); }
 
 void TestRun::WriteLog(ocpdiag::results_pb::Log::Severity severity,
                        absl::string_view msg) {
@@ -500,7 +442,7 @@ void TestRun::WriteLog(ocpdiag::results_pb::Log::Severity severity,
   *run_pb.mutable_log() = std::move(log_pb);
   rpb::OutputArtifact out_pb;
   *out_pb.mutable_test_run_artifact() = std::move(run_pb);
-  writer_->Write(out_pb);
+  writer_.Write(out_pb);
 }
 
 std::unique_ptr<TestStep> TestRun::BeginTestStep(absl::string_view name) {
@@ -508,7 +450,7 @@ std::unique_ptr<TestStep> TestRun::BeginTestStep(absl::string_view name) {
                       "started, nor after TestRun has ended.";
 
   // Emit TestStepStart artifact
-  std::string id = GenerateID();
+  std::string id = NewTestStepId();
   rpb::TestStepStart start_pb;
   start_pb.set_name(std::string(name));
   rpb::TestStepArtifact step_pb;
@@ -516,17 +458,18 @@ std::unique_ptr<TestStep> TestRun::BeginTestStep(absl::string_view name) {
   step_pb.set_test_step_id(id);
   rpb::OutputArtifact out;
   *out.mutable_test_step_artifact() = std::move(step_pb);
-  writer_->Write(out);
-  writer_->Flush();
+  writer_.Write(out);
+  writer_.Flush();
 
   return absl::WrapUnique(
-      new TestStep(*this, id, name, *writer_, *file_handler_));
+      new TestStep(result_calculator_, id, name, writer_, *file_handler_));
 }
 
-TestStep::TestStep(TestRun& parent, absl::string_view id,
-                   absl::string_view name, internal::ArtifactWriter& writer,
+TestStep::TestStep(TestResultCalculator& result_calculator,
+                   absl::string_view id, absl::string_view name,
+                   internal::ArtifactWriter& writer,
                    internal::FileHandler& file_handler)
-    : parent_(&parent),
+    : result_calculator_(&result_calculator),
       writer_(&writer),
       file_handler_(&file_handler),
       name_(std::move(name)),
@@ -537,8 +480,8 @@ TestStep::TestStep(TestRun& parent, absl::string_view id,
 void TestStep::AddDiagnosis(rpb::Diagnosis::Type type, std::string symptom,
                             std::string message,
                             absl::Span<const HwRecord> records) {
-  if (type == rpb::Diagnosis::FAIL && parent_ != nullptr) {
-    parent_->ProcessFailDiag();
+  if (type == rpb::Diagnosis::FAIL && result_calculator_ != nullptr) {
+    result_calculator_->NotifyFailureDiagnosis();
   }
   rpb::Diagnosis diag_pb;
   diag_pb.set_symptom(symptom);
@@ -567,14 +510,11 @@ void TestStep::AddDiagnosis(rpb::Diagnosis::Type type, std::string symptom,
 }
 
 void TestStep::AddError(absl::string_view symptom, absl::string_view message,
-                        absl::Span<const SwRecord> records)
-    ABSL_LOCKS_EXCLUDED(mutex_) {
+                        absl::Span<const SwRecord> records) {
   mutex_.Lock();
   status_ = rpb::TestStatus::ERROR;
   mutex_.Unlock();
-  if (parent_ != nullptr) {
-    parent_->ProcessStepError();
-  }
+  if (result_calculator_ != nullptr) result_calculator_->NotifyError();
   rpb::Error error_pb;
   error_pb.set_symptom(std::string(symptom));
   error_pb.set_msg(std::string(message));
@@ -740,12 +680,12 @@ if (false) {
   writer_->Write(out_pb, &resolver);
 }
 
-bool TestStep::Ended() const ABSL_LOCKS_EXCLUDED(mutex_) {
+bool TestStep::Ended() const {
   absl::MutexLock lock(&mutex_);
   return ended_;
 }
 
-void TestStep::End() ABSL_LOCKS_EXCLUDED(mutex_) {
+void TestStep::End() {
   absl::MutexLock lock(&mutex_);
   // The writer can be null if we are a mock.
   if (ended_ || !writer_) return;
@@ -767,7 +707,7 @@ void TestStep::End() ABSL_LOCKS_EXCLUDED(mutex_) {
   writer_->Flush();
 }
 
-void TestStep::Skip() ABSL_LOCKS_EXCLUDED(mutex_) {
+void TestStep::Skip() {
   absl::ReleasableMutexLock l(&mutex_);
   if (status_ == rpb::TestStatus::UNKNOWN) {
     status_ = ocpdiag::results_pb::SKIPPED;
@@ -791,12 +731,14 @@ void TestStep::LogFatal(absl::string_view msg) {
   //
 }
 
-rpb::TestStatus TestStep::Status() const ABSL_LOCKS_EXCLUDED(mutex_) {
+rpb::TestStatus TestStep::Status() const {
   absl::MutexLock lock(&mutex_);
   return status_;
 }
 
-std::string TestStep::GenerateID() { return absl::StrCat(series_id_.Next()); }
+std::string TestStep::NewMeasurementSeriesId() {
+  return absl::StrCat(series_id_.Next());
+}
 
 void TestStep::WriteLog(ocpdiag::results_pb::Log::Severity severity,
                         absl::string_view msg) {
@@ -867,7 +809,7 @@ std::unique_ptr<MeasurementSeries> TestStep::BeginMeasurementSeries(
   info.set_hardware_info_id(record.Data().hardware_info_id());
 
   // Emit MeasurementSeriesBegin artifact
-  std::string series_id = GenerateID();
+  std::string series_id = NewMeasurementSeriesId();
   std::string step_id = Id();
   rpb::MeasurementSeriesStart ms_pb;
   ms_pb.set_measurement_series_id(series_id);
@@ -1022,7 +964,7 @@ absl::Status MeasurementSeries::SetValueKind(
 }
 
 absl::Status MeasurementSeries::CheckValueKind(
-    const google::protobuf::Value& val) ABSL_LOCKS_EXCLUDED(mutex_) {
+    const google::protobuf::Value& val) {
   absl::MutexLock lock(&mutex_);
   if (val.kind_case() != value_kind_rule_.kind_case()) {
     const std::string err = absl::StrFormat(
