@@ -18,13 +18,12 @@
 #include "google/protobuf/message.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/flags/declare.h"
-#include "absl/log/log_entry.h"
-#include "absl/log/log_sink.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
+#include "ocpdiag/core/results/calculator.h"
 #include "ocpdiag/core/results/internal/file_handler.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/utils.h"
@@ -56,6 +55,11 @@ class MockMeasurementSeries;
 extern const char kInvalidRecordId[];
 extern const char kSympProceduralErr[];
 
+namespace internal {
+// Returns the global artifact writer object.
+internal::ArtifactWriter& GetGlobalArtifactWriter();
+}  // namespace internal
+
 // Contains factory methods to create main Result API objects.
 // Note: for unit tests, use fake or mock provided in
 // 'ocpdiag/core/testing/mock_results.h'
@@ -69,20 +73,19 @@ class ResultApi {
   ResultApi& operator=(const ResultApi& other) = delete;
   virtual ~ResultApi() = default;
 
-  // Factory method to create a TestRun.
+  // DEPRECATED - Factory method to create a TestRun.
   // NOTE: only one TestRun may exist per binary, thus this method will fail if
   // called a second time. `name`: a descriptive name for your test.
   virtual absl::StatusOr<std::unique_ptr<TestRun>> InitializeTestRun(
       std::string name);
 
-  // Factory method to create a TestStep. Emits a TestStepStart artifact if
-  // successful.
-  // `testrun`: must be a pointer to a valid and started TestRun.
-  // `name`: a descriptive name for your step.
+  // DEPRECATED - Factory method to create a TestStep. Emits a TestStepStart
+  // artifact if successful. `testrun`: must be a pointer to a valid and started
+  // TestRun. `name`: a descriptive name for your step.
   virtual absl::StatusOr<std::unique_ptr<TestStep>> BeginTestStep(
       TestRun* parent, std::string name);
 
-  // Factory method to create a MeasurementSeries. Emits a
+  // DEPRECATED - Factory method to create a MeasurementSeries. Emits a
   // MeasurementSeriesStart artifact if successful.
   // `teststep`: must be a pointer to a valid and started TestStep.
   // `hw`: should be registered HwRecord.
@@ -99,10 +102,11 @@ class TestRun : public internal::LoggerInterface {
   // Constructs a TestRun object. If the ArtifactWriter is not specified, it
   // will use the global artifact writer. Normally you only need to provide the
   // name, but other dependencies can be injected for unit tests.
-  TestRun(absl::string_view name,
-          std::unique_ptr<internal::ArtifactWriter> writer = nullptr,
-          std::unique_ptr<internal::FileHandler> file_handler =
-              std::make_unique<internal::FileHandler>());
+  TestRun(
+      absl::string_view name,
+      internal::ArtifactWriter& writer = internal::GetGlobalArtifactWriter(),
+      std::unique_ptr<internal::FileHandler> file_handler =
+          std::make_unique<internal::FileHandler>());
   TestRun(const TestRun&) = delete;
   TestRun& operator=(const TestRun&) = delete;
   ~TestRun() override { End(); }
@@ -144,7 +148,7 @@ class TestRun : public internal::LoggerInterface {
   // fatal error have been called)
   virtual bool Ended() const;
 
-  // Creates a new test step result object.
+  // DEPRECATED - Creates a new test step result object. (Use TestStep ctor).
   virtual std::unique_ptr<TestStep> BeginTestStep(absl::string_view name);
 
   // Emits a Log artifact of Debug severity, associated with the TestRun.
@@ -171,9 +175,9 @@ class TestRun : public internal::LoggerInterface {
   static void SetEnforceSingleton(bool enforce);
 
  private:
-  friend class TestStep;  //
+  friend class TestStep;
 
-  enum class RunState { kNotStarted, kInProgress, kEnded };
+  enum RunState { kNotStarted, kInProgress, kEnded };
 
   // Emits the TestRunStart artifact without holding mutex lock.
   void EmitStartUnlocked(absl::Span<const DutInfo> dutinfos,
@@ -181,24 +185,14 @@ class TestRun : public internal::LoggerInterface {
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
-  // Sets the overall TestRun Status to ERROR, if not already ended or skipped.
-  void ProcessStepError();
-
-  // Signals TestRun to FAIL when it ends, but will be overridden if an Error
-  // artifact is emitted.
-  void ProcessFailDiag();
-
-  std::string GenerateID();
-
-  std::shared_ptr<internal::ArtifactWriter> writer_;
+  internal::ArtifactWriter& writer_;
   std::unique_ptr<internal::FileHandler> file_handler_;
   const std::string name_;
   internal::IntIncrementer step_id_;
+  TestResultCalculator result_calculator_;
 
   mutable absl::Mutex mutex_;
   RunState state_ ABSL_GUARDED_BY(mutex_);
-  ocpdiag::results_pb::TestResult result_ ABSL_GUARDED_BY(mutex_);
-  ocpdiag::results_pb::TestStatus status_ ABSL_GUARDED_BY(mutex_);
 };
 
 // TestStep is a logical subdivision of a TestRun.
@@ -209,6 +203,7 @@ class TestStep : public internal::LoggerInterface {
   static absl::Status ValidateMeasurementElement(
       const ocpdiag::results_pb::MeasurementElement&);
 
+  TestStep(absl::string_view name, TestRun& test_run);
   TestStep(const TestStep&) = delete;
   TestStep& operator=(const TestStep&) = delete;
   ~TestStep() override { End(); }
@@ -275,27 +270,22 @@ class TestStep : public internal::LoggerInterface {
   // Returns the step ID which is unique in the TestRun.
   std::string Id() const { return id_; }
 
-  // Factory method to create a MeasurementSeries. Emits MeasurementSeriesStart
-  // artifact if successful.
+  // DEPRECATED - Factory method to create a MeasurementSeries. Emits
+  // MeasurementSeriesStart artifact if successful. (Use MeasurementSeries ctor)
   std::unique_ptr<MeasurementSeries> BeginMeasurementSeries(
       const HwRecord& record,
       ocpdiag::results_pb::MeasurementInfo info);
 
  private:
+  friend class MeasurementSeries;
   friend ResultApi;
-  friend TestRun;
   friend testonly::MockTestStep;
 
   TestStep() = default;
-  TestStep(TestRun& parent, absl::string_view id, absl::string_view name,
-           internal::ArtifactWriter& writer,
-           internal::FileHandler& file_handler);
   void WriteLog(ocpdiag::results_pb::Log::Severity,
                 absl::string_view msg) override;
 
-  std::string GenerateID();
-
-  TestRun* parent_ = nullptr;
+  TestResultCalculator* result_calculator_ = nullptr;
   internal::ArtifactWriter* writer_ = nullptr;
   internal::FileHandler* file_handler_ = nullptr;
   std::string name_;
@@ -327,7 +317,7 @@ class DutInfo {
 
   // Adds a descriptive string about the host to the DutInfo, such as
   // platform-family or plugins.
-  void AddPlatformInfo(std::string);
+  void AddPlatformInfo(const std::string &info);
 
   // Returns true if the DutInfo has been registered with the TestRun object.
   bool Registered() const { return registered_; }
@@ -341,8 +331,8 @@ class DutInfo {
   ocpdiag::results_pb::DutInfo proto_;
   bool registered_;
   // Shall be globally unique within the binary, even across TestRun objects.
-  static internal::IntIncrementer &GetHardwareIdSource();
-  static internal::IntIncrementer &GetSoftwareIdSource();
+  static internal::IntIncrementer& GetHardwareIdSource();
+  static internal::IntIncrementer& GetSoftwareIdSource();
 };
 
 // A handle to a HardwareInfo that has been added to a DutInfo.
@@ -390,6 +380,10 @@ class SwRecord {
 // A collection of related measurement elements.
 class MeasurementSeries {
  public:
+  MeasurementSeries(
+      const HwRecord& hw,
+      const ocpdiag::results_pb::MeasurementInfo& info,
+      TestStep& test_step);
   MeasurementSeries(const MeasurementSeries&) = delete;
   MeasurementSeries& operator=(const MeasurementSeries&) = delete;
   virtual ~MeasurementSeries() { End(); }
@@ -421,26 +415,20 @@ class MeasurementSeries {
 
  private:
   friend ResultApi;
-  friend TestStep;
   friend testonly::MockMeasurementSeries;
 
   MeasurementSeries() = default;
-  MeasurementSeries(TestStep& parent, absl::string_view step_id,
-                    absl::string_view series_id,
-                    internal::ArtifactWriter& writer,
-                    ocpdiag::results_pb::MeasurementInfo);
   // If no values have yet been added to this series, sets the value kind rule.
   // `val`: the value to be added.
   // `valid_kinds`: the kinds that are accepted in caller's context.
-  absl::Status SetValueKind(
+  void SetValueKind(
       const google::protobuf::Value& val,
       const absl::flat_hash_set<google::protobuf::Value::KindCase>&
           valid_kinds);
   // Verifies that a Value added to this series matches the 'kind' of others
   // that have been previously added.
-  absl::Status CheckValueKind(const google::protobuf::Value&);
+  void CheckValueKind(const google::protobuf::Value&);
 
-  TestStep* parent_ = nullptr;
   internal::ArtifactWriter* writer_ = nullptr;
   std::string step_id_;  // Id of parent Step
   std::string series_id_;
@@ -452,48 +440,6 @@ class MeasurementSeries {
   // first value added to the series.
   google::protobuf::Value value_kind_rule_ ABSL_GUARDED_BY(mutex_);
   ocpdiag::results_pb::MeasurementInfo info_;
-};
-
-// Custom ABSL LogSink that redirect the ABSL log to the global ArtifactWriter.
-class LogSink : public absl::LogSink {
- public:
-  // Registers the LogSink with ABSL. You only need to call this once.
-  static void RegisterWithAbsl();
-
-  // Logs the given message to the global artifact writer.
-  static void LogToArtifactWriter(
-      absl::string_view msg,
-      ocpdiag::results_pb::Log::Severity severity);
-
-  // Log function that directly logs the message with ArtifactWriter. This will
-  // allow logging without TestRun or TestStep.
-  void Send(const absl::LogEntry& entry) final;
-};
-
-// This class manages the global artifact writer.
-class GlobalArtifactWriterManager {
- public:
-  // Returns a reference to the global manager. The artifact writer will be
-  // initialized with a default instance.
-  static GlobalArtifactWriterManager& Get();
-
-  // Returns the global artifact writer. Sharing the ownership ensures that
-  // references to the returned object will still be valid even if someone
-  // re-initializes the global writer.
-  std::shared_ptr<internal::ArtifactWriter> writer();
-
-  // Updates the global artifact writer to use the provided one. If nullptr is
-  // provided (the default) then a default one is created.
-  //
-  // It should be uncommon to update the global artifact writer, but it is
-  // supported for unit tests.
-  void SetWriter(std::unique_ptr<internal::ArtifactWriter> writer = nullptr);
-
- private:
-  GlobalArtifactWriterManager();
-
-  absl::Mutex mutex_;
-  std::shared_ptr<internal::ArtifactWriter> writer_ ABSL_GUARDED_BY(mutex_);
 };
 
 }  // namespace results
