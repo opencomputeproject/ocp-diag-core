@@ -12,7 +12,7 @@
 #include "google/protobuf/empty.pb.h"
 #include "google/protobuf/struct.pb.h"
 #include "absl/flags/flag.h"
-#include "ocpdiag/core/results/output_receiver.h"
+#include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "pybind11_abseil/absl_casters.h"
 #include "pybind11_abseil/status_casters.h"
@@ -44,12 +44,21 @@ PYBIND11_MODULE(_results, m) {
   // DEPRECATED: Use TestRun().
   m.def(
       "InitTestRun",
-      [](const std::string& name) {
+      [](const std::string& name) -> absl::StatusOr<std::shared_ptr<TestRun>> {
         return ResultApi().InitializeTestRun(name);
       },
       pybind11::arg("name"));
-  pybind11::class_<TestRun>(m, "TestRun")
-      .def(pybind11::init<absl::string_view>())
+  pybind11::class_<internal::ArtifactWriter> artifact_writer(m,
+                                                             "ArtifactWriter");
+  pybind11::class_<TestRun, std::shared_ptr<TestRun>>(m, "TestRun")
+      .def(pybind11::init(
+               // The constructor allows optionally injecting an artifactwriter.
+               [](absl::string_view name, internal::ArtifactWriter* writer) {
+                 if (writer) return std::make_unique<TestRun>(name, *writer);
+                 return std::make_unique<TestRun>(name);
+               }),
+           pybind11::arg("name"),
+           pybind11::arg("writer").none(true) = pybind11::none())
       .def(
           "StartAndRegisterInfos",
           [](TestRun& a, absl::Span<const DutInfo> dutinfos,
@@ -90,6 +99,8 @@ PYBIND11_MODULE(_results, m) {
       pybind11::arg("parent"), pybind11::arg("name"));
 
   pybind11::class_<TestStep>(m, "TestStep")
+      .def(pybind11::init<absl::string_view, TestRun&>(), pybind11::arg("name"),
+           pybind11::arg("test_run"))
       .def("BeginMeasurementSeries", &TestStep::BeginMeasurementSeries,
            pybind11::arg("hwrec"), pybind11::arg("info"))
       .def(
@@ -146,6 +157,12 @@ PYBIND11_MODULE(_results, m) {
       pybind11::arg("parent"), pybind11::arg("hwrecord"),
       pybind11::arg("info"));
   pybind11::class_<MeasurementSeries>(m, "MeasurementSeries")
+      .def(pybind11::init<
+               const HwRecord&,
+               const ocpdiag::results_pb::MeasurementInfo&,
+               TestStep&>(),
+           pybind11::arg("hwrec"), pybind11::arg("info"),
+           pybind11::arg("test_step"))
       .def("AddElement",
            static_cast<void (MeasurementSeries::*)(google::protobuf::Value)>(
                &MeasurementSeries::AddElement),
@@ -160,18 +177,6 @@ PYBIND11_MODULE(_results, m) {
       .def("__enter__", [](MeasurementSeries* self) { return self; })
       .def("__exit__",
            [](MeasurementSeries* self, pybind11::args) { self->End(); });
-
-  // Define the output receiver in this module, because it needs to update the
-  // TestRun flags. In open-source builds it will be unable to modify these
-  // flags if defined in a different pybind module.
-  //
-  pybind11::class_<OutputReceiver>(m, "OutputReceiver")
-      .def(pybind11::init())
-      .def("__enter__", [](OutputReceiver* self) { return self; })
-      .def("__exit__",
-           [](OutputReceiver* self, pybind11::args) { self->Close(); })
-      .def("Iterate", &OutputReceiver::Iterate, pybind11::arg("callback"))
-      .def_property_readonly("model", &OutputReceiver::model);
 }
 
 }  // namespace ocpdiag::results
