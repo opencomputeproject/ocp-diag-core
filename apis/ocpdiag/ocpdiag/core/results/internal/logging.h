@@ -10,12 +10,12 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/util/type_resolver.h"
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -41,13 +41,6 @@ absl::StatusOr<int> OpenAndGetDescriptor(absl::string_view filepath);
 
 // Returns a globally cached TypeResolver for the generated pool.
 google::protobuf::util::TypeResolver* GeneratedResolver();
-
-// Parses a binary recordIO file of output artifacts and executes the callback
-// on each record. Touches all output until the callback returns "false".
-absl::Status ParseRecordIo(
-    absl::string_view filepath,
-    std::function<bool(ocpdiag::results_pb::OutputArtifact)>
-        callback);
 
 // Handles emission of OutputArtifacts for OCPDiag tests.
 class ArtifactWriter {
