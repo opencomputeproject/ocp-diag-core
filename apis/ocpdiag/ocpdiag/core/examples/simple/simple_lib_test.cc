@@ -35,7 +35,7 @@ using ::ocpdiag::results_pb::OutputArtifact;
 TEST(TestAddAllMeasurementTypes, CheckAll) {
   results::OutputReceiver output;
   {
-    results::TestRun test_run("test_run");
+    results::TestRun test_run("Test", output.artifact_writer());
     test_run.StartAndRegisterInfos({});
     auto step = test_run.BeginTestStep("fake_step");
 
@@ -44,13 +44,12 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
 
   // Check measurements.
   std::vector<Measurement> measurements;
-  output.Iterate([&](OutputArtifact artifact) {
+  for (OutputArtifact artifact : output) {
     if (artifact.has_test_step_artifact() &&
         artifact.test_step_artifact().has_measurement()) {
       measurements.push_back(artifact.test_step_artifact().measurement());
     }
-    return true;
-  });
+  }
 
   std::vector<std::string> expected_measurements{
       // Null measurements.
