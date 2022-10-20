@@ -18,10 +18,9 @@ pytype_strict_library(
     srcs = [
         "fake_params.py",
     ],
+    data = [":_fake_params.so"],
     visibility = ["//visibility:public"],
     deps = [
-        ":_fake_params",
-        "//ocpdiag/core/hwinterface/client/python:service_client",
         "//ocpdiag/core/results:results_py_pb2",
         "//third_party/pybind11_abseil:status",
         "@com_google_protobuf//:protobuf_python",
