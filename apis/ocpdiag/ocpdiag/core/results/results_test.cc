@@ -37,6 +37,7 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/mock_file_handler.h"
+#include "ocpdiag/core/results/recordio_iterator.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
@@ -163,7 +164,7 @@ class ResultsTestBase : public ::testing::Test {
 using TestRunTest = ResultsTestBase;
 
 TEST_F(TestRunTest, StartAndRegisterInfos) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Started());
   DutInfo di("host");
   DutInfo di2("host2");
@@ -212,15 +213,14 @@ TEST_F(TestRunTest, StartAndRegisterInfos) {
   // Now check the recordIO fileoutput. We validate this once and use the json
   // output for the rest of the tests.
   got.Clear();
-  ASSERT_OK(ParseRecordIo(output_filename_, [&](auto artifact) {
-    if (artifact.test_run_artifact().has_test_run_start()) got = artifact;
-    return true;
-  }));
+  RecordIoIterator<rpb::OutputArtifact> iter(output_filename_);
+  for (; iter; ++iter)
+    if (iter->test_run_artifact().has_test_run_start()) got = *iter;
   EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestRunTest, EndBeforeStart) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Ended());
   rpb::TestResult result = test.End();
   // Expect NOT_APPLICABLE since test was never started
@@ -228,7 +228,7 @@ TEST_F(TestRunTest, EndBeforeStart) {
 }
 
 TEST_F(TestRunTest, EndAfterStart) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Ended());
   test.StartAndRegisterInfos({});
   rpb::TestResult result = test.End();
@@ -247,7 +247,7 @@ TEST_F(TestRunTest, EndAfterStart) {
 }
 
 TEST_F(TestRunTest, EndTwice) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.End();
   test.End();
 
@@ -261,7 +261,7 @@ TEST_F(TestRunTest, EndTwice) {
 
 // Expect default NOT_APPLICABLE:UNKNOWN
 TEST_F(TestRunTest, ResultCalcDefaults) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::UNKNOWN));
   EXPECT_EQ(rpb::TestResult_Name(test.Result()),
@@ -270,7 +270,7 @@ TEST_F(TestRunTest, ResultCalcDefaults) {
 
 // Expect NOT_APPLICABLE:SKIPPED if skipped and no errors emitted
 TEST_F(TestRunTest, ResultCalcSkip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   rpb::TestResult result = test.Skip();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::SKIPPED));
@@ -282,7 +282,7 @@ TEST_F(TestRunTest, ResultCalcSkip) {
 
 // Expect NOT_APPLICABLE:ERROR even if skip called after error
 TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("", "");
   rpb::TestResult result = test.Skip();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -295,7 +295,7 @@ TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
 
 // Expect PASS:COMPLETE if started and no diags/errors emitted
 TEST_F(TestRunTest, ResultCalcPass) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -308,7 +308,7 @@ TEST_F(TestRunTest, ResultCalcPass) {
 
 // Expect FAIL:COMPLETE if started and fail diag emitted
 TEST_F(TestRunTest, ResultCalcAddFailDiag) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("");
   step->AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
@@ -323,7 +323,7 @@ TEST_F(TestRunTest, ResultCalcAddFailDiag) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestRun
 TEST_F(TestRunTest, ResultCalcTestRunAddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("", "");
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -336,7 +336,7 @@ TEST_F(TestRunTest, ResultCalcTestRunAddError) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestStep
 TEST_F(TestRunTest, ResultCalcTestStepAddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("");
   step->AddError("", "", {});
@@ -350,7 +350,7 @@ TEST_F(TestRunTest, ResultCalcTestStepAddError) {
 }
 
 TEST_F(TestRunTest, AddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("symptom", "msg");
   test.End();
 
@@ -363,7 +363,7 @@ TEST_F(TestRunTest, AddError) {
 }
 
 TEST_F(TestRunTest, AddTag) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddTag("Guten Tag");
   test.End();
   // Compare to what we expect (ignoring timestamp)
@@ -375,7 +375,7 @@ TEST_F(TestRunTest, AddTag) {
 }
 
 TEST_F(TestRunTest, LogDebug) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogDebug("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -387,7 +387,7 @@ TEST_F(TestRunTest, LogDebug) {
 }
 
 TEST_F(TestRunTest, LogInfo) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogInfo("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -399,7 +399,7 @@ TEST_F(TestRunTest, LogInfo) {
 }
 
 TEST_F(TestRunTest, LogWarn) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogWarn("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -411,7 +411,7 @@ TEST_F(TestRunTest, LogWarn) {
 }
 
 TEST_F(TestRunTest, LogError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogError("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -423,7 +423,7 @@ TEST_F(TestRunTest, LogError) {
 }
 
 TEST_F(TestRunTest, LogFatal) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogFatal("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -442,7 +442,7 @@ using TestStepDeathTest = TestStepTest;
 TEST_F(TestStepTest, Begin) {
   // This test also confirms that the readable stream from the child object
   // (TestStep) writes to the same buffer as the parent (TestRun), as expected.
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   test.BeginTestStep("TestStepTest");
   test.End();
@@ -457,14 +457,15 @@ TEST_F(TestStepTest, Begin) {
 }
 
 TEST(TestStepDeathTest, BeginWithParentNotStarted) {
-  TestRun test("Begin", std::make_unique<ArtifactWriter>(-1, nullptr));
+  ArtifactWriter writer(-1, nullptr);
+  TestRun test("Begin", writer);
   ASSERT_DEATH(test.BeginTestStep("invalid"), "");
 }
 
 TEST_F(TestStepTest, AddDiagnosis) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
   auto step = test.BeginTestStep("AddDiagnosis");
   step->AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
@@ -494,7 +495,7 @@ TEST_F(TestStepTest, AddDiagnosis) {
 TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddDiagnosis");
   step->AddDiagnosis(rpb::Diagnosis::FAIL, "symptom", "add diag fail", {hw});
@@ -545,7 +546,7 @@ TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
 TEST_F(TestStepTest, AddError) {
   DutInfo dut_info;
   SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
   auto step = test.BeginTestStep("AddError");
   step->AddError("symptom", "add error success", {swrec});
@@ -576,7 +577,7 @@ TEST_F(TestStepTest, AddError) {
 TEST_F(TestStepTest, AddErrorSwUnregistered) {
   DutInfo dut_info;
   SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwNotRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddError");
   step->AddError("symptom", "add error fail", {swrec});
@@ -628,7 +629,7 @@ TEST_F(TestStepTest, AddErrorSwUnregistered) {
 TEST_F(TestStepTest, AddMeasurement) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
   auto step = test.BeginTestStep("AddMeasurement");
 
@@ -675,7 +676,7 @@ TEST_F(TestStepTest, AddMeasurement) {
 // Expect Error artifact if MeasurementElement is mal-formed (Struct kind not
 // allowed)
 TEST_F(TestStepTest, AddMeasurementFail) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("step");
   rpb::MeasurementElement elem;
@@ -692,7 +693,7 @@ TEST_F(TestStepTest, AddMeasurementFail) {
 class ValidateMeasElemTest : public ResultsTestBase {
  protected:
   ValidateMeasElemTest() {
-    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
+    test_ = std::make_unique<TestRun>("TestRunTest", *writer_);
 
     test_->StartAndRegisterInfos({});
     step_ = test_->BeginTestStep("step");
@@ -781,7 +782,7 @@ TEST_F(ValidateMeasElemTest, RangeMaxEmpty) {
 }
 
 TEST_F(TestStepTest, AddMeasurementWithNullptr) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddMeasurement");
 
@@ -824,7 +825,7 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
 TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddMeasurement");
 
@@ -893,7 +894,7 @@ TEST_F(TestStepTest, AddFile) {
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).Times(0);
   EXPECT_CALL(*fh, CopyRemoteFile(_)).Times(0);
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddFile");
 
@@ -933,7 +934,7 @@ TEST_F(TestStepTest, AddFileLocalCopy) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).WillOnce(Return(absl::OkStatus()));
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddFile");
 
@@ -951,7 +952,7 @@ TEST_F(TestStepTest, AddFileFail) {
   EXPECT_CALL(*fh, CopyLocalFile(_, _))
       .WillOnce(Return(absl::UnknownError("")));
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddFile");
   rpb::File file;
@@ -977,7 +978,7 @@ TEST_F(TestStepTest, AddFileRemote) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::OkStatus()));
 
-  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  TestRun test("AddFileRemote", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddFileRemote");
 
@@ -995,7 +996,7 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::UnknownError("")));
 
-  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  TestRun test("AddFileRemote", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddFileRemote");
 
@@ -1024,7 +1025,7 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
 }
 
 TEST_F(TestStepTest, AddArtifactExtension) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("AddArtifactExtension");
 
@@ -1055,7 +1056,7 @@ TEST_F(TestStepTest, AddArtifactExtension) {
 }
 
 TEST_F(TestStepTest, End) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
 
@@ -1081,7 +1082,7 @@ TEST_F(TestStepTest, End) {
 }
 
 TEST_F(TestStepTest, Skip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
 
@@ -1092,7 +1093,7 @@ TEST_F(TestStepTest, Skip) {
 }
 
 TEST_F(TestStepTest, LogDebug) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
   step->LogDebug("my house has termites, please debug it");
@@ -1113,7 +1114,7 @@ TEST_F(TestStepTest, LogDebug) {
 }
 
 TEST_F(TestStepTest, LogInfo) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
   step->LogInfo("Here, have an info");
@@ -1133,7 +1134,7 @@ TEST_F(TestStepTest, LogInfo) {
 }
 
 TEST_F(TestStepTest, LogWarn) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
   step->LogWarn("this test is brand new, never warn");
@@ -1154,7 +1155,7 @@ TEST_F(TestStepTest, LogWarn) {
 }
 
 TEST_F(TestStepTest, LogError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
   step->LogError("to err is human");
@@ -1175,7 +1176,7 @@ TEST_F(TestStepTest, LogError) {
 }
 
 TEST_F(TestStepTest, LogFatal) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   auto step = test.BeginTestStep("TestStepTest");
   step->LogFatal("What's my destiny? Fatal determine that");
@@ -1250,7 +1251,7 @@ TEST_F(TestStepTest, BeginMeasurementSeriesHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
 
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});  // no dut info registered
   auto step = test.BeginTestStep("TestStepTest");
 
@@ -1278,7 +1279,7 @@ class MeasurementSeriesTest : public ResultsTestBase {
   MeasurementSeriesTest() {
     hw_ = dut_info_.AddHardware(ParseTextProtoOrDie(kHwRegistered));
 
-    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
+    test_ = std::make_unique<TestRun>("TestRunTest", *writer_);
     test_->StartAndRegisterInfos({dut_info_});
     step_ = test_->BeginTestStep("TestStepTest");
   }
