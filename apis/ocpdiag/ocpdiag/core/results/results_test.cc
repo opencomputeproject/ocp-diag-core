@@ -37,6 +37,7 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/internal/mock_file_handler.h"
+#include "ocpdiag/core/results/recordio_iterator.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
@@ -163,7 +164,7 @@ class ResultsTestBase : public ::testing::Test {
 using TestRunTest = ResultsTestBase;
 
 TEST_F(TestRunTest, StartAndRegisterInfos) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Started());
   DutInfo di("host");
   DutInfo di2("host2");
@@ -212,15 +213,14 @@ TEST_F(TestRunTest, StartAndRegisterInfos) {
   // Now check the recordIO fileoutput. We validate this once and use the json
   // output for the rest of the tests.
   got.Clear();
-  ASSERT_OK(ParseRecordIo(output_filename_, [&](auto artifact) {
-    if (artifact.test_run_artifact().has_test_run_start()) got = artifact;
-    return true;
-  }));
+  RecordIoIterator<rpb::OutputArtifact> iter(output_filename_);
+  for (; iter; ++iter)
+    if (iter->test_run_artifact().has_test_run_start()) got = *iter;
   EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
 TEST_F(TestRunTest, EndBeforeStart) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Ended());
   rpb::TestResult result = test.End();
   // Expect NOT_APPLICABLE since test was never started
@@ -228,7 +228,7 @@ TEST_F(TestRunTest, EndBeforeStart) {
 }
 
 TEST_F(TestRunTest, EndAfterStart) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   ASSERT_FALSE(test.Ended());
   test.StartAndRegisterInfos({});
   rpb::TestResult result = test.End();
@@ -247,7 +247,7 @@ TEST_F(TestRunTest, EndAfterStart) {
 }
 
 TEST_F(TestRunTest, EndTwice) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.End();
   test.End();
 
@@ -261,7 +261,7 @@ TEST_F(TestRunTest, EndTwice) {
 
 // Expect default NOT_APPLICABLE:UNKNOWN
 TEST_F(TestRunTest, ResultCalcDefaults) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::UNKNOWN));
   EXPECT_EQ(rpb::TestResult_Name(test.Result()),
@@ -270,7 +270,7 @@ TEST_F(TestRunTest, ResultCalcDefaults) {
 
 // Expect NOT_APPLICABLE:SKIPPED if skipped and no errors emitted
 TEST_F(TestRunTest, ResultCalcSkip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   rpb::TestResult result = test.Skip();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::SKIPPED));
@@ -282,7 +282,7 @@ TEST_F(TestRunTest, ResultCalcSkip) {
 
 // Expect NOT_APPLICABLE:ERROR even if skip called after error
 TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("", "");
   rpb::TestResult result = test.Skip();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -295,7 +295,7 @@ TEST_F(TestRunTest, ResultCalcErrorThenSkip) {
 
 // Expect PASS:COMPLETE if started and no diags/errors emitted
 TEST_F(TestRunTest, ResultCalcPass) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -308,10 +308,10 @@ TEST_F(TestRunTest, ResultCalcPass) {
 
 // Expect FAIL:COMPLETE if started and fail diag emitted
 TEST_F(TestRunTest, ResultCalcAddFailDiag) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("");
-  step->AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
+  TestStep step("", test);
+  step.AddDiagnosis(rpb::Diagnosis::FAIL, "", "", {});
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::COMPLETE));
@@ -323,7 +323,7 @@ TEST_F(TestRunTest, ResultCalcAddFailDiag) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestRun
 TEST_F(TestRunTest, ResultCalcTestRunAddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("", "");
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
@@ -336,10 +336,10 @@ TEST_F(TestRunTest, ResultCalcTestRunAddError) {
 
 // Expect NOT_APPLICABLE:ERROR if error artifact emitted from TestStep
 TEST_F(TestRunTest, ResultCalcTestStepAddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("");
-  step->AddError("", "", {});
+  TestStep step("", test);
+  step.AddError("", "", {});
   rpb::TestResult result = test.End();
   EXPECT_EQ(rpb::TestStatus_Name(test.Status()),
             rpb::TestStatus_Name(rpb::TestStatus::ERROR));
@@ -350,7 +350,7 @@ TEST_F(TestRunTest, ResultCalcTestStepAddError) {
 }
 
 TEST_F(TestRunTest, AddError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddError("symptom", "msg");
   test.End();
 
@@ -363,7 +363,7 @@ TEST_F(TestRunTest, AddError) {
 }
 
 TEST_F(TestRunTest, AddTag) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.AddTag("Guten Tag");
   test.End();
   // Compare to what we expect (ignoring timestamp)
@@ -375,7 +375,7 @@ TEST_F(TestRunTest, AddTag) {
 }
 
 TEST_F(TestRunTest, LogDebug) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogDebug("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -387,7 +387,7 @@ TEST_F(TestRunTest, LogDebug) {
 }
 
 TEST_F(TestRunTest, LogInfo) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogInfo("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -399,7 +399,7 @@ TEST_F(TestRunTest, LogInfo) {
 }
 
 TEST_F(TestRunTest, LogWarn) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogWarn("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -411,7 +411,7 @@ TEST_F(TestRunTest, LogWarn) {
 }
 
 TEST_F(TestRunTest, LogError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogError("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -423,7 +423,7 @@ TEST_F(TestRunTest, LogError) {
 }
 
 TEST_F(TestRunTest, LogFatal) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.LogFatal("m");
   test.End();
   auto logs = FindAllArtifacts([&](rpb::OutputArtifact a) {
@@ -442,9 +442,9 @@ using TestStepDeathTest = TestStepTest;
 TEST_F(TestStepTest, Begin) {
   // This test also confirms that the readable stream from the child object
   // (TestStep) writes to the same buffer as the parent (TestRun), as expected.
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  test.BeginTestStep("TestStepTest");
+  { TestStep step("TestStepTest", test); }
   test.End();
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_test_step_start();
@@ -456,18 +456,19 @@ TEST_F(TestStepTest, Begin) {
                                       })pb")));
 }
 
-TEST(TestStepDeathTest, BeginWithParentNotStarted) {
-  TestRun test("Begin", std::make_unique<ArtifactWriter>(-1, nullptr));
-  ASSERT_DEATH(test.BeginTestStep("invalid"), "");
+TEST(TestStepNoFixtureDeathTest, BeginWithParentNotStarted) {
+  ArtifactWriter writer(-1, nullptr);
+  TestRun test("Begin", writer);
+  ASSERT_DEATH(TestStep("invalid", test), "");
 }
 
 TEST_F(TestStepTest, AddDiagnosis) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
-  auto step = test.BeginTestStep("AddDiagnosis");
-  step->AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
+  TestStep step("AddDiagnosis", test);
+  step.AddDiagnosis(rpb::Diagnosis::PASS, "symptom", "add diag success", {hw});
   test.End();
 
   // Compare to what we expect (ignoring timestamp)
@@ -487,68 +488,28 @@ TEST_F(TestStepTest, AddDiagnosis) {
                                        }
                                        sequence_number: 0
                                      )pb",
-                                     hw.Data().hardware_info_id(), step->Id());
+                                     hw.Data().hardware_info_id(), step.Id());
   EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
-TEST_F(TestStepTest, AddDiagnosisHwUnregistered) {
+TEST_F(TestStepDeathTest, AddDiagnosisHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddDiagnosis");
-  step->AddDiagnosis(rpb::Diagnosis::FAIL, "symptom", "add diag fail", {hw});
-
-  std::vector<std::string> wants;
-
-  // Expect test step start.
-  std::string want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          test_step_id: "%s"
-          test_step_start {}
-        }
-      )pb",
-      step->Id());
-  wants.push_back(want);
-
-  // Expect Error log artifact.
-  want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          error { symptom: "%s" }
-          test_step_id: "%s"
-        }
-      )pb",
-      kSympUnregHw, step->Id());
-  wants.push_back(want);
-
-  // Then expect diag result with missing hardware_info_id
-  want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          diagnosis { symptom: "symptom" type: FAIL msg: "add diag fail" }
-          test_step_id: "%s"
-        }
-      )pb",
-      step->Id());
-  wants.push_back(want);
-  test.End();
-
-  auto gots = FindAllArtifacts(
-      [](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
-  ASSERT_EQ(wants.size(), gots.size());
-  for (size_t i = 0; i < wants.size(); i++)
-    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
+  TestStep step("AddDiagnosis", test);
+  EXPECT_DEATH(step.AddDiagnosis(rpb::Diagnosis::FAIL, "symptom",
+                                  "add diag fail", {hw}),
+               "Unregistered");
 }
 
 TEST_F(TestStepTest, AddError) {
   DutInfo dut_info;
   SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
-  auto step = test.BeginTestStep("AddError");
-  step->AddError("symptom", "add error success", {swrec});
+  TestStep step("AddError", test);
+  step.AddError("symptom", "add error success", {swrec});
   test.End();
 
   // Compare to what we expect (ignoring timestamp)
@@ -564,73 +525,31 @@ TEST_F(TestStepTest, AddError) {
                         }
                         sequence_number: 0
                       )pb",
-                      swrec.Data().software_info_id(), step->Id());
+                      swrec.Data().software_info_id(), step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_error();
                        }));
   EXPECT_THAT(got, Partially(EqualsProto(want)));
-  EXPECT_EQ(step->Status(), rpb::TestStatus::ERROR);
+  EXPECT_EQ(step.Status(), rpb::TestStatus::ERROR);
   EXPECT_EQ(test.Status(), rpb::TestStatus::ERROR);
 }
 
 TEST_F(TestStepTest, AddErrorSwUnregistered) {
   DutInfo dut_info;
   SwRecord swrec = dut_info.AddSoftware(ParseTextProtoOrDie(kSwNotRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddError");
-  step->AddError("symptom", "add error fail", {swrec});
-  test.End();
-
-  // Expect test step start.
-  std::vector<std::string> wants;
-  std::string want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          test_step_id: "%s"
-          test_step_start {}
-        }
-      )pb",
-      step->Id());
-  wants.push_back(want);
-
-  // Expect Error log artifact first.
-  want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          error { symptom: "%s" }
-          test_step_id: "%s"
-        }
-      )pb",
-      kSympUnregSw, step->Id());
-  wants.push_back(want);
-
-  // Then expect error result with missing software_info_id
-  want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          error { symptom: "symptom" msg: "add error fail" }
-          test_step_id: "%s"
-        }
-      )pb",
-      step->Id());
-  wants.push_back(want);
-
-  auto gots = FindAllArtifacts(
-      [](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
-  ASSERT_EQ(wants.size(), gots.size());
-  for (size_t i = 0; i < wants.size(); i++) {
-    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
-  }
-  ASSERT_EQ(step->Status(), rpb::TestStatus::ERROR);
+  TestStep step("AddError", test);
+  EXPECT_DEATH(step.AddError("symptom", "add error fail", {swrec}),
+               "Unregistered");
 }
 
 TEST_F(TestStepTest, AddMeasurement) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({dut_info});
-  auto step = test.BeginTestStep("AddMeasurement");
+  TestStep step("AddMeasurement", test);
 
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
@@ -643,7 +562,7 @@ TEST_F(TestStepTest, AddMeasurement) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step->AddMeasurement(info, elem, &hw);
+  step.AddMeasurement(info, elem, &hw);
   test.End();
 
   std::string want = absl::StrFormat(
@@ -665,7 +584,7 @@ TEST_F(TestStepTest, AddMeasurement) {
           test_step_id: "%s"
         }
       )pb",
-      hw.Data().hardware_info_id(), now.seconds(), now.nanos(), step->Id());
+      hw.Data().hardware_info_id(), now.seconds(), now.nanos(), step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_measurement();
                        }));
@@ -674,31 +593,23 @@ TEST_F(TestStepTest, AddMeasurement) {
 
 // Expect Error artifact if MeasurementElement is mal-formed (Struct kind not
 // allowed)
-TEST_F(TestStepTest, AddMeasurementFail) {
-  TestRun test("TestRunTest", std::move(writer_));
+TEST_F(TestStepDeathTest, AddMeasurementFail) {
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("step");
+  TestStep step("step", test);
   rpb::MeasurementElement elem;
   *elem.mutable_value()->mutable_struct_value() = google::protobuf::Struct();
-  step->AddMeasurement({}, elem, nullptr);
-  test.End();
-
-  // This fails the test if an error was not found.
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
+  EXPECT_DEATH(step.AddMeasurement({}, elem, nullptr), "");
 }
 
 class ValidateMeasElemTest : public ResultsTestBase {
  protected:
-  ValidateMeasElemTest() {
-    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
-
-    test_->StartAndRegisterInfos({});
-    step_ = test_->BeginTestStep("step");
+  ValidateMeasElemTest() : test_{"TestRunTest", *writer_} {
+    test_.StartAndRegisterInfos({});
+    step_ = std::make_unique<TestStep>("step", test_);
   }
 
-  std::unique_ptr<TestRun> test_;
+  TestRun test_;
   std::unique_ptr<TestStep> step_;
 };
 
@@ -781,9 +692,9 @@ TEST_F(ValidateMeasElemTest, RangeMaxEmpty) {
 }
 
 TEST_F(TestStepTest, AddMeasurementWithNullptr) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddMeasurement");
+  TestStep step("AddMeasurement", test);
 
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
@@ -796,7 +707,7 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step->AddMeasurement(info, elem, nullptr);
+  step.AddMeasurement(info, elem, nullptr);
   test.End();
 
   std::string want = absl::StrFormat(
@@ -814,19 +725,19 @@ TEST_F(TestStepTest, AddMeasurementWithNullptr) {
           test_step_id: "%s"
         }
       )pb",
-      now.seconds(), now.nanos(), step->Id());
+      now.seconds(), now.nanos(), step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_measurement();
                        }));
   EXPECT_THAT(got, Partially(EqualsProto(want)));
 }
 
-TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
+TEST_F(TestStepDeathTest, AddMeasurementHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwRegistered));
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddMeasurement");
+  TestStep step("AddMeasurement", test);
 
   rpb::MeasurementInfo info;
   info.set_name("measurement info");
@@ -839,51 +750,7 @@ TEST_F(TestStepTest, AddMeasurementHwUnregistered) {
   google::protobuf::Timestamp now = Now();
   *elem.mutable_dut_timestamp() = now;
 
-  step->AddMeasurement(info, elem, &hw);
-  test.End();
-
-  std::vector<std::string> wants;
-  wants.push_back(absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          test_step_id: "%s"
-          test_step_start {}
-        }
-      )pb",
-      step->Id()));
-
-  // Expect Error Log artifact
-  wants.push_back(absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          error { symptom: "%s" }
-          test_step_id: "%s"
-        }
-      )pb",
-      kSympUnregHw, step->Id()));
-
-  wants.push_back(absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          measurement {
-            info { name: "measurement info" unit: "units" }
-            element {
-              measurement_series_id: ""
-              value { number_value: 3.14 }
-              valid_values { values { number_value: 3.14 } }
-              dut_timestamp { seconds: %d nanos: %d }
-            }
-          }
-          test_step_id: "%s"
-        }
-      )pb",
-      now.seconds(), now.nanos(), step->Id()));
-
-  auto gots = FindAllArtifacts(
-      [&](rpb::OutputArtifact a) { return a.has_test_step_artifact(); });
-  ASSERT_EQ(wants.size(), gots.size());
-  for (size_t i = 0; i < wants.size(); i++)
-    EXPECT_THAT(gots[i], Partially(EqualsProto(wants[i])));
+  EXPECT_DEATH(step.AddMeasurement(info, elem, &hw), "Unregistered");
 }
 
 // Test AddFile on local CWD file, no file copy expected.
@@ -893,9 +760,9 @@ TEST_F(TestStepTest, AddFile) {
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).Times(0);
   EXPECT_CALL(*fh, CopyRemoteFile(_)).Times(0);
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddFile");
+  TestStep step("AddFile", test);
 
   std::error_code err;
   std::string cwd = std::filesystem::current_path(err);
@@ -907,7 +774,7 @@ TEST_F(TestStepTest, AddFile) {
   file.set_output_path(output_path);
   file.set_description("description");
   file.set_content_type("content type");
-  step->AddFile(file);
+  step.AddFile(file);
   test.End();
 
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -925,7 +792,7 @@ TEST_F(TestStepTest, AddFile) {
                            test_step_id: "%s"
                          }
                        )pb",
-                       output_path, step->Id()))));
+                       output_path, step.Id()))));
 }
 
 // expect local file copy
@@ -933,14 +800,14 @@ TEST_F(TestStepTest, AddFileLocalCopy) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyLocalFile(_, _)).WillOnce(Return(absl::OkStatus()));
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddFile");
+  TestStep step("AddFile", test);
 
   // Set a local path not in test dir, so expect a file copy.
   rpb::File file;
   file.set_output_path("/tmp/temporary_file_testing_copies");
-  step->AddFile(file);
+  step.AddFile(file);
   test.End();
 
   // Skip proto output comparison, this is tested already
@@ -951,12 +818,12 @@ TEST_F(TestStepTest, AddFileFail) {
   EXPECT_CALL(*fh, CopyLocalFile(_, _))
       .WillOnce(Return(absl::UnknownError("")));
 
-  TestRun test("AddFile", std::move(writer_), std::move(fh));
+  TestRun test("AddFile", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddFile");
+  TestStep step("AddFile", test);
   rpb::File file;
   file.set_output_path("/tmp/data/file");
-  step->AddFile(file);
+  step.AddFile(file);
   test.End();
 
   std::string want = absl::StrFormat(
@@ -966,7 +833,7 @@ TEST_F(TestStepTest, AddFileFail) {
           test_step_id: "%s"
         }
       )pb",
-      step->Id());
+      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_error();
                        }));
@@ -977,9 +844,9 @@ TEST_F(TestStepTest, AddFileRemote) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::OkStatus()));
 
-  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  TestRun test("AddFileRemote", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddFileRemote");
+  TestStep step("AddFileRemote", test);
 
   rpb::File file;
   file.set_upload_as_name("upload name");
@@ -988,16 +855,16 @@ TEST_F(TestStepTest, AddFileRemote) {
   file.set_description("description");
   file.set_content_type("content type");
   file.set_node_address("node_address");
-  step->AddFile(file);
+  step.AddFile(file);
 }
 
 TEST_F(TestStepTest, AddFileRemoteFail) {
   auto fh = std::make_unique<MockFileHandler>();
   EXPECT_CALL(*fh, CopyRemoteFile(_)).WillOnce(Return(absl::UnknownError("")));
 
-  TestRun test("AddFileRemote", std::move(writer_), std::move(fh));
+  TestRun test("AddFileRemote", *writer_, std::move(fh));
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddFileRemote");
+  TestStep step("AddFileRemote", test);
 
   rpb::File file;
   file.set_upload_as_name("upload name");
@@ -1006,7 +873,7 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
   file.set_description("description");
   file.set_content_type("content type");
   file.set_node_address("node_address");
-  step->AddFile(file);
+  step.AddFile(file);
   test.End();
 
   std::string want = absl::StrFormat(
@@ -1016,7 +883,7 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
           test_step_id: "%s"
         }
       )pb",
-      step->Id());
+      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_error();
                        }));
@@ -1024,12 +891,12 @@ TEST_F(TestStepTest, AddFileRemoteFail) {
 }
 
 TEST_F(TestStepTest, AddArtifactExtension) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("AddArtifactExtension");
+  TestStep step("AddArtifactExtension", test);
 
   google::protobuf::Empty extension;
-  step->AddArtifactExtension("test extension", extension);
+  step.AddArtifactExtension("test extension", extension);
   test.End();
 
   std::string want = absl::StrFormat(
@@ -1046,7 +913,7 @@ TEST_F(TestStepTest, AddArtifactExtension) {
         }
         sequence_number: 0
       )pb",
-      extension.SerializeAsString(), step->Id());
+      extension.SerializeAsString(), step.Id());
 
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_extension();
@@ -1055,13 +922,13 @@ TEST_F(TestStepTest, AddArtifactExtension) {
 }
 
 TEST_F(TestStepTest, End) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
+  TestStep step("TestStepTest", test);
 
-  ASSERT_FALSE(step->Ended());
-  ASSERT_EQ(step->Status(), rpb::TestStatus::UNKNOWN);
-  step->End();
+  ASSERT_FALSE(step.Ended());
+  ASSERT_EQ(step.Status(), rpb::TestStatus::UNKNOWN);
+  step.End();
 
   std::string want = absl::StrFormat(
       R"pb(
@@ -1071,31 +938,31 @@ TEST_F(TestStepTest, End) {
         }
         sequence_number: 0
       )pb",
-      step->Id());
+      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_test_step_end();
                        }));
   EXPECT_THAT(got, Partially(EqualsProto(want)));
-  ASSERT_EQ(step->Status(), rpb::TestStatus::COMPLETE);
-  ASSERT_TRUE(step->Ended());
+  ASSERT_EQ(step.Status(), rpb::TestStatus::COMPLETE);
+  ASSERT_TRUE(step.Ended());
 }
 
 TEST_F(TestStepTest, Skip) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
+  TestStep step("TestStepTest", test);
 
-  ASSERT_EQ(step->Status(), rpb::TestStatus::UNKNOWN);
-  step->Skip();
-  ASSERT_EQ(step->Status(), rpb::TestStatus::SKIPPED);
-  ASSERT_TRUE(step->Ended());
+  ASSERT_EQ(step.Status(), rpb::TestStatus::UNKNOWN);
+  step.Skip();
+  ASSERT_EQ(step.Status(), rpb::TestStatus::SKIPPED);
+  ASSERT_TRUE(step.Ended());
 }
 
 TEST_F(TestStepTest, LogDebug) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
-  step->LogDebug("my house has termites, please debug it");
+  TestStep step("TestStepTest", test);
+  step.LogDebug("my house has termites, please debug it");
   test.End();
 
   std::string want = absl::StrFormat(
@@ -1105,7 +972,7 @@ TEST_F(TestStepTest, LogDebug) {
           test_step_id: "%s"
         }
       )pb",
-      step->Id());
+      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_log();
                        }));
@@ -1113,10 +980,10 @@ TEST_F(TestStepTest, LogDebug) {
 }
 
 TEST_F(TestStepTest, LogInfo) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
-  step->LogInfo("Here, have an info");
+  TestStep step("TestStepTest", test);
+  step.LogInfo("Here, have an info");
   test.End();
 
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -1129,14 +996,14 @@ TEST_F(TestStepTest, LogInfo) {
                            test_step_id: "%s"
                          }
                        )pb",
-                       step->Id()))));
+                       step.Id()))));
 }
 
 TEST_F(TestStepTest, LogWarn) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
-  step->LogWarn("this test is brand new, never warn");
+  TestStep step("TestStepTest", test);
+  step.LogWarn("this test is brand new, never warn");
   test.End();
 
   std::string want = absl::StrFormat(
@@ -1146,7 +1013,7 @@ TEST_F(TestStepTest, LogWarn) {
           test_step_id: "%s"
         }
       )pb",
-      step->Id());
+      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_log();
                        }));
@@ -1154,10 +1021,10 @@ TEST_F(TestStepTest, LogWarn) {
 }
 
 TEST_F(TestStepTest, LogError) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
-  step->LogError("to err is human");
+  TestStep step("TestStepTest", test);
+  step.LogError("to err is human");
   test.End();
 
   std::string want =
@@ -1167,7 +1034,7 @@ TEST_F(TestStepTest, LogError) {
                           test_step_id: "%s"
                         }
                       )pb",
-                      step->Id());
+                      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_log();
                        }));
@@ -1175,10 +1042,10 @@ TEST_F(TestStepTest, LogError) {
 }
 
 TEST_F(TestStepTest, LogFatal) {
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});
-  auto step = test.BeginTestStep("TestStepTest");
-  step->LogFatal("What's my destiny? Fatal determine that");
+  TestStep step("TestStepTest", test);
+  step.LogFatal("What's my destiny? Fatal determine that");
   test.End();
 
   std::string want =
@@ -1191,7 +1058,7 @@ TEST_F(TestStepTest, LogFatal) {
                           test_step_id: "%s"
                         }
                       )pb",
-                      step->Id());
+                      step.Id());
   ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
                          return a.test_step_artifact().has_log();
                        }));
@@ -1246,47 +1113,31 @@ TEST(DutInfoTest, ID_Uniqueness) {
   EXPECT_EQ(kWantCount, ids.size());
 }
 
-TEST_F(TestStepTest, BeginMeasurementSeriesHwUnregistered) {
+TEST_F(TestStepDeathTest, BeginMeasurementSeriesHwUnregistered) {
   DutInfo dut_info;
   HwRecord hw = dut_info.AddHardware(ParseTextProtoOrDie(kHwNotRegistered));
 
-  TestRun test("TestRunTest", std::move(writer_));
+  TestRun test("TestRunTest", *writer_);
   test.StartAndRegisterInfos({});  // no dut info registered
-  auto step = test.BeginTestStep("TestStepTest");
-
-  std::unique_ptr<MeasurementSeries> series =
-      step->BeginMeasurementSeries(hw, ParseTextProtoOrDie(kMeasurementInfo));
-  test.End();
-
-  std::string want = absl::StrFormat(
-      R"pb(
-        test_step_artifact {
-          error { symptom: "%s" }
-          test_step_id: "%s"
-        }
-      )pb",
-      kSympUnregHw, step->Id());
-
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
-  EXPECT_THAT(got, Partially(EqualsProto(want)));
+  TestStep step("TestStepTest", test);
+  EXPECT_DEATH(
+      MeasurementSeries(hw, ParseTextProtoOrDie(kMeasurementInfo), step),
+      "Unregistered");
 }
 
 class MeasurementSeriesTest : public ResultsTestBase {
  protected:
-  MeasurementSeriesTest() {
+  MeasurementSeriesTest() : test_{"TestRunTest", *writer_} {
     hw_ = dut_info_.AddHardware(ParseTextProtoOrDie(kHwRegistered));
 
-    test_ = std::make_unique<TestRun>("TestRunTest", std::move(writer_));
-    test_->StartAndRegisterInfos({dut_info_});
-    step_ = test_->BeginTestStep("TestStepTest");
+    test_.StartAndRegisterInfos({dut_info_});
+    step_ = std::make_unique<TestStep>("TestStepTest", test_);
   }
 
   DutInfo dut_info_;
   HwRecord hw_;
 
-  std::unique_ptr<TestRun> test_;
+  TestRun test_;
   std::unique_ptr<TestStep> step_;
 };
 using MeasurementSeriesDeathTest = MeasurementSeriesTest;
@@ -1296,9 +1147,8 @@ TEST_F(MeasurementSeriesTest, Begin) {
 
   rpb::MeasurementInfo info =
       ParseTextProtoOrDie(absl::StrFormat(kMeasurementInfo, hw_id));
-  std::unique_ptr<MeasurementSeries> series =
-      step_->BeginMeasurementSeries(hw_, info);
-  test_->End();
+  MeasurementSeries series(hw_, info, *step_);
+  test_.End();
 
   std::string want = absl::StrFormat(
       R"pb(
@@ -1307,7 +1157,7 @@ TEST_F(MeasurementSeriesTest, Begin) {
           test_step_id: "%s"
         }
       )pb",
-      series->Id(), absl::StrFormat(kMeasurementInfo, hw_id), step_->Id());
+      series.Id(), absl::StrFormat(kMeasurementInfo, hw_id), step_->Id());
 
   ASSERT_OK_AND_ASSIGN(
       auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -1320,16 +1170,16 @@ TEST_F(MeasurementSeriesTest, Begin) {
 // ended.
 TEST_F(MeasurementSeriesDeathTest, BeginFailAfterStepEnd) {
   step_->End();
-  ASSERT_DEATH(step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo()), "");
+  ASSERT_DEATH(MeasurementSeries(hw_, rpb::MeasurementInfo(), *step_), "");
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithoutLimit) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value val;
   val.set_number_value(3.14);
-  series->AddElement(val);
-  test_->End();
+  series.AddElement(val);
+  test_.End();
 
   std::string want = absl::StrFormat(
       R"pb(
@@ -1341,7 +1191,7 @@ TEST_F(MeasurementSeriesTest, AddElementWithoutLimit) {
           test_step_id: "%s"
         }
       )pb",
-      series->Id(), kStepIdDefault);
+      series.Id(), kStepIdDefault);
 
   ASSERT_OK_AND_ASSIGN(
       auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -1351,7 +1201,7 @@ TEST_F(MeasurementSeriesTest, AddElementWithoutLimit) {
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithRange) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value val, min, max;
   rpb::MeasurementElement::Range range;
@@ -1360,8 +1210,8 @@ TEST_F(MeasurementSeriesTest, AddElementWithRange) {
   max.set_number_value(3.15);
   *range.mutable_minimum() = std::move(min);
   *range.mutable_maximum() = std::move(max);
-  series->AddElementWithRange(val, range);
-  test_->End();
+  series.AddElementWithRange(val, range);
+  test_.End();
 
   std::string want = absl::StrFormat(
       R"pb(
@@ -1377,7 +1227,7 @@ TEST_F(MeasurementSeriesTest, AddElementWithRange) {
           test_step_id: "%s"
         }
       )pb",
-      series->Id(), kStepIdDefault);
+      series.Id(), kStepIdDefault);
 
   ASSERT_OK_AND_ASSIGN(
       auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -1387,79 +1237,84 @@ TEST_F(MeasurementSeriesTest, AddElementWithRange) {
 }
 
 // ERROR if Range used as limit for ListValue
-TEST_F(MeasurementSeriesTest, ValueKindListWithRangeLimit) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+TEST_F(MeasurementSeriesDeathTest, ValueKindListWithRangeLimit) {
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value val, list;
   val.set_number_value(0);
-  *list.mutable_list_value()->add_values() = std::move(val);
-  series->AddElementWithRange(list, {});
-  test_->End();
+  *list.mutable_list_value()->add_values() = val;
+  EXPECT_DEATH(series.AddElementWithRange(list, {}), "");
+}
 
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([&](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
-  EXPECT_EQ(got.test_step_artifact().error().symptom(), kSympProceduralErr);
+TEST_F(MeasurementSeriesDeathTest, RangeLimitBadMinimum) {
+  MeasurementSeries series{hw_, rpb::MeasurementInfo(), *step_};
+
+  rpb::MeasurementElement::Range range;
+  google::protobuf::Value val, min;
+  min.set_string_value("oops");  // wrong type
+  val.set_number_value(3.14);
+  *range.mutable_minimum() = min;
+  EXPECT_DEATH(series.AddElementWithRange(val, range), "");
+}
+
+TEST_F(MeasurementSeriesDeathTest, RangeLimitBadMaximum) {
+  MeasurementSeries series{hw_, rpb::MeasurementInfo(), *step_};
+
+  rpb::MeasurementElement::Range range;
+  google::protobuf::Value val, max;
+  max.set_string_value("oops");  // wrong type
+  val.set_number_value(3.14);
+  *range.mutable_maximum() = max;
+  EXPECT_DEATH(series.AddElementWithRange(val, range), "");
 }
 
 // ERROR if Value kinds don't match
-TEST_F(MeasurementSeriesTest, ValueKindMismatch) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+TEST_F(MeasurementSeriesDeathTest, ValueKindMismatch) {
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value number_val, string_val;
   number_val.set_number_value(0);
   string_val.set_string_value("zero");
-  series->AddElementWithValues(number_val, {string_val});
-  test_->End();
+  EXPECT_DEATH(series.AddElementWithValues(number_val, {string_val}), "");
+}
 
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
-  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
-                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
-                       kSympProceduralErr))));
+TEST_F(MeasurementSeriesDeathTest, ValueKindMismatchOnSubsequentCall) {
+  MeasurementSeries series{hw_, rpb::MeasurementInfo(), *step_};
+
+  google::protobuf::Value number_val;
+  number_val.set_number_value(0);
+  series.AddElementWithValues(number_val, {number_val});
+
+  // The type of the second call does not match the first.
+  google::protobuf::Value string_val;
+  string_val.set_string_value("zero");
+  EXPECT_DEATH(series.AddElementWithValues(string_val, {number_val}), "");
 }
 
 // ERROR if Value has no type
 TEST_F(MeasurementSeriesTest, ValueKindNoType) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value no_type;
-  series->AddElementWithValues(no_type, {no_type});
-  test_->End();
-
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
-  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
-                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
-                       kSympProceduralErr))));
+  EXPECT_DEATH(series.AddElementWithValues(no_type, {no_type}), "");
 }
 
 // ERROR if Value has no type
-TEST_F(MeasurementSeriesTest, ValueKindRejectStruct) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+TEST_F(MeasurementSeriesDeathTest, ValueKindRejectStruct) {
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value struct_type;
   *struct_type.mutable_struct_value() = google::protobuf::Struct();
-  series->AddElementWithValues(struct_type, {struct_type});
-  test_->End();
-
-  ASSERT_OK_AND_ASSIGN(auto got, FindArtifact([](rpb::OutputArtifact a) {
-                         return a.test_step_artifact().has_error();
-                       }));
-  EXPECT_THAT(got, Partially(EqualsProto(absl::StrFormat(
-                       R"pb(test_step_artifact { error { symptom: "%s" } })pb",
-                       kSympProceduralErr))));
+  EXPECT_DEATH(series.AddElementWithValues(struct_type, {struct_type}), "");
 }
 
 TEST_F(MeasurementSeriesTest, AddElementWithValidValues) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
   google::protobuf::Value val;
   val.set_number_value(3.14);
-  series->AddElementWithValues(val, {val});
-  test_->End();
+  series.AddElementWithValues(val, {val});
+  test_.End();
 
   std::string want = absl::StrFormat(
       R"pb(
@@ -1472,7 +1327,7 @@ TEST_F(MeasurementSeriesTest, AddElementWithValidValues) {
           test_step_id: "%s"
         }
       )pb",
-      series->Id(), kStepIdDefault);
+      series.Id(), kStepIdDefault);
 
   ASSERT_OK_AND_ASSIGN(
       auto got, FindArtifact([&](rpb::OutputArtifact a) {
@@ -1482,33 +1337,27 @@ TEST_F(MeasurementSeriesTest, AddElementWithValidValues) {
 }
 
 // Ensures MeasurementElements cannot be added to a series after it has ended.
-TEST_F(MeasurementSeriesTest, AddElementWithValuesFailAfterEnded) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
-  series->End();
+TEST_F(MeasurementSeriesDeathTest, AddElementFailAfterEnded) {
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
+  series.End();
 
   google::protobuf::Value val;
   rpb::MeasurementElement::Range range;
   range.mutable_maximum()->set_number_value(0);
   range.mutable_minimum()->set_number_value(0);
   val.set_number_value(0);
-  series->AddElementWithValues(val, {val});
-  series->AddElementWithRange(val, range);
-  test_->End();
-
-  auto got = FindArtifact([&](rpb::OutputArtifact a) {
-    return a.test_step_artifact().has_measurement_element();
-  });
-  // We should not find any measurement elements.
-  EXPECT_FALSE(got.status().ok());
+  EXPECT_DEATH(series.AddElement(val), "");
+  EXPECT_DEATH(series.AddElementWithValues(val, {val}), "");
+  EXPECT_DEATH(series.AddElementWithRange(val, range), "");
 }
 
 TEST_F(MeasurementSeriesTest, End) {
-  auto series = step_->BeginMeasurementSeries(hw_, rpb::MeasurementInfo());
+  MeasurementSeries series(hw_, rpb::MeasurementInfo(), *step_);
 
-  ASSERT_FALSE(series->Ended());
-  series->End();
-  ASSERT_TRUE(series->Ended());
-  test_->End();
+  ASSERT_FALSE(series.Ended());
+  series.End();
+  ASSERT_TRUE(series.Ended());
+  test_.End();
 
   std::string want = absl::StrFormat(R"pb(
                                        test_step_artifact {
@@ -1519,7 +1368,7 @@ TEST_F(MeasurementSeriesTest, End) {
                                          test_step_id: "%s"
                                        }
                                      )pb",
-                                     series->Id(), kStepIdDefault);
+                                     series.Id(), kStepIdDefault);
   ASSERT_OK_AND_ASSIGN(
       auto got, FindArtifact([&](rpb::OutputArtifact a) {
         return a.test_step_artifact().has_measurement_series_end();
