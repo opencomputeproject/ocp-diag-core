@@ -10,12 +10,12 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/util/type_resolver.h"
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -42,18 +42,11 @@ absl::StatusOr<int> OpenAndGetDescriptor(absl::string_view filepath);
 // Returns a globally cached TypeResolver for the generated pool.
 google::protobuf::util::TypeResolver* GeneratedResolver();
 
-// Parses a binary recordIO file of output artifacts and executes the callback
-// on each record. Touches all output until the callback returns "false".
-absl::Status ParseRecordIo(
-    absl::string_view filepath,
-    std::function<bool(ocpdiag::results_pb::OutputArtifact)>
-        callback);
-
 // Handles emission of OutputArtifacts for OCPDiag tests.
 class ArtifactWriter {
  public:
   ArtifactWriter() = default;
-  ArtifactWriter(int output_file_desc, bool also_print_to_stdout = false);
+
   // This ctor intended for use only in tests.
   ArtifactWriter(int output_file_desc, std::ostream* readable_out);
 
@@ -113,8 +106,9 @@ class ArtifactWriter {
     WriterProxy(int fd, std::ostream* readable = nullptr);
     ~WriterProxy();
 
-    absl::flat_hash_set<std::string> registered_hw_;
-    absl::flat_hash_set<std::string> registered_sw_;
+    // Do not use absl::flat_hash_set due to b/254570302.
+    std::unordered_set<std::string> registered_hw_;
+    std::unordered_set<std::string> registered_sw_;
 
     absl::Mutex mutex_;
     int sequence_num_ ABSL_GUARDED_BY(mutex_);
