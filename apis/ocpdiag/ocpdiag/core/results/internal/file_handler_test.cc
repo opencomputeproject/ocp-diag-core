@@ -16,8 +16,8 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/mock_remote.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/mock_remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/remote.h"
 #include "ocpdiag/core/results/internal/mock_file_handler.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
@@ -85,7 +85,7 @@ TEST_F(FileHandlerTest, CopyRemoteFile) {
 
   // Set expectations on mock node connection.
   auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::Cord("content")));
 
@@ -115,7 +115,7 @@ TEST_F(FileHandlerTest, CopyRemoteFileWithUploadName) {
 
   // Set expectations on mock node connection.
   auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::Cord("content")));
 
@@ -138,7 +138,7 @@ TEST_F(FileHandlerTest, CopyRemoteFileWithUploadName) {
 TEST_F(FileHandlerTest, NodeReadFileFail) {
   // Set expectations on mock node connection.
   auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
       .WillOnce(::testing::Return(absl::InternalError("")));
 
