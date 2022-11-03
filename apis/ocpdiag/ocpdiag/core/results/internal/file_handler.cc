@@ -20,7 +20,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/remote_factory.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/remote_factory.h"
 
 namespace ocpdiag {
 namespace results {
