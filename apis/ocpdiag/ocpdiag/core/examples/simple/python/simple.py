@@ -50,30 +50,15 @@ def main(argv) -> None:  # pylint: disable=unused-argument
   hw_record = dut_info.AddHardware(hw_info)
   runner.StartAndRegisterInfos([dut_info], params)
 
-  # Make a DutInfo with HW, but forget to register it
-  unused_dut_info = results.DutInfo("UnregisteredHost")
-  bad_hw_info = results_pb2.HardwareInfo(
-      arena="badArena",
-      name="badName",
-      manufacturer="badManufacturer",
-      mfg_part_number="badMfgPartNum",
-      part_type="badPartType")
-  unregistered_record = unused_dut_info.AddHardware(bad_hw_info)
-
   try:
     step = results.BeginTestStep(runner, "MyStep")
   except error.StatusNotOk as e:
     runner.AddError("my_test-procedural-error", e)
     return
 
-  # Demonstrate Diagnosis with good/bad HwRecord
-  #
-  # Adding one registered HwRecord, and one unregistered.
-  # This will illustrate that using an unregistered HwRecord
-  # emits an Error artifact and the HwRecord will not be
-  # referenced in the Diagnosis result
+  # Demonstrate Diagnosis with a HwRecord
   step.AddDiagnosis(results_pb2.Diagnosis.PASS, "my_test-good-myHardware",
-                    "my hardware is good!", [hw_record, unregistered_record])
+                    "my hardware is good!", [hw_record])
 
   # Demonstrate MeasurementSeries
   meas_info = results_pb2.MeasurementInfo(
