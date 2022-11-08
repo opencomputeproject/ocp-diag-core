@@ -23,9 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "google/protobuf/io/zero_copy_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
@@ -35,6 +32,9 @@
 #include "absl/types/span.h"
 #include "ocpdiag/core/params/ocpdiag_parameter_parser.h"
 #include "ocpdiag/core/params/utils.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 
 namespace {
 
