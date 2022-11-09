@@ -9,7 +9,6 @@ from typing import Callable, Text, List, Optional
 from google.protobuf import struct_pb2
 from google.protobuf import message
 from ocpdiag.core.results import results_pb2
-from ocpdiag.core.results.python import output_model
 
 
 def SetResultsLibFlags(
@@ -27,45 +26,78 @@ def InitTestRun(name: Text) -> TestRun:
   ...
 
 
-class MeasurementSeries:
+class ArtifactWriter:
+  ...
 
-  def __enter__(self) -> MeasurementSeries:
+
+class TestRun:
+
+  def __init__(self, name: str):
+    ...
+
+  def __init__(self, name: str, artifact_writer: ArtifactWriter):
+    ...
+
+  def __enter__(self) -> TestRun:
     ...
 
   def __exit__(self, *args):
     ...
 
-  def AddElement(self, value: struct_pb2.Value) -> None:
+  def StartAndRegisterInfos(self,
+                            dutinfos: List[DutInfo],
+                            params: Optional[message.Message] = ...) -> None:
     ...
 
-  def AddElementWithRange(self, val: struct_pb2.Value,
-                          range: results_pb2.MeasurementElement.Range) -> None:
+  def End(self) -> results_pb2.TestResult:
     ...
 
-  def AddElementWithValues(self, val: struct_pb2.Value,
-                           valid_values: List[struct_pb2.Value]) -> None:
+  def Skip(self) -> results_pb2.TestResult:
     ...
 
-  def Id(self) -> Text:
+  def AddError(self, symptom: Text, message: Text) -> None:
+    ...
+
+  def AddTag(self, tag: Text) -> None:
+    ...
+
+  def Status(self) -> results_pb2.TestStatus:
+    ...
+
+  def Result(self) -> results_pb2.TestStatus:
+    ...
+
+  def Started(self) -> bool:
     ...
 
   def Ended(self) -> bool:
     ...
 
-  def End(self) -> None:
+  def LogDebug(self, msg: Text) -> None:
+    ...
+
+  def LogInfo(self, msg: Text) -> None:
+    ...
+
+  def LogWarn(self, msg: Text) -> None:
+    ...
+
+  def LogError(self, msg: Text) -> None:
+    ...
+
+  def LogFatal(self, msg: Text) -> None:
     ...
 
 
 class TestStep:
 
+  def __init__(self, name: str, test_run: TestRun):
+    ...
+
   def __enter__(self) -> TestStep:
     ...
 
   def __exit__(self, *args):
-    ...
-
-  def BeginMeasurementSeries(
-      hwrec: HwRecord, info: results_pb2.MeasurementInfo) -> MeasurementSeries:
     ...
 
   def AddDiagnosis(self,
@@ -81,10 +113,15 @@ class TestStep:
                records: List[SwRecord] = ...) -> None:
     ...
 
-  def AddMeasurement(self,
-                     info: results_pb2.MeasurementInfo,
+  def AddMeasurement(self, info: results_pb2.MeasurementInfo,
                      elem: results_pb2.MeasurementElement,
-                     hwrec: Optional[HwRecord] = ...) -> None:
+                     hwrec: Optional[HwRecord] = None) -> None:
+    ...
+
+  def AddMeasurement(self, info: results_pb2.MeasurementInfo,
+                     elem: results_pb2.MeasurementElement,
+                     hwrec: Optional[HwRecord],
+                     enforce_constraints: bool) -> None:
     ...
 
   def AddFile(self, file: results_pb2.File) -> None:
@@ -125,62 +162,40 @@ class TestStep:
     ...
 
 
-class TestRun:
+class MeasurementSeries:
 
-  def __init__(self, name: str):
+  def __init__(self, hwrec: HwRecord, info: results_pb2.MeasurementInfo,
+               test_step: TestStep):
     ...
 
-  def __enter__(self) -> TestRun:
+  def __init__(self, hwrec: HwRecord, info: results_pb2.MeasurementInfo,
+               test_step: TestStep, enforce_constraints: bool):
+    ...
+
+  def __enter__(self) -> MeasurementSeries:
     ...
 
   def __exit__(self, *args):
     ...
 
-  def StartAndRegisterInfos(self,
-                            dutinfos: List[DutInfo],
-                            params: Optional[message.Message] = ...) -> None:
+  def AddElement(self, value: struct_pb2.Value) -> None:
     ...
 
-  def BeginTestStep(name: str) -> TestStep:
+  def AddElementWithRange(self, val: struct_pb2.Value,
+                          range: results_pb2.MeasurementElement.Range) -> None:
     ...
 
-  def End(self) -> results_pb2.TestResult:
+  def AddElementWithValues(self, val: struct_pb2.Value,
+                           valid_values: List[struct_pb2.Value]) -> None:
     ...
 
-  def Skip(self) -> results_pb2.TestResult:
-    ...
-
-  def AddError(self, symptom: Text, message: Text) -> None:
-    ...
-
-  def AddTag(self, tag: Text) -> None:
-    ...
-
-  def Status(self) -> results_pb2.TestStatus:
-    ...
-
-  def Result(self) -> results_pb2.TestStatus:
-    ...
-
-  def Started(self) -> bool:
+  def Id(self) -> Text:
     ...
 
   def Ended(self) -> bool:
     ...
 
-  def LogDebug(self, msg: Text) -> None:
-    ...
-
-  def LogInfo(self, msg: Text) -> None:
-    ...
-
-  def LogWarn(self, msg: Text) -> None:
-    ...
-
-  def LogError(self, msg: Text) -> None:
-    ...
-
-  def LogFatal(self, msg: Text) -> None:
+  def End(self) -> None:
     ...
 
 
@@ -227,22 +242,3 @@ def BeginMeasurementSeries(
     parent: TestStep, hw: HwRecord,
     info: results_pb2.MeasurementInfo) -> MeasurementSeries:
   ...
-
-
-class OutputReceiver:
-
-  def __init__(self):
-    ...
-
-  def __enter__(self) -> OutputReceiver:
-    ...
-
-  def __exit__(self, *args):
-    ...
-
-  @property
-  def model(self) -> output_model.TestRunOutput:
-    ...
-
-  def Iterate(callback: Callable[[results_pb2.OutputArtifact], bool]):
-    ...
