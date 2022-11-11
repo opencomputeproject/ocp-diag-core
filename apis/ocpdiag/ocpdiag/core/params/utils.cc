@@ -12,9 +12,6 @@
 #include <memory>
 #include <string>
 
-#include "google/protobuf/io/zero_copy_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/util/json_util.h"
@@ -24,6 +21,9 @@
 #include "absl/strings/str_cat.h"
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/params/utils_version.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 
 namespace ocpdiag {
 namespace params {
