@@ -7,9 +7,9 @@
 #ifndef OCPDIAG_CORE_PARAMS_UTILS_H_
 #define OCPDIAG_CORE_PARAMS_UTILS_H_
 
-#include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/message.h"
 #include "absl/status/status.h"
+#include "google/protobuf/io/zero_copy_stream.h"
 
 namespace ocpdiag {
 namespace params {
