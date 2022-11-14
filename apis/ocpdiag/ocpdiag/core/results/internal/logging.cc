@@ -30,7 +30,6 @@
 #include "ocpdiag/core/results/results.pb.h"
 #include "riegeli/bytes/fd_reader.h"
 #include "riegeli/bytes/fd_writer.h"
-#include "riegeli/records/record_reader.h"
 #include "riegeli/records/records_metadata.pb.h"
 
 namespace ocpdiag {
@@ -73,9 +72,6 @@ absl::StatusOr<int> OpenAndGetDescriptor(absl::string_view filepath) {
 
 ArtifactWriter::ArtifactWriter(int output_file_desc, std::ostream* readable)
     : proxy_(new WriterProxy(output_file_desc, readable)) {}
-
-ArtifactWriter::ArtifactWriter(int output_file_desc, bool also_print_to_stdout)
-    : proxy_(new WriterProxy(output_file_desc, nullptr)) {}
 
 const char* kTypeUrlPrefix = "type.googleapis.com";
 std::string GetTypeUrl(const google::protobuf::Message& message) {
@@ -174,26 +170,6 @@ ArtifactWriter::WriterProxy::WriterProxy(int fd, std::ostream* readable)
 
 ArtifactWriter::WriterProxy::~WriterProxy() {
   file_out_.Close();
-}
-
-absl::Status ParseRecordIo(absl::string_view filepath,
-                           std::function<bool(rpb::OutputArtifact)> callback) {
-  int fd = open(filepath.data(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-  if (fd == -1) {
-    return absl::InternalError(absl::StrFormat(
-        "Failed to open requested output file \"%s\"", filepath));
-  }
-  auto close_fd = absl::MakeCleanup([fd]() { close(fd); });
-
-  riegeli::RecordReader reader(riegeli::FdReader(
-      fd, riegeli::FdReaderBase::Options().set_independent_pos(0)));
-  auto close_reader = absl::MakeCleanup([&reader]() { reader.Close(); });
-
-  rpb::OutputArtifact artifact;
-  while (reader.ReadRecord(artifact)) {
-    if (!callback(std::move(artifact))) return absl::OkStatus();
-  }
-  return reader.status();
 }
 
 }  // namespace internal
