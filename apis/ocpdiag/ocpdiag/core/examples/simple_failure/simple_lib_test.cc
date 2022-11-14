@@ -31,37 +31,23 @@ using ::ocpdiag::results_pb::OutputArtifact;
 TEST(TestAddAllMeasurementTypes, CheckAll) {
   results::OutputReceiver output;
   {
-    results::TestRun test_run("test_run");
+    results::TestRun test_run("Test", output.artifact_writer());
     test_run.StartAndRegisterInfos({});
-    auto step = test_run.BeginTestStep("fake_step");
+    results::TestStep step("fake_step", test_run);
 
-    ocpdiag::example::AddAllMeasurementTypes(step.get(), nullptr);
+    ocpdiag::example::AddAllMeasurementTypes(&step, nullptr);
   }
 
   // Check measurements.
   std::vector<Measurement> measurements;
-  output.Iterate([&](OutputArtifact artifact) {
+  for (OutputArtifact artifact : output) {
     if (artifact.has_test_step_artifact() &&
         artifact.test_step_artifact().has_measurement()) {
       measurements.push_back(artifact.test_step_artifact().measurement());
     }
-    return true;
-  });
+  }
 
   std::vector<std::string> expected_measurements{
-      // Null measurements.
-      R"pb(
-        info { name: "null-measurement" unit: "null-measurement-unit" }
-        element {
-          measurement_series_id: ""
-          value { null_value: NULL_VALUE }
-          valid_values {
-            values { null_value: NULL_VALUE }
-            values { null_value: NULL_VALUE }
-            values { null_value: NULL_VALUE }
-          }
-        }
-      )pb",
       // Number measurements.
       R"pb(
         info { name: "number-measurement" unit: "number-measurement-unit" }
@@ -110,55 +96,9 @@ TEST(TestAddAllMeasurementTypes, CheckAll) {
           }
         }
       )pb",
-      // Boolean measurements.
-      R"pb(
-        info { name: "boolean-measurement" unit: "boolean-measurement-unit" }
-        element {
-          measurement_series_id: ""
-          value { bool_value: false }
-          valid_values {
-            values { bool_value: false }
-            values { bool_value: true }
-            values { bool_value: true }
-          }
-        }
-      )pb",
-      // List measurements.
-      R"pb(
-        info { name: "list-measurement" unit: "list-measurement-unit" }
-        element {
-          measurement_series_id: ""
-          value {
-            list_value {
-              values { number_value: 1.23 }
-              values { number_value: 2.34 }
-            }
-          }
-          valid_values {
-            values {
-              list_value {
-                values { number_value: 1.23 }
-                values { number_value: 2.34 }
-              }
-            }
-            values {
-              list_value {
-                values { number_value: 1.23 }
-                values { number_value: 2.34 }
-              }
-            }
-            values {
-              list_value {
-                values { number_value: 1.23 }
-                values { number_value: 2.34 }
-              }
-            }
-          }
-        }
-      )pb",
   };
 
-  const int count = 7;
+  const int count = 4;
   ASSERT_EQ(measurements.size(), count);
   ASSERT_EQ(expected_measurements.size(), count);
   for (int i = 0; i < count; i++) {
