@@ -1,0 +1,92 @@
+// Copyright 2022 Google LLC
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
+// The results model is a structured view of a OCPDiag diagnostic output.
+//
+// Raw OCPDiag output is a series of OutputArtifact messages, where each message
+// could be one of a number of different types. The results model organizes
+// these artifacts semantically so certain information is easier to access. For
+// example, you can quickly find the start or end of a test run, or find a
+// particular diagnosis symptom of a test step.
+syntax = "proto3";
+
+package ocpdiag_results_pb;
+
+import "ocpdiag/core/results/results.proto";
+
+// Organizes all the output artifacts of a OCPDiag test run.
+message TestRunModel {
+  // The test run start artifact.
+  ocpdiag.results_pb.TestRunStart start = 1;
+
+  // The test run end artifact.
+  ocpdiag.results_pb.TestRunEnd end = 2;
+
+  // Any test run logs.
+  LogsModel logs = 3;
+
+  // Any errors produced by the test run.
+  repeated ocpdiag.results_pb.Error errors = 4;
+
+  // Any tags produced by the test run.
+  repeated ocpdiag.results_pb.Tag tags = 5;
+
+  // Test steps are indexed by ID.
+  map<string, TestStepModel> test_steps = 6;
+}
+
+// Organizes all the output artifacts of a OCPDiag test step.
+message TestStepModel {
+  // The test step start artifact.
+  ocpdiag.results_pb.TestStepStart start = 1;
+
+  // The test step end artifact.
+  ocpdiag.results_pb.TestStepEnd end = 2;
+
+  // Any test step logs.
+  LogsModel logs = 3;
+
+  // Any errors produced by the test step.
+  repeated ocpdiag.results_pb.Error errors = 4;
+
+  // Any files uploaded by the test step.
+  repeated ocpdiag.results_pb.File files = 5;
+
+  // Any artifact extensions added to the test step.
+  repeated ocpdiag.results_pb.ArtifactExtension artifact_extensions =
+      6;
+
+  // Any measurement series created by the test step, indexed by series ID.
+  map<string, MeasurementSeriesModel> measurement_series = 7;
+
+  // Any measurements added to the test step.
+  repeated ocpdiag.results_pb.Measurement measurements = 8;
+
+  // Any test step diagnoses.
+  repeated ocpdiag.results_pb.Diagnosis diagnoses = 9;
+}
+
+// Organizes all the output artifacts of a measurement series.
+message MeasurementSeriesModel {
+  // The measurement series start artifact.
+  ocpdiag.results_pb.MeasurementSeriesStart start = 1;
+
+  // The measurement series end artifact.
+  ocpdiag.results_pb.MeasurementSeriesEnd end = 2;
+
+  // The measurement elements.
+  repeated ocpdiag.results_pb.MeasurementElement
+      measurement_elements = 3;
+}
+
+// Organizes log messages by severity.
+message LogsModel {
+  repeated ocpdiag.results_pb.Log debug = 1;
+  repeated ocpdiag.results_pb.Log info = 2;
+  repeated ocpdiag.results_pb.Log warning = 3;
+  repeated ocpdiag.results_pb.Log error = 4;
+  repeated ocpdiag.results_pb.Log fatal = 5;
+}
