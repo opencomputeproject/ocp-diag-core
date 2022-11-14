@@ -11,8 +11,6 @@
 #include <memory>
 #include <string>
 
-#include "google/protobuf/io/zero_copy_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/util/json_util.h"
 #include "google/protobuf/util/type_resolver.h"
@@ -22,6 +20,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "ocpdiag/core/compat/status_converters.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 
 namespace ocpdiag {
 namespace params {
