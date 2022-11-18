@@ -46,9 +46,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_absl",
-        url = "https://github.com/abseil/abseil-cpp/archive/92fdbfb301f8b301b28ab5c99e7361e775c2fb8a.zip",  # 2022-08-25
-        strip_prefix = "abseil-cpp-92fdbfb301f8b301b28ab5c99e7361e775c2fb8a",
-        sha256 = "feea6e761ab9df667f054531b4e4d5d143eaa78f2c40dbf5ba45289142cbcc1d",
+        url = "https://github.com/abseil/abseil-cpp/archive/64f00b1f4a064e9e140fc4642ccd55c9c2e2e365.zip",  # 2022-11-08
+        strip_prefix = "abseil-cpp-64f00b1f4a064e9e140fc4642ccd55c9c2e2e365",
+        sha256 = "e7c605119f5aefdf3cd0159f2cbc439c2f7d614c99758be32e0258d49201fc4e",
     )
 
     maybe(
@@ -161,7 +161,7 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_riegeli",
-        url = "https://github.com/google/riegeli/archive/a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c.tar.gz",
-        strip_prefix = "riegeli-a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c",
-        sha256 = "69046b1dc669ebebb7ea20b8f88dc92d869b61e20ac872882afc54f4ce88059f",
+        url = "https://github.com/google/riegeli/archive/301c122a77aa60fd01396b5b9a7901218494e096.tar.gz",  # 2022-11-04
+        strip_prefix = "riegeli-301c122a77aa60fd01396b5b9a7901218494e096",
+        sha256 = "64b8848baef329b382a64e30e1c58708de061bf5a6e017b8599d9ebd116f04d9",
     )
