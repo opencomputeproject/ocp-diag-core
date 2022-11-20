@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "google/protobuf/io/zero_copy_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/descriptor.pb.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/descriptor_database.h"
@@ -37,6 +35,8 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/params/ocpdiag_params.pb.h"
 #include "ocpdiag/core/params/utils.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 
 namespace ocpdiag {
 namespace {
