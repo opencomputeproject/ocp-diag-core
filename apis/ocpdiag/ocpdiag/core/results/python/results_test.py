@@ -6,7 +6,6 @@
 
 """Tests for ocpdiag.core.results.python.results."""
 
-import contextlib
 import faulthandler
 import unittest
 
@@ -16,6 +15,7 @@ from google.protobuf import struct_pb2
 from google.protobuf import timestamp_pb2
 from google.protobuf import text_format
 from ocpdiag.core.results import results_pb2
+from ocpdiag.core.results.python import output_receiver
 from ocpdiag.core.results.python import results
 
 HWREGISTERED = """
@@ -50,27 +50,6 @@ MEASUREMENTINFO = """
   """
 
 
-class OutputReceiverTest(unittest.TestCase):
-
-  def test_model_inside_context(self):
-    with results.OutputReceiver() as receiver:
-      test_run = results.InitTestRun("Test")
-      test_run.End()
-
-      # Test that the model is populated.
-      self.assertIsNotNone(receiver.model.end)
-
-    # Iterate through the output, outside of the managed context.
-    self.cnt = 0
-
-    def count_artifacts(unused_artifact: results_pb2.OutputArtifact) -> bool:
-      self.cnt += 1
-      return True
-
-    receiver.Iterate(count_artifacts)
-    self.assertEqual(self.cnt, 2)  # 1 start + 1 end
-
-
 class DutInfoTest(unittest.TestCase):
 
   def testDutInfoHwInfo(self):
@@ -101,19 +80,14 @@ class ResultsTestBase(unittest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self.output = results.OutputReceiver()
-    self.exit_stack = contextlib.ExitStack()
-    self.exit_stack.enter_context(self.output)
-
-  def tearDown(self):
-    super().tearDown()
-    self.exit_stack.close()
+    self.output = output_receiver.OutputReceiver()
+    self.test_run = results.TestRun("ResultsTest", self.output.artifact_writer)
 
 
 class TestRunTest(ResultsTestBase):
 
   def testTestRunEnd(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       self.assertFalse(test_run.Ended())
       test_run.StartAndRegisterInfos([])
       result = test_run.End()
@@ -122,44 +96,42 @@ class TestRunTest(ResultsTestBase):
       self.assertEqual(test_run.Status(), results_pb2.TestStatus.COMPLETE)
 
   def testTestRunSkip(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       self.assertEqual(test_run.Status(), results_pb2.TestStatus.UNKNOWN)
       result = test_run.Skip()
       self.assertEqual(test_run.Status(), results_pb2.TestStatus.SKIPPED)
       self.assertEqual(result, results_pb2.TestResult.NOT_APPLICABLE)
 
   def testTestRunAddError(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       test_run.AddError("symptom", "msg")
 
-    self.assertEqual(len(self.output.model.errors), 1)
-    self.assertEqual(self.output.model.errors[0].symptom, "symptom")
+    self.assertEqual(len(self.output.test_run.errors), 1)
+    self.assertEqual(self.output.test_run.errors[0].symptom, "symptom")
 
   def testTestRunAddTag(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       test_run.AddTag("T")
 
-    self.assertEqual(len(self.output.model.tags), 1)
-    self.assertEqual(self.output.model.tags[0].tag, "T")
+    self.assertEqual(len(self.output.test_run.tags), 1)
+    self.assertEqual(self.output.test_run.tags[0].tag, "T")
 
   def testTestRunLogs(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       test_run.LogDebug("A")
       test_run.LogInfo("B")
       test_run.LogWarn("C")
       test_run.LogError("D")
       test_run.LogFatal("E")
 
-    self.assertEqual(len(self.output.model.logs), 5)
-    self.assertEqual(self.output.model.logs[results_pb2.Log.DEBUG][0].text, "A")
-    self.assertEqual(self.output.model.logs[results_pb2.Log.INFO][0].text, "B")
-    self.assertEqual(self.output.model.logs[results_pb2.Log.WARNING][0].text,
-                     "C")
-    self.assertEqual(self.output.model.logs[results_pb2.Log.ERROR][0].text, "D")
-    self.assertEqual(self.output.model.logs[results_pb2.Log.FATAL][0].text, "E")
+    self.assertEqual(self.output.test_run.logs.debug[0].text, "A")
+    self.assertEqual(self.output.test_run.logs.info[0].text, "B")
+    self.assertEqual(self.output.test_run.logs.warning[0].text, "C")
+    self.assertEqual(self.output.test_run.logs.error[0].text, "D")
+    self.assertEqual(self.output.test_run.logs.fatal[0].text, "E")
 
   def testTestRunStartAndRegisterInfos(self):
-    with results.TestRun("TestRunTest") as test_run:
+    with self.test_run as test_run:
       self.assertFalse(test_run.Started())
       d0 = results.DutInfo("host0")
       d0.AddHardware(
@@ -171,49 +143,55 @@ class TestRunTest(ResultsTestBase):
       test_run.StartAndRegisterInfos([d0])
 
     self.assertEqual(
-        len(self.output.model.start.dut_info[0].hardware_components), 1)
-    self.assertEqual(len(self.output.model.start.dut_info[0].software_infos), 1)
+        len(self.output.test_run.start.dut_info[0].hardware_components), 1)
+    self.assertEqual(
+        len(self.output.test_run.start.dut_info[0].software_infos), 1)
 
 
 class TestRunStep(ResultsTestBase):
 
   def testTestStepBegin(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       test_run.StartAndRegisterInfos([])
-      test_run.BeginTestStep("TestStepTest")
+      results.TestStep("TestStepTest", test_run)
 
-    self.assertIn("0", self.output.model.steps.keys())
-    self.assertEqual(self.output.model.steps["0"].start.name, "TestStepTest")
+    self.assertIn("0", self.output.test_run.test_steps.keys())
+    self.assertEqual(self.output.test_run.test_steps["0"].start.name,
+                     "TestStepTest")
 
   def testTestStepAddDiagnosis(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       dutinfo = results.DutInfo("hostname")
       hw = dutinfo.AddHardware(
           text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
       test_run.StartAndRegisterInfos([dutinfo])
 
-      with test_run.BeginTestStep("TestStepTest") as step:
+      hw_dict = {"1": hw}
+      with results.TestStep("TestStepTest", test_run) as step:
+        # Ensure that this call works with a generic iterable container.
         step.AddDiagnosis(results_pb2.Diagnosis.PASS, "symptom",
-                          "add diag success", [hw])
+                          "add diag success", hw_dict.values())
 
-    self.assertEqual(self.output.model.steps["0"].diagnoses[0].type,
+    self.assertEqual(self.output.test_run.test_steps["0"].diagnoses[0].type,
                      results_pb2.Diagnosis.PASS)
 
   def testTestStepAddError(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       dutinfo = results.DutInfo("hostname")
       sw = dutinfo.AddSoftware(
           text_format.Parse(SWREGISTERED, results_pb2.SoftwareInfo()))
       test_run.StartAndRegisterInfos([dutinfo])
 
-      with test_run.BeginTestStep("TestStepTest") as step:
-        step.AddError("symptom", "add error success", [sw])
-    errors = self.output.model.steps["0"].errors
+      sw_dict = {"1": sw}
+      with results.TestStep("TestStepTest", test_run) as step:
+        # Ensure that this call works with a generic iterable container.
+        step.AddError("symptom", "add error success", sw_dict.values())
+    errors = self.output.test_run.test_steps["0"].errors
     self.assertEqual(len(errors), 1)
     self.assertEqual(errors[0].msg, "add error success")
 
   def testTestStepAddMeasurement(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       dutinfo = results.DutInfo("hostname")
       hw = dutinfo.AddHardware(
           text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
@@ -225,17 +203,17 @@ class TestRunStep(ResultsTestBase):
       elem.valid_values.values.append(val)
 
       info = results_pb2.MeasurementInfo(name="measurement info", unit="unit")
-      with test_run.BeginTestStep("TestStepTest") as step:
+      with results.TestStep("TestStepTest", test_run) as step:
         step.AddMeasurement(info, elem, hw)
 
-    measurements = self.output.model.steps["0"].measurements
+    measurements = self.output.test_run.test_steps["0"].measurements
     self.assertEqual(len(measurements), 1)
     self.assertEqual(measurements[0].info.name, "measurement info")
 
   def testTestStepAddFile(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       test_run.StartAndRegisterInfos([])
-      with test_run.BeginTestStep("TestStepTest") as step:
+      with results.TestStep("TestStepTest", test_run) as step:
         step.AddFile(
             results_pb2.File(
                 upload_as_name="upload name",
@@ -243,64 +221,63 @@ class TestRunStep(ResultsTestBase):
                 description="description",
                 content_type="content type"))
 
-    files = self.output.model.steps["0"].files
+    files = self.output.test_run.test_steps["0"].files
     self.assertEqual(len(files), 1)
     self.assertEqual(files[0].upload_as_name, "upload name")
 
   def testTestStepAddArtifactExtension(self):
     extension = empty_pb2.Empty()
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       test_run.StartAndRegisterInfos([])
-      with test_run.BeginTestStep("TestStepTest") as step:
+      with results.TestStep("TestStepTest", test_run) as step:
         step.AddArtifactExtension("test extension", extension)
 
-    extensions = self.output.model.steps["0"].artifact_extensions
+    extensions = self.output.test_run.test_steps["0"].artifact_extensions
     self.assertEqual(len(extensions), 1)
     self.assertEqual(extensions[0].name, "test extension")
 
   def testTestStepSkip(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       test_run.StartAndRegisterInfos([])
-      with test_run.BeginTestStep("TestStepTest") as step:
+      with results.TestStep("TestStepTest", test_run) as step:
         self.assertEqual(step.Status(), results_pb2.TestStatus.UNKNOWN)
         step.Skip()
         self.assertEqual(step.Status(), results_pb2.TestStatus.SKIPPED)
 
   def testTestStepDebug(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       test_run.StartAndRegisterInfos([])
-      with test_run.BeginTestStep("TestStepTest") as step:
+      with results.TestStep("TestStepTest", test_run) as step:
         step.LogDebug("A")
         step.LogInfo("B")
         step.LogWarn("C")
         step.LogError("D")
         step.LogFatal("E")
 
-    logs = self.output.model.steps["0"].logs
-    self.assertEqual(len(logs), 5)
-    self.assertEqual(logs[results_pb2.Log.DEBUG][0].text, "A")
-    self.assertEqual(logs[results_pb2.Log.INFO][0].text, "B")
-    self.assertEqual(logs[results_pb2.Log.WARNING][0].text, "C")
-    self.assertEqual(logs[results_pb2.Log.ERROR][0].text, "D")
-    self.assertEqual(logs[results_pb2.Log.FATAL][0].text, "E")
+    logs = self.output.test_run.test_steps["0"].logs
+    self.assertEqual(logs.debug[0].text, "A")
+    self.assertEqual(logs.info[0].text, "B")
+    self.assertEqual(logs.warning[0].text, "C")
+    self.assertEqual(logs.error[0].text, "D")
+    self.assertEqual(logs.fatal[0].text, "E")
 
 
 class TestMeasurementSeries(ResultsTestBase):
 
   def testMeasurementSeriesBegin(self):
-    with results.TestRun("TestRun") as test_run:
+    with self.test_run as test_run:
       dut_info = results.DutInfo("host")
       hw = dut_info.AddHardware(
           text_format.Parse(HWREGISTERED, results_pb2.HardwareInfo()))
       hw_id = hw.Data().hardware_info_id
       test_run.StartAndRegisterInfos([dut_info])
-      with test_run.BeginTestStep("TestMeasurementSeries") as step:
+      with results.TestStep("TestMeasurementSeries", test_run) as step:
         infostr = MEASUREMENTINFO % (hw_id)
         info = text_format.Parse(infostr, results_pb2.MeasurementInfo())
-        with step.BeginMeasurementSeries(hw, info) as measurement_series:
+        with results.MeasurementSeries(hw, info, step) as measurement_series:
           measurement_series.AddElement(struct_pb2.Value(number_value=3.14))
 
-    measurement_series = self.output.model.steps["0"].measurement_series
+    measurement_series = self.output.test_run.test_steps["0"].measurement_series
     self.assertEqual(len(measurement_series), 1)
     series_output = list(measurement_series.values())[0]
     self.assertEqual(series_output.start.info.name, "measurement info")
