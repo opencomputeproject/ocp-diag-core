@@ -18,14 +18,12 @@ namespace ocpdiag::testing {
 // Usage: MyMessage msg = ParseTextProtoOrDie(my_text_proto);
 class ParseTextProtoOrDie {
  public:
-  ParseTextProtoOrDie(std::string text_proto)
-      : text_proto_(std::move(text_proto)) {}
+  ParseTextProtoOrDie(absl::string_view text_proto) : text_proto_(text_proto) {}
 
   template <class T>
   operator T() {
     T message;
-    if (!google::protobuf::TextFormat::ParseFromString(text_proto_,
-                                             &message)) {
+    if (!google::protobuf::TextFormat::ParseFromString(text_proto_, &message)) {
       ADD_FAILURE() << "Failed to parse textproto: " << text_proto_;
       abort();
     }
