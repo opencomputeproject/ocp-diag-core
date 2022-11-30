@@ -8,85 +8,172 @@
 
 #include <cstdlib>
 #include <filesystem>  //
+#include <iostream>
 #include <memory>
+#include <optional>
+#include <ostream>
 
-#include "absl/base/attributes.h"
-#include "absl/base/thread_annotations.h"
-#include "absl/flags/flag.h"
 #include "absl/log/check.h"
-#include "absl/status/status.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
-#include "absl/synchronization/mutex.h"
-#include "ocpdiag/core/results/internal/logging.h"
-#include "ocpdiag/core/results/results.h"
+#include "ocpdiag/core/compat/status_macros.h"
+#include "ocpdiag/core/results/recordio_iterator.h"
+#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/results_model.pb.h"
+#include "ocpdiag/core/testing/file_utils.h"
 
 namespace ocpdiag::results {
 namespace {
+using ::ocpdiag::results_pb::Log;
+using ::ocpdiag::results_pb::OutputArtifact;
+using ::ocpdiag::results_pb::TestRunArtifact;
+using ::ocpdiag::results_pb::TestStepArtifact;
 
-void ClearFile(absl::string_view filename) {
-  if (std::filesystem::exists(filename))
-    CHECK(std::filesystem::remove(filename));
+absl::Status HandleLog(ocpdiag_results_pb::LogsModel &model, const Log &log) {
+  Log *model_log = nullptr;
+  switch (log.severity()) {
+    case Log::DEBUG:
+      model_log = model.add_debug();
+      break;
+    case Log::INFO:
+      model_log = model.add_info();
+      break;
+    case Log::WARNING:
+      model_log = model.add_warning();
+      break;
+    case Log::ERROR:
+      model_log = model.add_error();
+      break;
+    case Log::FATAL:
+      model_log = model.add_fatal();
+      break;
+    default:
+      return absl::UnknownError("Unexpected log severity");
+  }
+  *model_log = log;
+  return absl::OkStatus();
 }
 
-// Use a global variable to ensure we only have exactly one output receiver.
-ABSL_CONST_INIT absl::Mutex mutex(absl::kConstInit);
-bool singleton_initialized ABSL_GUARDED_BY(mutex) = false;
+absl::Status HandleTestRunArtifact(ocpdiag_results_pb::TestRunModel &model,
+                                   const OutputArtifact &artifact) {
+  const TestRunArtifact &test_run = artifact.test_run_artifact();
+  if (test_run.has_test_run_start()) {
+    if (!model.start().name().empty())
+      return absl::UnknownError("Multiple TestRunStart artifacts");
+    *model.mutable_start() = test_run.test_run_start();
+  } else if (test_run.has_test_run_end()) {
+    if (!model.end().name().empty())
+      return absl::UnknownError("Multiple TestRunEnd artifacts");
+    *model.mutable_end() = test_run.test_run_end();
+  } else if (test_run.has_log()) {
+    RETURN_IF_ERROR(HandleLog(*model.mutable_logs(), test_run.log()));
+  } else if (test_run.has_tag()) {
+    *model.add_tags() = test_run.tag();
+  } else if (test_run.has_error()) {
+    *model.add_errors() = test_run.error();
+  }
+  return absl::OkStatus();
+}
+
+absl::Status HandleTestStepArtifact(ocpdiag_results_pb::TestRunModel &model,
+                                    const OutputArtifact &artifact) {
+  const TestStepArtifact &test_step = artifact.test_step_artifact();
+  if (test_step.has_test_step_start()) {
+    ocpdiag_results_pb::TestStepModel &step =
+        (*model.mutable_test_steps())[test_step.test_step_id()];
+    if (!step.start().name().empty()) {
+      return absl::UnknownError(
+          absl::StrFormat("Multiple TestStepStart artifacts for id '%s'",
+                          test_step.test_step_id()));
+    }
+    *step.mutable_start() = test_step.test_step_start();
+    return absl::OkStatus();
+  }
+
+  ocpdiag_results_pb::TestStepModel &step =
+      (*model.mutable_test_steps())[test_step.test_step_id()];
+  if (test_step.has_test_step_end()) {
+    if (!step.end().name().empty()) {
+      return absl::UnknownError(absl::StrFormat(
+          "Multiple TestStepEnd artifacts for '%s'", test_step.test_step_id()));
+    }
+    *step.mutable_end() = test_step.test_step_end();
+  } else if (test_step.has_log()) {
+    RETURN_IF_ERROR(HandleLog(*step.mutable_logs(), test_step.log()));
+  } else if (test_step.has_error()) {
+    *step.add_errors() = test_step.error();
+  } else if (test_step.has_diagnosis()) {
+    *step.add_diagnoses() = test_step.diagnosis();
+  } else if (test_step.has_file()) {
+    *step.add_files() = test_step.file();
+  } else if (test_step.has_extension()) {
+    *step.add_artifact_extensions() = test_step.extension();
+  } else if (test_step.has_measurement()) {
+    *step.add_measurements() = test_step.measurement();
+  } else if (test_step.has_measurement_element()) {
+    auto id = test_step.measurement_element().measurement_series_id();
+    *(*step.mutable_measurement_series())[id].add_measurement_elements() =
+        test_step.measurement_element();
+  } else if (test_step.has_measurement_series_start()) {
+    auto id = test_step.measurement_series_start().measurement_series_id();
+    auto &start = *(*step.mutable_measurement_series())[id].mutable_start();
+    if (!start.measurement_series_id().empty()) {
+      return absl::UnknownError(absl::StrFormat(
+          "Multiple MeasurementSeriesStart artifacts for '%s'", id));
+    }
+    start = test_step.measurement_series_start();
+  } else if (test_step.has_measurement_series_end()) {
+    auto id = test_step.measurement_series_end().measurement_series_id();
+    auto &end = *(*step.mutable_measurement_series())[id].mutable_end();
+    if (!end.measurement_series_id().empty()) {
+      return absl::UnknownError(absl::StrFormat(
+          "Multiple MeasurementSeriesEnd artifacts for '%s'", id));
+    }
+    end = test_step.measurement_series_end();
+  }
+  return absl::OkStatus();
+}
 
 }  // namespace
 
-OutputReceiver::OutputReceiver()
-    : flag_saver_(std::make_unique<absl::FlagSaver>()), filename_([&] {
-        // Try several options until we find a suitable one. The tempdir may be
-        // different depending on environment.
-        std::string path = std::getenv("TEST_TMPDIR");
-        if (path.empty()) path = std::getenv("TMPDIR");
-        if (path.empty()) path = std::filesystem::temp_directory_path();
-        path += "/ocpdiag_output_receiver_tempfile_XXXXXX";
-        CHECK_NE(mkstemp(path.data()), -1) << "Cannot create temp file";
-        return path;
-      }()) {
-  {
-    absl::MutexLock l(&mutex);
-    CHECK(!singleton_initialized)
-        << "Only one output receiver object can be instantiated at a time.";
-    singleton_initialized = true;
+absl::Status AddOutputArtifact(ocpdiag_results_pb::TestRunModel &model,
+                               OutputArtifact artifact) {
+  if (artifact.has_test_run_artifact()) {
+    RETURN_IF_ERROR(HandleTestRunArtifact(model, std::move(artifact)));
+  } else if (artifact.has_test_step_artifact()) {
+    RETURN_IF_ERROR(HandleTestStepArtifact(model, std::move(artifact)));
   }
-
-  // Prepare the output file to receive test data.
-  ClearFile(filename_);
-  absl::SetFlag(&FLAGS_ocpdiag_results_filepath, filename_);
-
-  // Turn off stdout when intercepting the output.
-  absl::SetFlag(&FLAGS_ocpdiag_copy_results_to_stdout, false);
-
-  // Tell the global artifact writer to pick up the new flags.
-  GlobalArtifactWriterManager::Get().SetWriter();
+  return absl::OkStatus();
 }
 
-void OutputReceiver::Close() {
-  if (!flag_saver_) return;  // already closed
-  flag_saver_.reset();
+OutputReceiver::OutputReceiver()
+    : container_([] {
+        std::string path = testutils::MkTempFileOrDie("output_receiver");
 
-  absl::MutexLock l(&mutex);
-  singleton_initialized = false;
-}
+        // Prepare the output file to receive test data.
+        if (std::filesystem::exists(path))
+          CHECK(std::filesystem::remove(path)) << "Cannot remove temp file";
+        return path;
+      }()),
+      artifact_writer_([&] {
+        // Create an artifact writer that outputs to a file, as well as stdout
+        // for easier examination during unit tests.
+        absl::StatusOr<int> fd =
+            internal::OpenAndGetDescriptor(container_.file_path());
+        CHECK_OK(fd.status()) << "Cannot open file";
+        std::ostream *out_stream = nullptr;
+        return std::make_unique<internal::ArtifactWriter>(*fd, out_stream);
+      }()) {}
 
-TestRunOutput OutputReceiver::ConsumeOutputOrDie() {
-  TestRunOutput output;
-  Iterate([&](auto artifact) {
-    CHECK_OK(AddOutputArtifact(output, std::move(artifact)));
-    return true;
-  });
-  return output;
-}
-
-void OutputReceiver::Iterate(const OutputCallback &callback) {
-  CHECK_OK(internal::ParseRecordIo(filename_, callback));
-}
-
-const TestRunOutput &OutputReceiver::model() {
-  if (!output_.has_value()) output_ = ConsumeOutputOrDie();
-  return *output_;
+const ocpdiag_results_pb::TestRunModel &OutputReceiver::test_run() {
+  // Populate the test run output model the first time this is called.
+  if (!model_.has_value()) {
+    model_ = ocpdiag_results_pb::TestRunModel{};
+    for (OutputArtifact artifact : raw()) {
+      CHECK_OK(AddOutputArtifact(*model_, std::move(artifact)));
+    }
+  }
+  return model_.value();
 }
 
 }  // namespace ocpdiag::results
