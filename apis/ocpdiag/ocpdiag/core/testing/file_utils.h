@@ -12,6 +12,10 @@
 
 namespace ocpdiag::testutils {
 
+// Generates a unique temporary file whose name includes the modifier string.
+// Returns the path to this file.
+std::string MkTempFileOrDie(absl::string_view modifier);
+
 // Retrieves the full path of a test dependency file in the source tree.
 std::string GetDataDependencyFilepath(absl::string_view file);
 
