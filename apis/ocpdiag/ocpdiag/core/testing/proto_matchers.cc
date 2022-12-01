@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <string>
 
-#include "google/protobuf/io/tokenizer.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
@@ -17,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "google/protobuf/io/tokenizer.h"
 
 namespace ocpdiag::testing::internal {
 
