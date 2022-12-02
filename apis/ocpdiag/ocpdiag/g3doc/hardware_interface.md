@@ -31,7 +31,7 @@ The diagram above describes the workflow of using a Hardware Abstraction Layer
 2.  HAL receives the configuration and returns a client for the test to use.
 3.  The test sends `Get<Resource>InfoRequest` to HAL.
 4.  HAL returns `Get<Resouce>InfoResponse` to the test
-    *   Based on the configuraion, HAL uses different backends to query
+    *   Based on the configuration, HAL uses different backends to query
         information for this `<Resource>`
     *   Our current backends include `HOST`, `REDFISH`,
         `BMC_DIAGNOSTIC_INTERFACE`.
