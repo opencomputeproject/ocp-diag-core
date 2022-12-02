@@ -25,10 +25,6 @@ namespace ocpdiag {
 namespace results {
 namespace testonly {
 
-using ::testing::_;
-
-static constexpr char kFakeId[] = "fake_id";
-
 // Can be used for interaction testing and injecting failure scenarios.
 //
 // DEPRECATED - Use result objects directly now.
@@ -56,7 +52,7 @@ class MockTestRun : public TestRun {
  public:
   // `name`: a descriptive name for your test.
   // `json_out`: you may inject an output stream for artifact validation.
-  MockTestRun(std::string name = "mock_test_run")
+  MockTestRun(absl::string_view name = "mock_test_run")
       : TestRun([&] {
           // Disable singleton enforcement when using the mock.
           TestRun::SetEnforceSingleton(false);
@@ -103,11 +99,12 @@ class MockTestStep : public TestStep {
  public:
   // `name`: a descriptive name for your step.
   // `json_out`: you may inject an output stream for artifact validation.
-  MockTestStep(std::string name = "mock_test_step") : TestStep() {}
+  MockTestStep(absl::string_view name = "mock_test_step") : TestStep() {}
 
   MOCK_METHOD(void, AddDiagnosis,
-              (ocpdiag::results_pb::Diagnosis::Type, std::string,
-               std::string, absl::Span<const HwRecord>),
+              (ocpdiag::results_pb::Diagnosis::Type,
+               absl::string_view, absl::string_view,
+               absl::Span<const HwRecord>),
               (override));
 
   MOCK_METHOD(void, AddError,
@@ -115,17 +112,17 @@ class MockTestStep : public TestStep {
                absl::Span<const SwRecord>),
               (override));
 
-  MOCK_METHOD(void, AddMeasurement,
+  MOCK_METHOD(bool, AddMeasurement,
               (ocpdiag::results_pb::MeasurementInfo,
                ocpdiag::results_pb::MeasurementElement,
-               const HwRecord*),
+               const HwRecord*, bool enforce_constraints),
               (override));
 
   MOCK_METHOD(void, AddFile, (ocpdiag::results_pb::File),
               (override));
 
-  MOCK_METHOD(void, AddArtifactExtension, (std::string, const google::protobuf::Message&),
-              (override));
+  MOCK_METHOD(void, AddArtifactExtension,
+              (absl::string_view, const google::protobuf::Message&), (override));
 
   MOCK_METHOD(void, End, (), (override));
 
@@ -155,13 +152,14 @@ class MockMeasurementSeries : public MeasurementSeries {
 
   MOCK_METHOD(void, AddElement, (google::protobuf::Value), (override));
 
-  MOCK_METHOD(void, AddElementWithRange,
-              (google::protobuf::Value,
-               ocpdiag::results_pb::MeasurementElement::Range),
-              (override));
+  MOCK_METHOD(
+      bool, AddElementWithRange,
+      (const google::protobuf::Value&,
+       const ocpdiag::results_pb::MeasurementElement::Range&),
+      (override));
 
-  MOCK_METHOD(void, AddElementWithValues,
-              (google::protobuf::Value,
+  MOCK_METHOD(bool, AddElementWithValues,
+              (const google::protobuf::Value&,
                absl::Span<const google::protobuf::Value> valid_values),
               (override));
 
