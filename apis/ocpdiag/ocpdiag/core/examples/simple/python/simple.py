@@ -16,6 +16,9 @@ from google.protobuf import struct_pb2
 from google.protobuf import json_format
 from google.protobuf import text_format
 from ocpdiag.core.examples.simple import params_pb2
+from ocpdiag.core.hwinterface import cpu_pb2
+from ocpdiag.core.hwinterface import service_pb2
+from ocpdiag.core.hwinterface.client.python import node_client
 from ocpdiag.core.params import utils
 from ocpdiag.core.results import results_pb2
 from ocpdiag.core.results.python import results
@@ -50,30 +53,15 @@ def main(argv) -> None:  # pylint: disable=unused-argument
   hw_record = dut_info.AddHardware(hw_info)
   runner.StartAndRegisterInfos([dut_info], params)
 
-  # Make a DutInfo with HW, but forget to register it
-  unused_dut_info = results.DutInfo("UnregisteredHost")
-  bad_hw_info = results_pb2.HardwareInfo(
-      arena="badArena",
-      name="badName",
-      manufacturer="badManufacturer",
-      mfg_part_number="badMfgPartNum",
-      part_type="badPartType")
-  unregistered_record = unused_dut_info.AddHardware(bad_hw_info)
-
   try:
     step = results.BeginTestStep(runner, "MyStep")
   except error.StatusNotOk as e:
     runner.AddError("my_test-procedural-error", e)
     return
 
-  # Demonstrate Diagnosis with good/bad HwRecord
-  #
-  # Adding one registered HwRecord, and one unregistered.
-  # This will illustrate that using an unregistered HwRecord
-  # emits an Error artifact and the HwRecord will not be
-  # referenced in the Diagnosis result
+  # Demonstrate Diagnosis with a HwRecord
   step.AddDiagnosis(results_pb2.Diagnosis.PASS, "my_test-good-myHardware",
-                    "my hardware is good!", [hw_record, unregistered_record])
+                    "my hardware is good!", [hw_record])
 
   # Demonstrate MeasurementSeries
   meas_info = results_pb2.MeasurementInfo(
@@ -97,6 +85,47 @@ def main(argv) -> None:  # pylint: disable=unused-argument
   except error.StatusNotOk as e:
     print(e, file=sys.stderr)
     return
+
+  try:
+    service_client_step = results.BeginTestStep(runner, "MyNodeClientStep")
+  except error.StatusNotOk as e:
+    runner.AddError("service_client_step-procedural-error", e)
+    return
+
+  try:
+    client = node_client.Create()
+  except error.StatusNotOk as e:
+    service_client_step.AddError(
+        "service_client_step-procedural-error",
+        "Failed to create service client: {0}".format(e), [])
+    return
+
+  cpu_info_req = service_pb2.GetCpuInfoRequest()
+  cpu_info_req.info_types.append(cpu_pb2.InfoType.TOPOLOGY)
+
+  try:
+    resp = client.GetCpuInfo(cpu_info_req)
+  except error.StatusNotOk as e:
+    service_client_step.AddError("service_client_step-procedural-error",
+                                 "Failed to get cpu info: {0}".format(e), [])
+    return
+
+  service_client_step.LogInfo(
+      text_format.MessageToString(
+          resp,
+          as_one_line=True,
+      ))
+
+  if resp.info.topology.sockets_enabled > 0:
+    service_client_step.AddDiagnosis(results_pb2.Diagnosis.PASS,
+                                     "MyNodeClientStep-good-result",
+                                     "Result of GetCpuInfo is good!", [])
+  else:
+    service_client_step.AddDiagnosis(
+        results_pb2.Diagnosis.FAIL, "MyNodeClientStep-bad-result",
+        "Unable to get cpu info. No CPU sockets detected.", [])
+  service_client_step.End()
+
 
 if __name__ == "__main__":
   app.run(main)
