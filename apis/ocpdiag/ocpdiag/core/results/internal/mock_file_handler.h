@@ -12,8 +12,8 @@
 
 #include "gmock/gmock.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/mock_remote.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/mock_remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/remote.h"
 #include "ocpdiag/core/results/internal/file_handler.h"
 
 namespace ocpdiag {
