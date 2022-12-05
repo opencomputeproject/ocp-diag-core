@@ -12,7 +12,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/remote.h"
 #include "ocpdiag/core/results/results.pb.h"
 
 namespace ocpdiag {
