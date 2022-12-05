@@ -12,13 +12,22 @@
 #include "google/protobuf/empty.pb.h"
 #include "google/protobuf/struct.pb.h"
 #include "absl/flags/flag.h"
-#include "ocpdiag/core/results/output_receiver.h"
+#include "ocpdiag/core/results/internal/logging.h"
 #include "ocpdiag/core/results/results.pb.h"
 #include "pybind11_abseil/absl_casters.h"
 #include "pybind11_abseil/status_casters.h"
 #include "pybind11_protobuf/native_proto_caster.h"
 
 namespace ocpdiag::results {
+namespace {
+
+// Converts a Python iterable container to a std::vector for C++ interop.
+template <class T>
+std::vector<T> IterableToVector(pybind11::iterable container) {
+  std::vector<T> records;
+  for (auto raw : container) records.push_back(raw.cast<T>());
+  return records;
+}
 
 void SetFlags(const bool ocpdiag_copy_results_to_stdout,
               const std::string ocpdiag_results_filepath,
@@ -33,6 +42,8 @@ void SetFlags(const bool ocpdiag_copy_results_to_stdout,
   absl::SetFlag(&FLAGS_ocpdiag_strict_reporting, ocpdiag_strict_reporting);
 }
 
+}  // namespace
+
 PYBIND11_MODULE(_results, m) {
   pybind11::google::ImportStatusModule();
   pybind11_protobuf::ImportNativeProtoCasters();
@@ -44,12 +55,21 @@ PYBIND11_MODULE(_results, m) {
   // DEPRECATED: Use TestRun().
   m.def(
       "InitTestRun",
-      [](const std::string& name) {
+      [](const std::string& name) -> absl::StatusOr<std::shared_ptr<TestRun>> {
         return ResultApi().InitializeTestRun(name);
       },
       pybind11::arg("name"));
-  pybind11::class_<TestRun>(m, "TestRun")
-      .def(pybind11::init<absl::string_view>())
+  pybind11::class_<internal::ArtifactWriter> artifact_writer(m,
+                                                             "ArtifactWriter");
+  pybind11::class_<TestRun, std::shared_ptr<TestRun>>(m, "TestRun")
+      .def(pybind11::init(
+               // The constructor allows optionally injecting an artifactwriter.
+               [](absl::string_view name, internal::ArtifactWriter* writer) {
+                 if (writer) return std::make_unique<TestRun>(name, *writer);
+                 return std::make_unique<TestRun>(name);
+               }),
+           pybind11::arg("name"),
+           pybind11::arg("writer").none(true) = pybind11::none())
       .def(
           "StartAndRegisterInfos",
           [](TestRun& a, absl::Span<const DutInfo> dutinfos,
@@ -62,7 +82,6 @@ PYBIND11_MODULE(_results, m) {
           },
           pybind11::arg("dutinfos"),
           pybind11::arg("params").none(true) = pybind11::none())
-      .def("BeginTestStep", &TestRun::BeginTestStep, pybind11::arg("name"))
       .def("End", [](TestRun& a) { return static_cast<int>(a.End()); })
       .def("Skip", [](TestRun& a) { return static_cast<int>(a.Skip()); })
       .def("AddError", &TestRun::AddError)
@@ -90,25 +109,32 @@ PYBIND11_MODULE(_results, m) {
       pybind11::arg("parent"), pybind11::arg("name"));
 
   pybind11::class_<TestStep>(m, "TestStep")
-      .def("BeginMeasurementSeries", &TestStep::BeginMeasurementSeries,
-           pybind11::arg("hwrec"), pybind11::arg("info"))
+      .def(pybind11::init<absl::string_view, TestRun&>(), pybind11::arg("name"),
+           pybind11::arg("test_run"))
       .def(
           "AddDiagnosis",
-          [](TestStep& a, const int symptom_type, std::string symptom,
-             std::string message, absl::Span<const HwRecord> records) {
-            return a.AddDiagnosis(
+          [](TestStep& self, const int symptom_type, std::string symptom,
+             std::string message, pybind11::iterable records) {
+            return self.AddDiagnosis(
                 ocpdiag::results_pb::Diagnosis::Type(symptom_type),
-                symptom, message, records);
+                symptom, message, IterableToVector<HwRecord>(records));
           },
           pybind11::arg("type"), pybind11::arg("symptom"),
           pybind11::arg("message"),
           pybind11::arg("records") = absl::Span<const HwRecord>{})
-      .def("AddError", &TestStep::AddError, pybind11::arg("symptom"),
-           pybind11::arg("message"),
-           pybind11::arg("records") = absl::Span<const SwRecord>{})
+      .def(
+          "AddError",
+          [](TestStep& self, absl::string_view symptom,
+             absl::string_view message, pybind11::iterable records) {
+            self.AddError(symptom, message,
+                          IterableToVector<SwRecord>(records));
+          },
+          pybind11::arg("symptom"), pybind11::arg("message"),
+          pybind11::arg("records") = absl::Span<const SwRecord>{})
       .def("AddMeasurement", &TestStep::AddMeasurement, pybind11::arg("info"),
            pybind11::arg("elem"),
-           pybind11::arg("hwRecord").none(true) = pybind11::none())
+           pybind11::arg("hwRecord").none(true) = pybind11::none(),
+           pybind11::arg("enforce_constraints") = true)
       .def("AddFile", &TestStep::AddFile)
       .def("AddArtifactExtension", &TestStep::AddArtifactExtension)
       .def("LogDebug", &TestStep::LogDebug)
@@ -146,6 +172,13 @@ PYBIND11_MODULE(_results, m) {
       pybind11::arg("parent"), pybind11::arg("hwrecord"),
       pybind11::arg("info"));
   pybind11::class_<MeasurementSeries>(m, "MeasurementSeries")
+      .def(pybind11::init<
+               const HwRecord&,
+               const ocpdiag::results_pb::MeasurementInfo&,
+               TestStep&, bool>(),
+           pybind11::arg("hwrec"), pybind11::arg("info"),
+           pybind11::arg("test_step"),
+           pybind11::arg("enforce_constraints") = true)
       .def("AddElement",
            static_cast<void (MeasurementSeries::*)(google::protobuf::Value)>(
                &MeasurementSeries::AddElement),
@@ -160,18 +193,6 @@ PYBIND11_MODULE(_results, m) {
       .def("__enter__", [](MeasurementSeries* self) { return self; })
       .def("__exit__",
            [](MeasurementSeries* self, pybind11::args) { self->End(); });
-
-  // Define the output receiver in this module, because it needs to update the
-  // TestRun flags. In open-source builds it will be unable to modify these
-  // flags if defined in a different pybind module.
-  //
-  pybind11::class_<OutputReceiver>(m, "OutputReceiver")
-      .def(pybind11::init())
-      .def("__enter__", [](OutputReceiver* self) { return self; })
-      .def("__exit__",
-           [](OutputReceiver* self, pybind11::args) { self->Close(); })
-      .def("Iterate", &OutputReceiver::Iterate, pybind11::arg("callback"))
-      .def_property_readonly("model", &OutputReceiver::model);
 }
 
 }  // namespace ocpdiag::results
