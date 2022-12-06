@@ -3,7 +3,7 @@
 
 
 <!--*
-freshness: { owner: 'yuanlinw' reviewed: '2022-03-22' }
+freshness: { owner: 'yuanlinw' reviewed: '2022-11-29' }
 *-->
 
 OCPDiag is an open and multi-node friendly hardware diagnostics framework. The
@@ -32,7 +32,7 @@ the test and collect its results.
 OCPDiag focuses on three main topics: Parameter Model, Results Model, and
 Hardware Interface.
 
-This documentation provides schema specificaton, reference implementation, and
+This documentation provides schema specification, reference implementation, and
 example usage for each of these topics. Each set of the core libraries can be
 imported individually without affecting the usages of other subdomains.
 
