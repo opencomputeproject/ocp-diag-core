@@ -46,9 +46,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_absl",
-        url = "https://github.com/abseil/abseil-cpp/archive/92fdbfb301f8b301b28ab5c99e7361e775c2fb8a.zip",  # 2022-08-25
-        strip_prefix = "abseil-cpp-92fdbfb301f8b301b28ab5c99e7361e775c2fb8a",
-        sha256 = "feea6e761ab9df667f054531b4e4d5d143eaa78f2c40dbf5ba45289142cbcc1d",
+        url = "https://github.com/abseil/abseil-cpp/archive/64f00b1f4a064e9e140fc4642ccd55c9c2e2e365.zip",  # 2022-11-08
+        strip_prefix = "abseil-cpp-64f00b1f4a064e9e140fc4642ccd55c9c2e2e365",
+        sha256 = "e7c605119f5aefdf3cd0159f2cbc439c2f7d614c99758be32e0258d49201fc4e",
     )
 
     maybe(
@@ -153,15 +153,15 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_ecclesia",
-        url = "https://github.com/google/ecclesia-machine-management/archive/92ae4d367c7a3a892bf672cdca424b75677c2bb2.zip",  # 2022-08-10
-        strip_prefix = "ecclesia-machine-management-92ae4d367c7a3a892bf672cdca424b75677c2bb2",
-        sha256 = "92d1acae14262951e0b0c8c7c7c34996353548921008d3e6f59f2d0d0ec123c3",
+        url = "https://github.com/google/ecclesia-machine-management/archive/906858282090dcd9d5cbbde146dc8f770dbe8d07.zip",  # 2022-12-01
+        strip_prefix = "ecclesia-machine-management-906858282090dcd9d5cbbde146dc8f770dbe8d07",
+        sha256 = "f5fc3ce7117c11f6dfe025add386cbbff569066939b081cadb51886608915064",
     )
 
     maybe(
         http_archive,
         "com_google_riegeli",
-        url = "https://github.com/google/riegeli/archive/a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c.tar.gz",
-        strip_prefix = "riegeli-a54f5d2f5cd7fdbd6f037d1ef945f6339da80c0c",
-        sha256 = "69046b1dc669ebebb7ea20b8f88dc92d869b61e20ac872882afc54f4ce88059f",
+        url = "https://github.com/google/riegeli/archive/2dafef562cbeab6d2a2b8fee6d605422ee71a30b.tar.gz",  # 2022-11-21
+        strip_prefix = "riegeli-2dafef562cbeab6d2a2b8fee6d605422ee71a30b",
+        sha256 = "8142f7538e271160ad968e251e1afed933a6a10b9499f0ef46acb8c7ba7c81c1",
     )
