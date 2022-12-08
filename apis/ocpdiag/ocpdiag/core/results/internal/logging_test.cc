@@ -27,7 +27,6 @@
 #include "ocpdiag/core/results/results.pb.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"
-#include "riegeli/base/base.h"
 #include "riegeli/bytes/fd_reader.h"
 #include "riegeli/records/record_reader.h"
 
