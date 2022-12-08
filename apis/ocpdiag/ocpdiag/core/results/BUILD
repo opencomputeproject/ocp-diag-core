@@ -30,11 +30,30 @@ py_proto_library(
     deps = [":results_proto"],
 )
 
+proto_library(
+    name = "results_model_proto",
+    srcs = ["results_model.proto"],
+    deps = [
+        ":results_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "results_model_cc_proto",
+    deps = [":results_model_proto"],
+)
+
+py_proto_library(
+    name = "results_model_py_pb2",
+    deps = [":results_model_proto"],
+)
+
 cc_library(
     name = "results",
     srcs = ["results.cc"],
     hdrs = ["results.h"],
     deps = [
+        ":calculator",
         ":results_cc_proto",
         "//ocpdiag/core/compat:status_macros",
         "//ocpdiag/core/params:utils",
@@ -64,6 +83,7 @@ cc_test(
     name = "results_test",
     srcs = ["results_test.cc"],
     deps = [
+        ":recordio_iterator",
         ":results",
         ":results_cc_proto",
         "//ocpdiag/core/compat:status_converters",
@@ -86,53 +106,20 @@ cc_test(
 )
 
 cc_library(
-    name = "output_model",
-    srcs = ["output_model.cc"],
-    hdrs = ["output_model.h"],
-    deps = [
-        ":results_cc_proto",
-        "//ocpdiag/core/compat:status_macros",
-        "@com_google_absl//absl/cleanup",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/functional:bind_front",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-    ],
-)
-
-cc_test(
-    name = "output_model_test",
-    srcs = [
-        "output_model_test.cc",
-    ],
-    deps = [
-        ":output_model",
-        ":results_cc_proto",
-        "//ocpdiag/core/testing:parse_text_proto",
-        "//ocpdiag/core/testing:status_matchers",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "output_receiver",
+    testonly = 1,
     srcs = ["output_receiver.cc"],
     hdrs = ["output_receiver.h"],
     deps = [
-        ":output_model",
-        ":results",
+        ":recordio_iterator",
         ":results_cc_proto",
+        ":results_model_cc_proto",
+        "//ocpdiag/core/compat:status_macros",
         "//ocpdiag/core/results/internal:logging",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:reflection",
-        "@com_google_absl//absl/functional:bind_front",
+        "//ocpdiag/core/testing:file_utils",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/synchronization",
     ],
 )
 
@@ -145,8 +132,58 @@ cc_test(
         ":output_receiver",
         ":results",
         ":results_cc_proto",
-        "//ocpdiag/core/compat:status_macros",
+        ":results_model_cc_proto",
+        "//ocpdiag/core/testing:parse_text_proto",
         "//ocpdiag/core/testing:status_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "recordio_iterator",
+    testonly = 1,
+    hdrs = ["recordio_iterator.h"],
+    deps = [
+        "@com_google_absl//absl/log:check",
+        "@com_google_riegeli//riegeli/bytes:fd_reader",
+        "@com_google_riegeli//riegeli/records:record_reader",
+    ],
+)
+
+cc_test(
+    name = "recordio_iterator_test",
+    srcs = [
+        "recordio_iterator_test.cc",
+    ],
+    deps = [
+        ":recordio_iterator",
+        ":results_cc_proto",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_riegeli//riegeli/bytes:fd_writer",
+        "@com_google_riegeli//riegeli/records:record_writer",
+    ],
+)
+
+cc_library(
+    name = "calculator",
+    srcs = ["calculator.cc"],
+    hdrs = ["calculator.h"],
+    deps = [
+        ":results_cc_proto",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "calculator_test",
+    srcs = [
+        "calculator_test.cc",
+    ],
+    deps = [
+        ":calculator",
+        ":results_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],
 )
