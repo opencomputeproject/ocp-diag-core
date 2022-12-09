@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <string>
 
-#include "google/protobuf/io/tokenizer.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
@@ -17,41 +16,40 @@
 #include "gtest/gtest.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "google/protobuf/io/tokenizer.h"
 
 namespace ocpdiag::testing::internal {
-
-using absl::string_view;
-using std::string;
 
 // Utilities.
 
 class StringErrorCollector : public google::protobuf::io::ErrorCollector {
  public:
-  explicit StringErrorCollector(string* error_text) : error_text_(error_text) {}
+  explicit StringErrorCollector(std::string* error_text)
+      : error_text_(error_text) {}
 
-  void AddError(int line, int column, const string& message) override {
+  void AddError(int line, int column, const std::string& message) override {
     absl::SubstituteAndAppend(error_text_, "$0($1): $2\n", line, column,
-                              message.c_str());
+                              message);
   }
 
-  void AddWarning(int line, int column, const string& message) override {
+  void AddWarning(int line, int column, const std::string& message) override {
     absl::SubstituteAndAppend(error_text_, "$0($1): $2\n", line, column,
-                              message.c_str());
+                              message);
   }
 
  private:
-  string* error_text_;
+  std::string* error_text_;
   StringErrorCollector(const StringErrorCollector&) = delete;
   StringErrorCollector& operator=(const StringErrorCollector&) = delete;
 };
 
-bool ParsePartialFromAscii(const string& pb_ascii, google::protobuf::Message* proto,
-                           string* error_text) {
+bool ParsePartialFromAscii(absl::string_view pb_ascii, google::protobuf::Message* proto,
+                           std::string* error_text) {
   google::protobuf::TextFormat::Parser parser;
   StringErrorCollector collector(error_text);
   parser.RecordErrorsTo(&collector);
   parser.AllowPartialMessage(true);
-  return parser.ParseFromString(pb_ascii, proto);
+  return parser.ParseFromString(std::string(pb_ascii), proto);
 }
 
 // Returns true iff p and q can be compared (i.e. have the same descriptor).
@@ -60,10 +58,11 @@ bool ProtoComparable(const google::protobuf::Message& p, const google::protobuf:
 }
 
 template <typename Container>
-string JoinStringPieces(const Container& strings, string_view separator) {
+std::string JoinStringPieces(const Container& strings,
+                             absl::string_view separator) {
   std::stringstream stream;
-  string_view sep = "";
-  for (const string_view str : strings) {
+  absl::string_view sep = "";
+  for (const absl::string_view str : strings) {
     stream << sep << str;
     sep = separator;
   }
@@ -73,13 +72,14 @@ string JoinStringPieces(const Container& strings, string_view separator) {
 // Find all the descriptors for the ingore_fields.
 std::vector<const google::protobuf::FieldDescriptor*> GetFieldDescriptors(
     const google::protobuf::Descriptor* proto_descriptor,
-    const std::vector<string>& ignore_fields) {
+    const std::vector<std::string>& ignore_fields) {
   std::vector<const google::protobuf::FieldDescriptor*> ignore_descriptors;
-  std::vector<string_view> remaining_descriptors;
+  std::vector<absl::string_view> remaining_descriptors;
 
   const google::protobuf::DescriptorPool* pool = proto_descriptor->file()->pool();
-  for (const string& name : ignore_fields) {
-    if (const google::protobuf::FieldDescriptor* field = pool->FindFieldByName(name)) {
+  for (absl::string_view name : ignore_fields) {
+    auto* field = pool->FindFieldByName(std::string(name));
+    if (field != nullptr) {
       ignore_descriptors.push_back(field);
     } else {
       remaining_descriptors.push_back(name);
@@ -96,7 +96,7 @@ std::vector<const google::protobuf::FieldDescriptor*> GetFieldDescriptors(
 // Sets the ignored fields corresponding to ignore_fields in differencer. Dies
 // if any is invalid.
 void SetIgnoredFieldsOrDie(const google::protobuf::Descriptor& root_descriptor,
-                           const std::vector<string>& ignore_fields,
+                           const std::vector<std::string>& ignore_fields,
                            google::protobuf::util::MessageDifferencer* differencer) {
   if (!ignore_fields.empty()) {
     std::vector<const google::protobuf::FieldDescriptor*> ignore_descriptors =
@@ -196,29 +196,29 @@ bool ProtoCompare(const internal::ProtoComparison& comp,
 }
 
 // Describes the types of the expected and the actual protocol buffer.
-string DescribeTypes(const google::protobuf::Message& expected,
-                     const google::protobuf::Message& actual) {
+std::string DescribeTypes(const google::protobuf::Message& expected,
+                          const google::protobuf::Message& actual) {
   return "whose type should be " + expected.GetDescriptor()->full_name() +
          " but actually is " + actual.GetDescriptor()->full_name();
 }
 
 // Prints the protocol buffer pointed to by proto.
-string PrintProtoPointee(const google::protobuf::Message* proto) {
+std::string PrintProtoPointee(const google::protobuf::Message* proto) {
   if (proto == NULL) return "";
 
   return "which points to " + ::testing::PrintToString(*proto);
 }
 
 // Describes the differences between the two protocol buffers.
-string DescribeDiff(const internal::ProtoComparison& comp,
-                    const google::protobuf::Message& actual,
-                    const google::protobuf::Message& expected) {
+std::string DescribeDiff(const internal::ProtoComparison& comp,
+                         const google::protobuf::Message& actual,
+                         const google::protobuf::Message& expected) {
   google::protobuf::util::MessageDifferencer differencer;
   google::protobuf::util::DefaultFieldComparator field_comparator;
   ConfigureDifferencer(comp, &field_comparator, &differencer,
                        actual.GetDescriptor());
 
-  string diff;
+  std::string diff;
   differencer.ReportDifferencesToString(&diff);
 
   // We must put 'expected' as the first argument here, as Compare()
