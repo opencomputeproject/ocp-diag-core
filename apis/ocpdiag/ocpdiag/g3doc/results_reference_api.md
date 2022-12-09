@@ -1,7 +1,7 @@
 # OCPDiag result generation API codelab
 
 <!--*
-freshness: { owner: 'viel' reviewed: '2021-09-20' }
+freshness: { owner: 'karagog' reviewed: '2022-11-29' }
 *-->
 
 
@@ -18,7 +18,7 @@ To learn how to write unit-tests for this library, see
 ## Glossary
 
 **FRU**
-:   Field-Replaceable Unit: Hardware components that datacenter techs can swap
+:   Field-Replaceable Unit: Hardware components that data center techs can swap
     out (in contrast to embedded components).
 
 ## API structure and semantics
@@ -82,7 +82,7 @@ A `HwRecord` can only be constructed by passing a HardwareInfo proto to
 must keep track of these records for later use in diagnostic result emissions.
 Performing a diagnosis without any associated hardware info is not useful.
 
-**Question**: Why can’t I just gather the hardware information when I actually
+**Question**: Why can't I just gather the hardware information when I actually
 need it for a Diagnosis? \
 **Answer**: In order to diagnose machines that panic, shut down, or are left in
 a bad-state during testing, you need to inform the OCPDiag Data Schema what
@@ -131,7 +131,7 @@ can trigger changes in the Result and/or Status:
     *   `TestResult` is set to `NOT_APPLICABLE`. ***This takes precedence over
         `Fail diagnoses and Skips`***.
 
-NOTE: Don’t confuse `TestRun/TestStep::AddError(...)` with
+NOTE: Don't confuse `TestRun/TestStep::AddError(...)` with
 `TestRun/TestStep::LogError(...)` - the latter are for Log artifacts and do not
 affect the test result.
 
@@ -178,14 +178,14 @@ int main(int argc, char* argv[]) {
   }
 ```
 
-1.  **Initialize the TestRun:** State this immediately after InitGoogle(). Use
+1.  **Initialize the TestRun:** State this immediately after `InitGoogle()`. Use
     the TestRun object for emitting Error artifacts in case anything goes wrong
     before the code reaches the diagnostic phase.
 1.  **Parse the input parameters:** These define how your OCPDiag test is
     customized at runtime. Parsing should happen *after* TestRun initialization
     in case there is a problem parsing the parameters; you can see this with
     `test_run->AddError`. The Error artifact is superior to writing a generic
-    message to STDERR, as it povides information about what went wrong instead
+    message to STDERR, as it provides information about what went wrong instead
     of only a statement that the test returned a non-zero exit code.
 
 ### Chunk 2: Host and hardware info gathering
