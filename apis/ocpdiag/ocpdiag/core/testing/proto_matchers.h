@@ -18,6 +18,7 @@
 #include "google/protobuf/util/message_differencer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/string_view.h"
 
 namespace ocpdiag::testing {
 
@@ -87,14 +88,14 @@ const bool kMayBeUninitialized = false;
 
 // Parses the TextFormat representation of a protobuf, allowing required fields
 // to be missing.  Returns true iff successful.
-bool ParsePartialFromAscii(const std::string& pb_ascii, google::protobuf::Message* proto,
+bool ParsePartialFromAscii(absl::string_view pb_ascii, google::protobuf::Message* proto,
                            std::string* error_text);
 
 // Returns a protobuf of type Proto by parsing the given TextFormat
 // representation of it.  Required fields can be missing, in which case the
 // returned protobuf will not be fully initialized.
 template <class Proto>
-Proto MakePartialProtoFromAscii(const std::string& str) {
+Proto MakePartialProtoFromAscii(absl::string_view str) {
   Proto proto;
   std::string error_text;
   ASSERT_TRUE(ParsePartialFromAscii(str, &proto, &error_text))
@@ -118,7 +119,7 @@ bool ProtoCompare(const ProtoComparison& comp, const google::protobuf::Message& 
 // tests will be run.
 template <typename Proto>
 inline bool ProtoCompare(const ProtoComparison& comp, const Proto& actual,
-                         const std::string& expected) {
+                         absl::string_view expected) {
   return ProtoCompare(comp, actual, MakePartialProtoFromAscii<Proto>(expected));
 }
 
@@ -340,7 +341,7 @@ class ProtoMatcher : public ProtoMatcherBase {
 class ProtoStringMatcher : public ProtoMatcherBase {
  public:
   ProtoStringMatcher(
-      const std::string&
+      absl::string_view
           expected,              // The text representing the expected protobuf.
       bool must_be_initialized,  // Must the argument be fully initialized?
       const ProtoComparison comp)  // How to compare the two protobufs.
@@ -512,14 +513,14 @@ inline internal::PolymorphicProtoMatcher EqualsProto(const google::protobuf::Mes
       internal::ProtoMatcher(x, internal::kMayBeUninitialized, comp));
 }
 inline ::testing::PolymorphicMatcher<internal::ProtoStringMatcher> EqualsProto(
-    const std::string& x) {
+    absl::string_view x) {
   internal::ProtoComparison comp;
   comp.field_comp = internal::kProtoEqual;
   return ::testing::MakePolymorphicMatcher(
       internal::ProtoStringMatcher(x, internal::kMayBeUninitialized, comp));
 }
 template <class Proto>
-inline internal::PolymorphicProtoMatcher EqualsProto(const std::string& str) {
+inline internal::PolymorphicProtoMatcher EqualsProto(absl::string_view str) {
   return EqualsProto(internal::MakePartialProtoFromAscii<Proto>(str));
 }
 
@@ -533,14 +534,14 @@ inline internal::PolymorphicProtoMatcher EquivToProto(
       internal::ProtoMatcher(x, internal::kMayBeUninitialized, comp));
 }
 inline ::testing::PolymorphicMatcher<internal::ProtoStringMatcher> EquivToProto(
-    const std::string& x) {
+    absl::string_view x) {
   internal::ProtoComparison comp;
   comp.field_comp = internal::kProtoEquiv;
   return ::testing::MakePolymorphicMatcher(
       internal::ProtoStringMatcher(x, internal::kMayBeUninitialized, comp));
 }
 template <class Proto>
-inline internal::PolymorphicProtoMatcher EquivToProto(const std::string& str) {
+inline internal::PolymorphicProtoMatcher EquivToProto(absl::string_view str) {
   return EquivToProto(internal::MakePartialProtoFromAscii<Proto>(str));
 }
 
