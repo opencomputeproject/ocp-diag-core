@@ -39,3 +39,35 @@ def get_params_version_command():
     fi
     echo "constexpr char kVersionString[] = \\"$$version\\";" >> $@
     """.format(version_file_path, key)
+
+def get_source_infomation_command():
+    """Generates a command that creates the OCPDiag source information for debian package.
+
+    This is done by extracting the source information from the build workspace and then
+    write it to the debian version file.
+
+    Returns:
+        A bash script that create the source information as a string to be included
+        in a genrule.
+    """
+    if is_bazel():
+        key = "BUILD_PARAMS_VERSION"
+        source = "Gerrit"
+        version_file_path = "bazel-out/volatile-status.txt"
+    else:
+        key = "BUILD_CHANGELIST"
+        source = "Google3"
+        version_file_path = "blaze-out/build-changelist.txt"
+
+    # Note that awk command returns the value from the key-value pair
+    # containing the version
+    return """
+    key_val_pair=`cat {} | grep "{}" || true`
+    if [ -n "$$key_val_pair" ]
+    then
+        version=`echo "$$key_val_pair" | awk '{{printf $$2}}'`
+    else
+        version="UNKNOWN"
+    fi
+    echo "Source: {}\nChange: $$version" >> $@
+    """.format(version_file_path, key, source)

@@ -9,6 +9,7 @@
 load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
 load("@rules_pkg//:providers.bzl", "PackageFilegroupInfo", "PackageFilesInfo", "PackageSymlinkInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("//ocpdiag:params_version.bzl", "get_source_infomation_command")
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 _OCPDIAG_WORKSPACE = "ocpdiag"
@@ -146,12 +147,20 @@ def ocpdiag_ovss_tar(name, ocpdiag_test, **kwargs):
         **kwargs
     )
 
+_all_deb_arches = ["k8", "arm"]
+
+_deb_cpu_names = {
+    "k8": "amd64",
+    "arm": "arm64",
+}
+
 def ocpdiag_ovss_debian(
         name,
         test_name,
         binary,
-        version,
         description,
+        version,
+        architectures = _all_deb_arches,
         params_proto = _DEFAULT_PROTO,
         json_defaults = None):
     """Packages a ocpdiag binary into debian packages for release in OVSS.
@@ -164,35 +173,56 @@ def ocpdiag_ovss_debian(
       name: Name of debian package build rule.
       test_name: The name of the OCPDiag test.
       binary: The executable program for the ocpdiag test, including all data deps.
-      version: The version string, in the form X.X.X.
       description: The description for the debian package.
+      version: The version string, in the form X.X.X.
+      architectures: Target architectures for the package.
       params_proto: The proto_library rule for the input parameters, if any.
       json_defaults: Optional JSON file with default values for the params.
     """
-    pointer_name = "%s_pointer" % name
-    _ocpdiag_ovss_pointer_debian(
-        name = pointer_name,
-        test_name = test_name,
-        description = description,
-        version = version,
-    )
-    payload_name = "%s_payload" % name
-    _ocpdiag_ovss_payload_debian(
-        name = payload_name,
-        test_name = test_name,
-        binary = binary,
-        version = version,
-        description = description,
-        params_proto = params_proto,
-        json_defaults = json_defaults,
-    )
-    master_rule(
+    deb_conf = {"//conditions:default": ":_%s_amd64_deb" % name}
+    for arch in architectures:
+        deb_arch = _deb_cpu_names[arch]
+        deb_name = "_%s_%s_deb" % (name, deb_arch)
+
+        pointer_name = "_%s_pointer" % deb_name
+        _ocpdiag_ovss_pointer_debian(
+            name = pointer_name,
+            test_name = test_name,
+            description = description,
+            version = version,
+            architecture = deb_arch,
+        )
+
+        payload_name = "_%s_payload" % deb_name
+        _ocpdiag_ovss_payload_debian(
+            name = payload_name,
+            test_name = test_name,
+            binary = binary,
+            version = version,
+            architecture = deb_arch,
+            description = description,
+            params_proto = params_proto,
+            json_defaults = json_defaults,
+        )
+
+        arch_name = "_%s_%s" % (name, deb_arch)
+        master_rule(
+            name = deb_name,
+            dep_rule_1 = ":" + pointer_name,
+            dep_rule_2 = ":" + payload_name,
+        )
+        native.config_setting(
+            name = arch_name,
+            values = {"cpu": arch},
+        )
+        deb_conf[arch_name] = ":%s" % deb_name
+
+    native.alias(
         name = name,
-        dep_rule_1 = ":" + pointer_name,
-        dep_rule_2 = ":" + payload_name,
+        actual = select(deb_conf),
     )
 
-def _ocpdiag_ovss_pointer_debian(name, test_name, description, version):
+def _ocpdiag_ovss_pointer_debian(name, test_name, description, version, architecture):
     """Creates a debian pointer package with a dependency on the payload package.
 
     Args:
@@ -201,11 +231,10 @@ def _ocpdiag_ovss_pointer_debian(name, test_name, description, version):
       description: The description for the debian package.
       version: The version string, in the form X.X.X. This version should match
         the version of the payload bundle.
+      architecture: Target architecture for the package.
     """
     test_name = test_name.replace("_", "-")
 
-    #
-    architecture = "amd64"
     empty_tar = "_ocpdiag_test_pkg_%s_empty_tar" % name
     pkg_tar(
         name = empty_tar,
@@ -229,8 +258,9 @@ def _ocpdiag_ovss_payload_debian(
         name,
         test_name,
         binary,
-        version,
         description,
+        version,
+        architecture,
         params_proto = _DEFAULT_PROTO,
         json_defaults = None):
     """Creates a debian payload package containing the test binary and run files.
@@ -239,8 +269,9 @@ def _ocpdiag_ovss_payload_debian(
       name: Name of debian package build rule.
       test_name: The name of the OCPDiag test.
       binary: The executable program for the ocpdiag test, including all data deps.
-      version: The version string, in the form X.X.X.
       description: The description for the debian package.
+      version: The version string, in the form X.X.X.
+      architecture: Target architecture for the package.
       params_proto: The proto_library rule for the input parameters, if any.
       json_defaults: Optional JSON file with default values for the params.
     """
@@ -261,6 +292,19 @@ def _ocpdiag_ovss_payload_debian(
         binary = binary,
         descriptors = descriptor_label,
         defaults = json_defaults,
+        visibility = ["//visibility:private"],
+    )
+
+    version_file_name = "_version_file_%s" % name
+    version_file_label = ":%s" % version_file_name
+
+    version_file_path = "%s_version_dir/version.txt" % architecture
+    get_version_command = "echo \"Version: " + version + "\" >> $@"
+    native.genrule(
+        name = version_file_name,
+        outs = [version_file_path],
+        cmd = get_version_command + get_source_infomation_command(),
+        stamp = 1,
         visibility = ["//visibility:private"],
     )
 
@@ -287,15 +331,13 @@ def _ocpdiag_ovss_payload_debian(
     pkg_tar(
         name = data_tar,
         extension = "tar.gz",
-        srcs = [runfiles_label],
+        srcs = [runfiles_label, version_file_label],
         mode = "0755",
         package_dir = ovss_prefix,
         symlinks = symlinks,
         visibility = ["//visibility:private"],
     )
 
-    #
-    architecture = "amd64"
     pkg_deb(
         name = name,
         data = data_tar,
