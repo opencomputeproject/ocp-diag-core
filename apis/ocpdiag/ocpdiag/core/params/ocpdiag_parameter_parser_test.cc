@@ -20,7 +20,6 @@
 #include <utility>
 #include <vector>
 
-#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/util/json_util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -38,6 +37,7 @@
 #include "ocpdiag/core/testing/file_utils.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"
+#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 
 using ::ocpdiag::testing::EqualsProto;
 using testing::AnyOf;
