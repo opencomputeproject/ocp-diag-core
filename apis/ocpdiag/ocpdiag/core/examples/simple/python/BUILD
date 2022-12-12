@@ -17,6 +17,9 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//ocpdiag/core/examples/simple:params_py_pb2",
+        "//ocpdiag/core/hwinterface:cpu_py_pb2",
+        "//ocpdiag/core/hwinterface:service_py_pb2",
+        "//ocpdiag/core/hwinterface/client/python:node_client",
         "//ocpdiag/core/params:utils_py",
         "//ocpdiag/core/results:results_py_pb2",
         "//ocpdiag/core/results/python:results",
