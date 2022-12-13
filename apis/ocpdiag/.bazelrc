@@ -1,12 +1,11 @@
 build --cxxopt='-std=c++17'
 build --host_cxxopt='-std=c++17'
 build --incompatible_enable_cc_toolchain_resolution=true
-# fix for gcc11, https://github.com/abseil/abseil-cpp/issues/948
-build --copt='-Wno-array-parameter'
 
 # Tell googletest to use absl.
 build --define absl=1
 
 # Target the OVSS image.
-build:ovss --host_platform=//toolchain:ovss_x86
-build:ovss --platforms=//toolchain:ovss_x86
+build:ovss --define=release=ovss
+build:ovss_x86 --define=release=ovss
+build:ovss_x86 --linkopt='-Wl,--dynamic-linker=/lib/ld-linux-x86-64.so.2'
