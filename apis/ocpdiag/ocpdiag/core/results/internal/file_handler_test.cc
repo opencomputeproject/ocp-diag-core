@@ -6,6 +6,8 @@
 
 #include "ocpdiag/core/results/internal/file_handler.h"
 
+#include <sys/stat.h>
+
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -16,8 +18,8 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/mock_remote.h"
-#include "ocpdiag/core/hwinterface/lib/off_dut_machine_interface/remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/mock_remote.h"
+#include "ocpdiag/core/lib/off_dut_machine_interface/remote.h"
 #include "ocpdiag/core/results/internal/mock_file_handler.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
@@ -29,9 +31,13 @@ using ::ocpdiag::hwinterface::remote::ConnInterface;
 using ::ocpdiag::hwinterface::remote::MockConnInterface;
 using ::ocpdiag::results::internal::FileHandler;
 using ::ocpdiag::results::internal::MockFileHandler;
+using ::ocpdiag::testing::EqualsProto;
 using ::ocpdiag::testing::ParseTextProtoOrDie;
+using ::ocpdiag::testing::Partially;
 using ::ocpdiag::testing::StatusIs;
 using ::testing::_;
+using ::testing::Return;
+using ::testing::StartsWith;
 
 namespace rpb = ocpdiag::results_pb;
 
@@ -79,30 +85,48 @@ TEST_F(FileHandlerTest, OpenLocalFileFail) {
 }
 
 TEST_F(FileHandlerTest, CopyRemoteFile) {
-  rpb::File file;
-  file.set_output_path("/tmp/data/file");
-  file.set_node_address("node_address");
+  // Copy a file from one host, and a file with the same path on another host
+  // and make sure they both get staged correctly.
+  auto mock_conn1 =
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+  ON_CALL(*mock_conn1, ReadFile(_))
+      .WillByDefault(Return(absl::Cord("content")));
+  auto mock_conn2 =
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+  ON_CALL(*mock_conn2, ReadFile(_))
+      .WillByDefault(Return(absl::Cord("content")));
 
-  // Set expectations on mock node connection.
-  auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
-  EXPECT_CALL(*mock_conn, ReadFile(_))
-      .WillOnce(::testing::Return(absl::Cord("content")));
+  EXPECT_CALL(mock_file_handler_, GetConnInterface(_))
+      .WillOnce([&](const std::string& s) { return std::move(mock_conn1); })
+      .WillOnce([&](const std::string& s) { return std::move(mock_conn2); });
 
-  // Stub GetConnInterface
-  ON_CALL(mock_file_handler_, GetConnInterface(_))
-      .WillByDefault(
-          [&](const std::string& s) { return std::move(mock_conn); });
+  const std::string common_path = "/tmp/data/file";
 
-  ASSERT_OK(mock_file_handler_.CopyRemoteFile(file));
+  rpb::File file1;
+  file1.set_output_path(common_path);
+  file1.set_node_address("node_address");
+  ASSERT_OK(mock_file_handler_.CopyRemoteFile(file1));
 
-  rpb::File want = ParseTextProtoOrDie(absl::StrFormat(
-      R"pb(
-        upload_as_name: "node_address._tmp_data_file"
-        output_path: "node_address._tmp_data_file"
-        node_address: "node_address"
-      )pb"));
-  EXPECT_THAT(file, ocpdiag::testing::EqualsProto(want));
+  rpb::File file2;
+  file2.set_output_path(common_path);
+  file2.set_node_address("node_address2");
+  ASSERT_OK(mock_file_handler_.CopyRemoteFile(file2));
+
+  EXPECT_THAT(file1, Partially(EqualsProto(R"pb(
+                upload_as_name: "node_address._tmp_data_file"
+                node_address: "node_address"
+              )pb")));
+  EXPECT_THAT(file1.output_path(), StartsWith("file_"));
+
+  EXPECT_THAT(file2, Partially(EqualsProto(R"pb(
+                upload_as_name: "node_address2._tmp_data_file"
+                node_address: "node_address2"
+              )pb")));
+  EXPECT_THAT(file2.output_path(), StartsWith("file_"));
+
+  // Ensure that files from equivalent paths on different hosts have unique
+  // local filenames.
+  EXPECT_STRNE(file1.output_path().c_str(), file2.output_path().c_str());
 }
 
 // Copy remote file, but with custom upload name, expect name to stay the same.
@@ -115,9 +139,8 @@ TEST_F(FileHandlerTest, CopyRemoteFileWithUploadName) {
 
   // Set expectations on mock node connection.
   auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
-  EXPECT_CALL(*mock_conn, ReadFile(_))
-      .WillOnce(::testing::Return(absl::Cord("content")));
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+  EXPECT_CALL(*mock_conn, ReadFile(_)).WillOnce(Return(absl::Cord("content")));
 
   // Stub GetConnInterface
   ON_CALL(mock_file_handler_, GetConnInterface(_))
@@ -126,21 +149,19 @@ TEST_F(FileHandlerTest, CopyRemoteFileWithUploadName) {
 
   ASSERT_OK(mock_file_handler_.CopyRemoteFile(file));
 
-  rpb::File want = ParseTextProtoOrDie(absl::StrFormat(
-      R"pb(
-        upload_as_name: "upload_name.log"
-        output_path: "node_address._tmp_data_file"
-        node_address: "node_address"
-      )pb"));
-  EXPECT_THAT(file, ocpdiag::testing::EqualsProto(want));
+  EXPECT_THAT(file, Partially(EqualsProto(R"pb(
+                upload_as_name: "upload_name.log"
+                node_address: "node_address"
+              )pb")));
+  EXPECT_THAT(file.output_path(), StartsWith("file_"));
 }
 
 TEST_F(FileHandlerTest, NodeReadFileFail) {
   // Set expectations on mock node connection.
   auto mock_conn =
-      absl::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
+      std::make_unique<ocpdiag::hwinterface::remote::MockConnInterface>();
   EXPECT_CALL(*mock_conn, ReadFile(_))
-      .WillOnce(::testing::Return(absl::InternalError("")));
+      .WillOnce(Return(absl::InternalError("")));
 
   // Stub GetConnInterface
   ON_CALL(mock_file_handler_, GetConnInterface(_))
@@ -172,6 +193,29 @@ TEST_F(FileHandlerTest, CopyLocalFile) {
   std::string got;
   std::getline(dest, got);
   ASSERT_STREQ(got.c_str(), "content");
+}
+
+TEST_F(FileHandlerTest, CopyLocalFilesWithSameName) {
+  // Create two files with the same name, but existing in separate paths.
+  std::string tmpdir = std::getenv(
+      "TEST_TMPDIR");  // NOTE: TEST_TMPDIR only set when running on Forge.
+  mkdir(absl::StrCat(tmpdir, "/path1").data(), 0777);
+  mkdir(absl::StrCat(tmpdir, "/path2").data(), 0777);
+  std::string tmp_filepath1 = absl::StrCat(tmpdir, "/path1/outputfile");
+  std::string tmp_filepath2 = absl::StrCat(tmpdir, "/path2/outputfile");
+  std::ofstream().open(tmp_filepath1);
+  std::ofstream().open(tmp_filepath2);
+
+  rpb::File file1;
+  file1.set_output_path(tmp_filepath1);
+  ASSERT_OK(mock_file_handler_.CopyLocalFile(file1, tmpdir));
+
+  rpb::File file2;
+  file2.set_output_path(tmp_filepath2);
+  ASSERT_OK(mock_file_handler_.CopyLocalFile(file2, tmpdir));
+
+  // Make sure the files both have unique output paths, so they don't collide.
+  ASSERT_STRNE(file1.output_path().c_str(), file2.output_path().c_str());
 }
 
 TEST_F(FileHandlerTest, CopyLocalFileFail) {
