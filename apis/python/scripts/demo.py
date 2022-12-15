@@ -2,8 +2,7 @@ import logging
 import sys
 import threading
 import time
-import typing
-from typing import List
+import typing as ty
 
 from pathlib import Path
 
@@ -11,6 +10,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import ocptv
 from ocptv import DiagnosisType, LogSeverity, TestResult, TestStatus
+from ocptv.output import Writer, StdoutWriter
 
 
 def banner(f):
@@ -26,6 +26,10 @@ def banner(f):
 
 @banner
 def demo_no_contexts():
+    """
+    Show that a run/step can be manually started and ended
+    (but it's safer with context)
+    """
     run = ocptv.TestRun(
         name="no with", version="1.0", parameters={"param1": "dog", "param2": "cat"}
     )
@@ -41,6 +45,10 @@ def demo_no_contexts():
 
 @banner
 def demo_context_run_skip():
+    """
+    Show a context-scoped run that automatically exits the whole func
+    because of the marker exception that triggers SKIP outcome.
+    """
     run = ocptv.TestRun(
         name="run_skip", version="1.0", parameters={"param1": "dog", "param2": "cat"}
     )
@@ -52,6 +60,10 @@ def demo_context_run_skip():
 
 @banner
 def demo_context_step_fail():
+    """
+    Show a scoped run with scoped steps, everything starts at "with" time and
+    ends automatically when the block ends (regardless of unhandled exceptions).
+    """
     run = ocptv.TestRun(name="step_fail", version="1.0")
     with run.scope(dut_info=None):
         step = run.add_step("step0")
@@ -60,14 +72,19 @@ def demo_context_step_fail():
 
         step = run.add_step("step1")
         with step.scope():
-            print(">> maybe this should fail the whole run?")
+            # TODO: maybe this should fail the whole run?
             raise ocptv.TestStepError(status=TestStatus.ERROR)
 
 
 @banner
 def demo_custom_writer():
-    class FileSyncWriter(ocptv.Writer):
-        def __init__(self, file: typing.TextIO):
+    """
+    Showcase parallel running steps outputting to a threadsafe writer on top of
+    stdout. The start/end messages get correctly scoped.
+    """
+
+    class FileSyncWriter(Writer):
+        def __init__(self, file: ty.TextIO):
             self.__file = file
             self.__lock = threading.Lock()
 
@@ -76,20 +93,20 @@ def demo_custom_writer():
                 print(buffer, file=self.__file)
 
     ocptv.configOutput(writer=FileSyncWriter(sys.stdout))
+
+    def parallel_step(step: ocptv.TestStep):
+        with step.scope():
+            for _ in range(5):
+                step.add_log(
+                    LogSeverity.INFO,
+                    f"log from: {step.name}, ts: {time.time()}",
+                )
+                time.sleep(0.001)
+
     try:
         run = ocptv.TestRun(name="custom writer", version="1.0")
         with run.scope(dut_info={}):
-
-            def parallel_step(step: ocptv.TestStep):
-                with step.scope():
-                    for _ in range(5):
-                        step.add_log(
-                            LogSeverity.INFO,
-                            f"log from: {step.name}, ts: {time.time()}",
-                        )
-                        # time.sleep(0.001)
-
-            threads: List[threading.Thread] = []
+            threads: list[threading.Thread] = []
             for id in range(4):
                 step = run.add_step(f"parallel_step_{id}")
                 threads.append(threading.Thread(target=parallel_step, args=(step,)))
@@ -100,13 +117,18 @@ def demo_custom_writer():
             for t in threads:
                 t.join()
     finally:
-        ocptv.configOutput(ocptv.StdoutWriter())
+        # return to default, useful for rest of demos
+        ocptv.configOutput(StdoutWriter())
 
 
 @banner
 def demo_diagnosis():
-    # str consts for error classifier
+    """
+    Show outputting a diagnosis message for the given step.
+    """
+
     class Verdict:
+        # str consts for error classifier
         PASS = "pass-default"
 
     run = ocptv.TestRun(name="run_with_diagnosis", version="1.0")
@@ -119,11 +141,13 @@ def demo_diagnosis():
 @banner
 def demo_python_logging_io():
     """
-    This demo shows that we can output to a python logger backed writer (note the pylog prefix)
-    and that we can route the standard python logger as input for the ocp output (mapped to run logs)
+    Show that we can output to a python logger backed writer (note the pylog prefix)
+    and that we can route the standard python logger as input for the ocp output (mapped to run logs).
+    This demo is shown as a migration path for code using standard python logging, until
+    we have some on-parity functionality (eg. rolling/archiving output writer).
     """
 
-    class LoggingWriter(ocptv.Writer):
+    class LoggingWriter(Writer):
         def __init__(self):
             logging.basicConfig(
                 stream=sys.stdout, level=logging.INFO, format="[pylog] %(message)s"
