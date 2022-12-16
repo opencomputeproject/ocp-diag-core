@@ -50,7 +50,7 @@ class TestRun:
         else:
             self._cmdline = self._get_cmdline()
 
-        self._params = parameters
+        self._params = parameters or {}
         self._emitter = ArtifactEmitter()
 
         self._stepId = 0
@@ -70,6 +70,7 @@ class TestRun:
             name=self.name,
             version=self._version,
             command_line=self.command_line,
+            parameters=self._params,
             dut_info=[x.info for x in duts],
         )
         self._emitter.emit(RunArtifact(impl=start))

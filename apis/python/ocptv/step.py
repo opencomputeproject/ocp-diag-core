@@ -65,7 +65,7 @@ class TestStep:
         diagnosis_type: DiagnosisType,
         *,
         verdict: str,
-        message: str = "",
+        message: ty.Optional[str] = None,
         hardware_info_id: ty.Optional[str] = None,
         subcomponent=None,
     ):

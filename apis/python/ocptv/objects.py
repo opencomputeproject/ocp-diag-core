@@ -91,8 +91,7 @@ class Diagnosis:
         },
     )
 
-    message: str = dc.field(
-        default="",
+    message: ty.Optional[str] = dc.field(
         metadata={"spec_field": "message"},
     )
 

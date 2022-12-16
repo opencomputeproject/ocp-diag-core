@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 import dataclasses as dc
 import json
 import typing as ty
-from numbers import Number
 from enum import Enum
 
 from .objects import ArtifactType, Root, SchemaVersion, RootArtifactType
@@ -38,7 +37,8 @@ def configOutput(writer: Writer):
     _writer = writer
 
 
-_JSON = dict[str, "_JSON"] | list["_JSON"] | Number | str | None
+Primitive = float | int | bool | str | None
+JSON = dict[str, "JSON"] | list["JSON"] | Primitive
 
 
 class ArtifactEmitter:
@@ -48,14 +48,28 @@ class ArtifactEmitter:
 
     @staticmethod
     def _serialize(artifact: ArtifactType):
+        def is_optional(field: ty.Type):
+            # type hackery incoming
+            # ty.Optional[T] == ty.Union[T, None]
+            # since ty.Union[ty.Union[T,U]] = ty.Union[T,U] we can the
+            # following transitiveness to check that type is optional
+            return field == ty.Optional[field]
+
         def visit(
-            value: ArtifactType | dict | list | Number | str,
+            value: ArtifactType | dict | list | Primitive,
             formatter: ty.Optional[ty.Callable[[ty.Any], str]] = None,
-        ) -> _JSON:
+        ) -> JSON:
             if dc.is_dataclass(value):
-                obj: dict[str, _JSON] = {}
+                obj: dict[str, JSON] = {}
                 for field in dc.fields(value):
                     val = getattr(value, field.name)
+
+                    if val is None:
+                        if not is_optional(field.type):
+                            # TODO: fix exception text/type
+                            raise RuntimeError("unacceptable none where not optional")
+                        continue
+
                     spec_field: ty.Optional[str] = field.metadata.get(
                         "spec_field", None
                     )
@@ -78,7 +92,7 @@ class ArtifactEmitter:
                 return [visit(k) for k in value]
             elif isinstance(value, dict):
                 return {k: visit(v) for k, v in value.items()}
-            elif isinstance(value, (str, Number, Enum)):
+            elif isinstance(value, (str, float, int, bool, Enum)):
                 # primitive types get here
                 if formatter is not None:
                     return formatter(value)
