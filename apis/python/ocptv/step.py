@@ -9,6 +9,7 @@ from .objects import (
     StepStart,
     StepEnd,
     Log,
+    Error,
     Diagnosis,
     TestStatus,
     LogSeverity,
@@ -76,8 +77,20 @@ class TestStep:
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=diag))
 
-    # def add_error(self, symptom: str, message: str, software_info_ids):
-    #     pass
+    # TODO: fix software_info_ids when duts are done
+    def add_error(
+        self,
+        *,
+        symptom: str,
+        message: ty.Optional[str] = None,
+        software_info_ids: ty.Optional[list[str]] = None,
+    ):
+        error = Error(
+            symptom=symptom,
+            message=message,
+            software_info_ids=[],
+        )
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=error))
 
     # def add_file():
     #     pass

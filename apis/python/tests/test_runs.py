@@ -168,3 +168,74 @@ def test_run_with_diagnosis(writer: MockWriter):
     assert "testRunArtifact" in writer.decoded_obj(6)
     artifact = ty.cast(dict[str, JSON], writer.decoded_obj(6)["testRunArtifact"])
     assert "testRunEnd" in artifact
+
+
+def test_run_can_error_before_start(writer: MockWriter):
+    class Symptom:
+        TEST_SYMPTOM = "test-symptom"
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    run.add_error(symptom=Symptom.TEST_SYMPTOM)
+
+    assert len(writer.lines), 2
+    assert_json(
+        writer.lines[1],
+        {
+            "testRunArtifact": {
+                "error": {
+                    "symptom": Symptom.TEST_SYMPTOM,
+                    "softwareInfoIds": [],
+                },
+            },
+            "sequenceNumber": 1,
+        },
+    )
+
+
+def test_run_can_error(writer: MockWriter):
+    class Symptom:
+        TEST_SYMPTOM = "test-symptom"
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        run.add_error(symptom=Symptom.TEST_SYMPTOM)
+
+    assert len(writer.lines), 4
+    assert_json(
+        writer.lines[2],
+        {
+            "testRunArtifact": {
+                "error": {
+                    "symptom": Symptom.TEST_SYMPTOM,
+                    "softwareInfoIds": [],
+                },
+            },
+            "sequenceNumber": 2,
+        },
+    )
+
+
+def test_step_can_error(writer: MockWriter):
+    class Symptom:
+        TEST_SYMPTOM = "test-symptom"
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_error(symptom=Symptom.TEST_SYMPTOM)
+
+    assert len(writer.lines), 7
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "error": {
+                    "symptom": Symptom.TEST_SYMPTOM,
+                    "softwareInfoIds": [],
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )

@@ -70,6 +70,23 @@ class Log:
     )
 
 
+@dc.dataclass
+class Error:
+    SPEC_OBJECT: ty.ClassVar[str] = "error"
+
+    symptom: str = dc.field(
+        metadata={"spec_field": "symptom"},
+    )
+
+    message: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "message"},
+    )
+
+    software_info_ids: list[str] = dc.field(
+        metadata={"spec_field": "softwareInfoIds"},
+    )
+
+
 class DiagnosisType(Enum):
     PASS = 1
     FAIL = 2
@@ -168,7 +185,7 @@ class RunEnd:
 class RunArtifact:
     SPEC_OBJECT: ty.ClassVar[str] = "testRunArtifact"
 
-    impl: RunStart | RunEnd | Log
+    impl: RunStart | RunEnd | Log | Error
 
 
 @dc.dataclass
@@ -207,7 +224,7 @@ class StepArtifact:
     # TODO: error
     # TODO: file
     # TODO: extension
-    impl: StepStart | StepEnd | Diagnosis | Log
+    impl: StepStart | StepEnd | Diagnosis | Log | Error
 
 
 RootArtifactType = SchemaVersion | RunArtifact | StepArtifact

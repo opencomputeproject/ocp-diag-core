@@ -185,10 +185,26 @@ def demo_python_logging_io():
     log.setLevel(logging.DEBUG)
     log.propagate = False
 
-    with run.scope():
-        log.info("ocp log thru python logger")
-        log.debug("debug log sample")
-        log.warning("warn level here")
+    try:
+        with run.scope():
+            log.info("ocp log thru python logger")
+            log.debug("debug log sample")
+            log.warning("warn level here")
+    finally:
+        ocptv.configOutput(StdoutWriter())
+        log.removeHandler(log.handlers[-1])
+
+
+@banner
+def demo_error_while_gathering_duts():
+    class Symptom:
+        # str consts for error classifier
+        NO_DUT = "no-dut"
+
+    run = ocptv.TestRun(
+        name="no with", version="1.0", parameters={"param1": "dog", "param2": "cat"}
+    )
+    run.add_error(symptom=Symptom.NO_DUT, message="could not find any valid DUTs")
 
 
 if __name__ == "__main__":
@@ -198,3 +214,4 @@ if __name__ == "__main__":
     demo_custom_writer()
     demo_diagnosis()
     demo_python_logging_io()
+    demo_error_while_gathering_duts()
