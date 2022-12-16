@@ -3,10 +3,19 @@ This module describes the high level test run and related objects.
 """
 import sys
 from contextlib import contextmanager
+import typing as ty
 
-from .objects import TempArtifactModel, TestStatus, TestResult, LogSeverity
+from .objects import (
+    RunArtifact,
+    RunStart,
+    RunEnd,
+    Log,
+    TestStatus,
+    TestResult,
+    LogSeverity,
+)
 from .step import TestStep
-from .dut import DutInfo
+from .dut import Dut
 from .output import ArtifactEmitter
 
 
@@ -25,8 +34,8 @@ class TestRun:
         name: str,
         version: str,
         *,
-        command_line: str = None,
-        parameters: dict[str, str | int] = None,
+        command_line: ty.Optional[str] = None,
+        parameters: ty.Optional[dict[str, str | int]] = None,
     ):
         """
         Make a new stateful test run model object. Parameters given to init
@@ -47,39 +56,51 @@ class TestRun:
         self._stepId = 0
 
     # by this point, user code has identified complete dut info or error'd out
-    def start(self, *, dut_info: DutInfo):
+    def start(self, *, duts: ty.Optional[list[Dut]] = None):
         """
         Signal the test run start and emit a json `testRunStart` artifact.
 
         The device-under-test information is considered known at this point, and can
         be specified using the `dut_info` parameter.
         """
-        json = f"""{{"testRunStart": {{"name": "{self.name}", "version": "{self.version}", "command_line": "{self.command_line}", "dut_info": "{dut_info}"}}}}"""
-        self._emitter.emit(TempArtifactModel("testRunArtifact", json))
+        if duts is None:
+            duts = []
+
+        start = RunStart(
+            name=self.name,
+            version=self._version,
+            command_line=self.command_line,
+            dut_info=[x.info for x in duts],
+        )
+        self._emitter.emit(RunArtifact(impl=start))
 
     def end(self, *, status: TestStatus, result: TestResult):
-        json = f"""{{"testRunEnd": {{"status": "{status.name}", "result": "{result.name}"}}}}"""
-        self._emitter.emit(TempArtifactModel("testRunArtifact", json))
+        end = RunEnd(
+            status=status,
+            result=result,
+        )
+        self._emitter.emit(RunArtifact(impl=end))
 
     @contextmanager
-    def scope(self, *, dut_info: DutInfo):
+    def scope(self, *, duts: ty.Optional[list[Dut]] = None):
         try:
-            yield self.start(dut_info=dut_info)
+            yield self.start(duts=duts)
         except TestRunError as re:
             self.end(status=re.status, result=re.result)
         else:
             self.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
 
     def add_step(self, name: str) -> TestStep:
-        step = TestStep(name, stepId=self._stepId, emitter=self._emitter)
+        step = TestStep(name, step_id=self._stepId, emitter=self._emitter)
         self._stepId += 1
         return step
 
     def add_log(self, severity: LogSeverity, message: str):
-        json = (
-            f"""{{"log": {{"severity": "{severity.name}", "message": "{message}"}}}}"""
+        log = Log(
+            severity=severity,
+            message=message,
         )
-        self._emitter.emit(TempArtifactModel("testRunArtifact", json))
+        self._emitter.emit(RunArtifact(impl=log))
 
     # def add_error(self, symptom: str, message: str, software_info_ids):
     #     pass
@@ -101,5 +122,5 @@ class TestRun:
         return self._cmdline
 
     @property
-    def parameters(self) -> dict[str, str | int]:
+    def parameters(self) -> ty.Optional[dict[str, str | int]]:
         return self._params

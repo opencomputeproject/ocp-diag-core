@@ -33,7 +33,7 @@ def demo_no_contexts():
     run = ocptv.TestRun(
         name="no with", version="1.0", parameters={"param1": "dog", "param2": "cat"}
     )
-    run.start(dut_info=None)
+    run.start()
 
     step = run.add_step("step0")
     step.start()
@@ -52,7 +52,7 @@ def demo_context_run_skip():
     run = ocptv.TestRun(
         name="run_skip", version="1.0", parameters={"param1": "dog", "param2": "cat"}
     )
-    with run.scope(dut_info=None):
+    with run.scope():
         raise ocptv.TestRunError(
             status=TestStatus.SKIP, result=TestResult.NOT_APPLICABLE
         )
@@ -65,7 +65,7 @@ def demo_context_step_fail():
     ends automatically when the block ends (regardless of unhandled exceptions).
     """
     run = ocptv.TestRun(name="step_fail", version="1.0")
-    with run.scope(dut_info=None):
+    with run.scope():
         step = run.add_step("step0")
         with step.scope():
             step.add_log(LogSeverity.INFO, "info log")
@@ -105,7 +105,7 @@ def demo_custom_writer():
 
     try:
         run = ocptv.TestRun(name="custom writer", version="1.0")
-        with run.scope(dut_info={}):
+        with run.scope():
             threads: list[threading.Thread] = []
             for id in range(4):
                 step = run.add_step(f"parallel_step_{id}")
@@ -132,7 +132,7 @@ def demo_diagnosis():
         PASS = "pass-default"
 
     run = ocptv.TestRun(name="run_with_diagnosis", version="1.0")
-    with run.scope(dut_info=None):
+    with run.scope():
         step = run.add_step("step0")
         with step.scope():
             step.add_diagnosis(DiagnosisType.PASS, verdict=Verdict.PASS)
@@ -168,8 +168,6 @@ def demo_python_logging_io():
 
         @staticmethod
         def _map_level(level: int) -> LogSeverity:
-            if level == logging.INFO:
-                return LogSeverity.INFO
             if level == logging.DEBUG:
                 return LogSeverity.DEBUG
             if level == logging.WARN:
@@ -178,6 +176,7 @@ def demo_python_logging_io():
                 return LogSeverity.ERROR
             if level == logging.FATAL:
                 return LogSeverity.FATAL
+            return LogSeverity.INFO
 
     run = ocptv.TestRun(name="run_with_diagnosis", version="1.0")
 
@@ -186,7 +185,7 @@ def demo_python_logging_io():
     log.setLevel(logging.DEBUG)
     log.propagate = False
 
-    with run.scope(dut_info=None):
+    with run.scope():
         log.info("ocp log thru python logger")
         log.debug("debug log sample")
         log.warning("warn level here")

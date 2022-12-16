@@ -4,8 +4,13 @@ This module covers the raw output semantics of the OCPTV library.
 import time
 import threading
 from abc import ABC, abstractmethod
+import dataclasses as dc
+import json
+import typing as ty
+from numbers import Number
+from enum import Enum
 
-from .objects import TempArtifactModel, OCPVersion
+from .objects import ArtifactType, Root, SchemaVersion, RootArtifactType
 
 
 class Writer(ABC):
@@ -25,7 +30,7 @@ class StdoutWriter(Writer):
 
 
 # module scoped output channel (similar to python logging)
-_writer = StdoutWriter()
+_writer: Writer = StdoutWriter()
 
 
 def configOutput(writer: Writer):
@@ -33,13 +38,57 @@ def configOutput(writer: Writer):
     _writer = writer
 
 
+_JSON = dict[str, "_JSON"] | list["_JSON"] | Number | str | None
+
+
 class ArtifactEmitter:
     def __init__(self):
         self._seq = 0
         self._lock = threading.Lock()
 
-    # artifact here is probably a dataclass that can be serialized
-    def emit(self, artifact: TempArtifactModel):
+    @staticmethod
+    def _serialize(artifact: ArtifactType):
+        def visit(
+            value: ArtifactType | dict | list | Number | str,
+            formatter: ty.Optional[ty.Callable[[ty.Any], str]] = None,
+        ) -> _JSON:
+            if dc.is_dataclass(value):
+                obj: dict[str, _JSON] = {}
+                for field in dc.fields(value):
+                    val = getattr(value, field.name)
+                    spec_field: ty.Optional[str] = field.metadata.get(
+                        "spec_field", None
+                    )
+                    spec_object: ty.Optional[str] = getattr(val, "SPEC_OBJECT", None)
+
+                    if spec_field is not None and spec_object is not None:
+                        # TODO: fix error type
+                        raise RuntimeError("internal error, bad object decl")
+
+                    if spec_field is None and spec_object is None:
+                        # TODO: fix error type
+                        raise RuntimeError("internal error, bad object decl")
+
+                    # "<invalid>" will never be reached, but keeps linter happy
+                    name = spec_field or spec_object or "<invalid>"
+                    formatter = field.metadata.get("formatter", None)
+                    obj[name] = visit(val, formatter)
+                return obj
+            elif isinstance(value, list) or isinstance(value, tuple):
+                return [visit(k) for k in value]
+            elif isinstance(value, dict):
+                return {k: visit(v) for k, v in value.items()}
+            elif isinstance(value, (str, Number, Enum)):
+                # primitive types get here
+                if formatter is not None:
+                    return formatter(value)
+                return value
+
+            raise RuntimeError("dont know how to serialize {}", value)
+
+        return json.dumps(visit(artifact))
+
+    def emit(self, artifact: RootArtifactType):
         if self._seq == 0:
             self._emit_version()
 
@@ -48,13 +97,18 @@ class ArtifactEmitter:
             # multiprocess will have an issue here
             self._seq += 1
 
-        _writer.write(
-            f"""{{"{artifact.name}": {artifact.value}, "sequenceNumber": {self._seq}, "timestamp": {time.time()}}}"""
+        root = Root(
+            impl=artifact,
+            sequence_number=self._seq,
+            timestamp=time.time(),
         )
+        _writer.write(self._serialize(root))
 
     def _emit_version(self):
-        major, minor = OCPVersion.VERSION_2_0.value
-        version = f"""{{"major": {major}, "minor": {minor}}}"""
-        _writer.write(
-            f"""{{"schemaVersion": {version}, "sequenceNumber": 0, "timestamp": {time.time()}}}"""
+        # use defaults for schema version here, should be set to latest
+        root = Root(
+            impl=SchemaVersion(),
+            sequence_number=self._seq,
+            timestamp=time.time(),
         )
+        _writer.write(self._serialize(root))

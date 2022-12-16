@@ -2,8 +2,18 @@
 This module describes the test steps inside the test run.
 """
 from contextlib import contextmanager
+import typing as ty
 
-from .objects import TempArtifactModel, TestStatus, LogSeverity, DiagnosisType
+from .objects import (
+    StepArtifact,
+    StepStart,
+    StepEnd,
+    Log,
+    Diagnosis,
+    TestStatus,
+    LogSeverity,
+    DiagnosisType,
+)
 from .output import ArtifactEmitter
 
 
@@ -15,18 +25,24 @@ class TestStepError(RuntimeError):
 
 
 class TestStep:
-    def __init__(self, name: str, *, stepId: int, emitter: ArtifactEmitter):
+    """
+    TODO:
+    Should not be used directly by user code, but through TestRun.add_step().
+    """
+
+    def __init__(self, name: str, *, step_id: int, emitter: ArtifactEmitter):
         self._name = name
-        self._id = stepId
+        self._id = step_id
+        self._idstr = "{}".format(step_id)
         self._emitter = emitter
 
     def start(self):
-        json = f"""{{"testStepStart": {{"name": "{self._name}"}}, "testStepId": "{self._id}"}}"""
-        self._emitter.emit(TempArtifactModel("testStepArtifact", json))
+        start = StepStart(name=self._name)
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=start))
 
     def end(self, *, status: TestStatus):
-        json = f"""{{"testStepEnd": {{"status": "{status.name}"}}, "testStepId": "{self._id}"}}"""
-        self._emitter.emit(TempArtifactModel("testStepArtifact", json))
+        end = StepEnd(status=status)
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=end))
 
     @contextmanager
     def scope(self):
@@ -43,17 +59,22 @@ class TestStep:
     # def add_measurement_series(self) -> MeasurementSeries:
     #     return MeasurementSeries()
 
+    # TODO: fix signature
     def add_diagnosis(
         self,
-        diagType: DiagnosisType,
+        diagnosis_type: DiagnosisType,
         *,
         verdict: str,
-        message: str = None,
-        hardwareInfoId: str = None,
+        message: str = "",
+        hardware_info_id: ty.Optional[str] = None,
         subcomponent=None,
     ):
-        json = f"""{{"diagnosis": {{"type": "{diagType.name}", "verdict": "{verdict}"}}, "testStepId": "{self._id}"}}"""
-        self._emitter.emit(TempArtifactModel("testStepArtifact", json))
+        diag = Diagnosis(
+            verdict=verdict,
+            type=diagnosis_type,
+            message=message,
+        )
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=diag))
 
     # def add_error(self, symptom: str, message: str, software_info_ids):
     #     pass
@@ -62,8 +83,11 @@ class TestStep:
     #     pass
 
     def add_log(self, severity: LogSeverity, message: str):
-        json = f"""{{"log": {{"severity": "{severity.name}", "message": "{message}"}}, "testStepId": "{self._id}"}}"""
-        self._emitter.emit(TempArtifactModel("testStepArtifact", json))
+        log = Log(
+            severity=severity,
+            message=message,
+        )
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=log))
 
     @property
     def name(self) -> str:
