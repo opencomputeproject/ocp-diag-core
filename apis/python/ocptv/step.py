@@ -10,6 +10,7 @@ from .objects import (
     StepEnd,
     Measurement,
     MeasurementValueType,
+    MeasurementSeriesType,
     Log,
     Error,
     File,
@@ -19,6 +20,7 @@ from .objects import (
     LogSeverity,
     DiagnosisType,
 )
+from .measurement import MeasurementSeries, MeasurementSeriesEmitter
 from .output import ArtifactEmitter
 
 
@@ -40,6 +42,10 @@ class TestStep:
         self._id = step_id
         self._idstr = "{}".format(step_id)
         self._emitter = emitter
+
+        # TODO: threadsafe?
+        # TODO: do we want manually controlled values? lambda?
+        self._measurement_series_id: int = 0
 
     def start(self):
         start = StepStart(name=self._name)
@@ -74,8 +80,23 @@ class TestStep:
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=measurement))
 
-    # def add_measurement_series(self) -> MeasurementSeries:
-    #     return MeasurementSeries()
+    def start_measurement_series(
+        self,
+        *,
+        name: str,
+        unit: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ) -> MeasurementSeries:
+        # TODO: arbitrary derivation for measurement id here, but unique for run scope
+        series = MeasurementSeries(
+            MeasurementSeriesEmitter(self._idstr, self._emitter),
+            "{}_{}".format(self._id, self._measurement_series_id),
+            name=name,
+            unit=unit,
+            metadata=metadata,
+        )
+        self._measurement_series_id += 1
+        return series
 
     # TODO: fix signature
     def add_diagnosis(

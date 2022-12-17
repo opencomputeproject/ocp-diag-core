@@ -1,0 +1,95 @@
+import time
+from contextlib import contextmanager
+import typing as ty
+
+from .objects import (
+    StepArtifact,
+    MeasurementValueType,
+    MeasurementSeriesStart,
+    MeasurementSeriesEnd,
+    MeasurementSeriesElement,
+    MeasurementSeriesType,
+    Metadata,
+)
+from .output import ArtifactEmitter
+
+
+class MeasurementSeriesEmitter(ArtifactEmitter):
+    def __init__(self, step_id: str, emitter: ArtifactEmitter):
+        self._step_id = step_id
+        self._emitter = emitter
+
+    def emit_impl(self, impl: MeasurementSeriesType):
+        self._emitter.emit(StepArtifact(id=self._step_id, impl=impl))
+
+
+class MeasurementSeries:
+    """
+    TODO: not for user code instantiation
+    """
+
+    def __init__(
+        self,
+        emitter: MeasurementSeriesEmitter,
+        series_id: str,
+        *,
+        name: str,
+        unit: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        self._emitter = emitter
+        self._id = series_id
+
+        # TODO: threadsafety?
+        self._index: int = 0
+
+        self._start(name, unit, metadata)
+
+    def add_measurement(
+        self,
+        *,
+        value: MeasurementValueType,
+        timestamp: ty.Optional[float] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        if timestamp is None:
+            # use local time if not specified
+            timestamp = time.time()
+
+        measurement = MeasurementSeriesElement(
+            index=self._index,
+            value=value,
+            timestamp=timestamp,
+            series_id=self._id,
+            metadata=metadata,
+        )
+        self._emitter.emit_impl(measurement)
+        self._index += 1
+
+    def _start(
+        self,
+        name: str,
+        unit: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        start = MeasurementSeriesStart(
+            name=name,
+            unit=unit,
+            series_id=self._id,
+            metadata=metadata,
+        )
+        self._emitter.emit_impl(start)
+
+    def end(self):
+        end = MeasurementSeriesEnd(
+            series_id=self._id,
+            total_count=self._index,
+        )
+        self._emitter.emit_impl(end)
+
+    @contextmanager
+    def scope(self):
+        try:
+            yield
+        finally:
+            self.end()

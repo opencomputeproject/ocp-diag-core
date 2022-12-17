@@ -1,8 +1,10 @@
 import pytest
+import time
 import typing as ty
 
 import ocptv
 from ocptv import LogSeverity, TestStatus, TestResult, DiagnosisType
+from ocptv.formatter import format_timestamp
 from ocptv.output import JSON
 
 TestStatus.__test__ = False  # type: ignore
@@ -348,3 +350,145 @@ def test_step_produces_simple_measurements(writer: MockWriter):
             "sequenceNumber": 5,
         },
     )
+
+
+def test_step_produces_measurement_series(writer: MockWriter):
+    ts = time.time()
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            fan_speed = step.start_measurement_series(name="fan_speed", unit="rpm")
+            with fan_speed.scope():
+                fan_speed.add_measurement(value=1200, timestamp=ts)
+                fan_speed.add_measurement(value=1500, timestamp=ts)
+
+    assert len(writer.lines) == 9
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "measurementSeriesStart": {
+                    "name": "fan_speed",
+                    "unit": "rpm",
+                    "measurementSeriesId": "0_0",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )
+    assert_json(
+        writer.lines[4],
+        {
+            "testStepArtifact": {
+                "measurementSeriesElement": {
+                    "index": 0,
+                    "value": 1200,
+                    "timestamp": format_timestamp(ts),
+                    "measurementSeriesId": "0_0",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 4,
+        },
+    )
+    assert_json(
+        writer.lines[5],
+        {
+            "testStepArtifact": {
+                "measurementSeriesElement": {
+                    "index": 1,
+                    "value": 1500,
+                    "timestamp": format_timestamp(ts),
+                    "measurementSeriesId": "0_0",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 5,
+        },
+    )
+    assert_json(
+        writer.lines[6],
+        {
+            "testStepArtifact": {
+                "measurementSeriesEnd": {
+                    "totalCount": 2,
+                    "measurementSeriesId": "0_0",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 6,
+        },
+    )
+
+
+def test_step_produces_concurrent_measurement_series(writer: MockWriter):
+    ts = time.time()
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            fan_speed = step.start_measurement_series(name="fan_speed", unit="rpm")
+            fan_speed.add_measurement(value=1200, timestamp=ts)
+            temp = step.start_measurement_series(name="temp", unit="C")
+            temp.add_measurement(value=42, timestamp=ts)
+            fan_speed.add_measurement(value=1500, timestamp=ts)
+            temp.end()
+            fan_speed.end()
+
+    assert len(writer.lines) == 12
+
+    # fan_speed start
+    assert "testStepArtifact" in writer.decoded_obj(3)
+    artifact = ty.cast(dict[str, JSON], writer.decoded_obj(3)["testStepArtifact"])
+    assert "measurementSeriesStart" in artifact
+
+    # temp start
+    assert "testStepArtifact" in writer.decoded_obj(5)
+    artifact = ty.cast(dict[str, JSON], writer.decoded_obj(5)["testStepArtifact"])
+    assert "measurementSeriesStart" in artifact
+
+    assert_json(
+        writer.lines[6],
+        {
+            "testStepArtifact": {
+                "measurementSeriesElement": {
+                    "index": 0,
+                    "value": 42,
+                    "timestamp": format_timestamp(ts),
+                    "measurementSeriesId": "0_1",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 6,
+        },
+    )
+
+    assert_json(
+        writer.lines[7],
+        {
+            "testStepArtifact": {
+                "measurementSeriesElement": {
+                    "index": 1,
+                    "value": 1500,
+                    "timestamp": format_timestamp(ts),
+                    "measurementSeriesId": "0_0",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 7,
+        },
+    )
+
+    # temp end
+    assert "testStepArtifact" in writer.decoded_obj(8)
+    artifact = ty.cast(dict[str, JSON], writer.decoded_obj(8)["testStepArtifact"])
+    assert "measurementSeriesEnd" in artifact
+
+    # fan_speed end
+    assert "testStepArtifact" in writer.decoded_obj(9)
+    artifact = ty.cast(dict[str, JSON], writer.decoded_obj(9)["testStepArtifact"])
+    assert "measurementSeriesEnd" in artifact

@@ -235,6 +235,43 @@ def demo_create_measurement_simple():
             step.add_measurement(name="set_item", value=[2, 4])
 
 
+@banner
+def demo_create_measurement_series():
+    """
+    Show various patterns of time measurement series.
+    Step0 has a single series, manually ended.
+    Step1 has a single series but using a scope, so series ends automatically.
+    Step2 shows multiple measurement interspersed series, they can be concurrent.
+    """
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step0 = run.add_step("step0")
+        with step0.scope():
+            fan_speed = step0.start_measurement_series(name="fan_speed", unit="rpm")
+            fan_speed.add_measurement(value=1000)
+            fan_speed.add_measurement(value=1200)
+            fan_speed.add_measurement(value=1500)
+            fan_speed.end()
+
+        step1 = run.add_step("step1")
+        with step1.scope():
+            temp0 = step1.start_measurement_series(name="temp0", unit="C")
+            with temp0.scope():
+                temp0.add_measurement(value=42, timestamp=time.time() - 2)
+                temp0.add_measurement(value=43)
+
+        step2 = run.add_step("step2")
+        with step2.scope():
+            s0 = step2.start_measurement_series(name="freq0", unit="ghz")
+            s1 = step2.start_measurement_series(name="freq1", unit="ghz")
+
+            s0.add_measurement(value=1.0)
+            s1.add_measurement(value=2.0)
+            s0.add_measurement(value=1.2)
+            s0.end()
+            s1.end()
+
+
 if __name__ == "__main__":
     demo_no_contexts()
     demo_context_run_skip()
@@ -245,3 +282,4 @@ if __name__ == "__main__":
     demo_error_while_gathering_duts()
     demo_create_file_during_step()
     demo_create_measurement_simple()
+    demo_create_measurement_series()

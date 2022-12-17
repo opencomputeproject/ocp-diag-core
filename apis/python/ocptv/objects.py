@@ -194,6 +194,82 @@ class Measurement:
 
 
 @dc.dataclass
+class MeasurementSeriesStart:
+    SPEC_OBJECT: ty.ClassVar[str] = "measurementSeriesStart"
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    unit: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "unit"},
+    )
+
+    series_id: str = dc.field(
+        metadata={"spec_field": "measurementSeriesId"},
+    )
+
+    # validators: list[Validator] = dc.field(
+    #     metadata={"spec_field": "validators"},
+    # )
+
+    # TODO: make an obj here and formatter?
+    # hardware_info_id: ty.Optional[str] = dc.field(
+    #     metadata={"spec_field": "hardwareInfoId"},
+    # )
+
+    # subcomponent: ty.Optional[Subcomponent] = dc.field(
+    #     metadata={"spec_field": "subcomponent"},
+    # )
+
+    metadata: ty.Optional[Metadata]
+
+
+@dc.dataclass
+class MeasurementSeriesEnd:
+    SPEC_OBJECT: ty.ClassVar[str] = "measurementSeriesEnd"
+
+    series_id: str = dc.field(
+        metadata={"spec_field": "measurementSeriesId"},
+    )
+
+    total_count: int = dc.field(
+        metadata={"spec_field": "totalCount"},
+    )
+
+
+@dc.dataclass
+class MeasurementSeriesElement:
+    SPEC_OBJECT: ty.ClassVar[str] = "measurementSeriesElement"
+
+    index: int = dc.field(
+        metadata={"spec_field": "index"},
+    )
+
+    value: MeasurementValueType = dc.field(
+        metadata={"spec_field": "value"},
+    )
+
+    timestamp: float = dc.field(
+        metadata={
+            "spec_field": "timestamp",
+            "formatter": format_timestamp,
+        },
+    )
+
+    series_id: str = dc.field(
+        metadata={"spec_field": "measurementSeriesId"},
+    )
+
+    metadata: ty.Optional[Metadata]
+
+
+MeasurementSeriesType = (
+    MeasurementSeriesStart | MeasurementSeriesEnd | MeasurementSeriesElement
+)
+
+
+@dc.dataclass
 class RunStart:
     SPEC_OBJECT: ty.ClassVar[str] = "testRunStart"
 
@@ -289,11 +365,8 @@ class StepArtifact:
         metadata={"spec_field": "testStepId"},
     )
 
-    # TODO: measurementSeriesStart
-    # TODO: measurementSeriesEnd
-    # TODO: measurementSeriesElement
     # TODO: extension
-    impl: StepStart | StepEnd | Diagnosis | Measurement | Log | Error | File
+    impl: StepStart | StepEnd | Measurement | MeasurementSeriesType | Diagnosis | Log | Error | File
 
 
 RootArtifactType = SchemaVersion | RunArtifact | StepArtifact

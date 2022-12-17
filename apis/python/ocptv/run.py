@@ -54,7 +54,8 @@ class TestRun:
         self._params = parameters or {}
         self._emitter = ArtifactEmitter()
 
-        self._stepId = 0
+        # TODO: threadsafe?
+        self._step_id: int = 0
 
     # by this point, user code has identified complete dut info or error'd out
     def start(self, *, duts: ty.Optional[list[Dut]] = None):
@@ -93,8 +94,8 @@ class TestRun:
             self.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
 
     def add_step(self, name: str) -> TestStep:
-        step = TestStep(name, step_id=self._stepId, emitter=self._emitter)
-        self._stepId += 1
+        step = TestStep(name, step_id=self._step_id, emitter=self._emitter)
+        self._step_id += 1
         return step
 
     def add_log(self, severity: LogSeverity, message: str):
