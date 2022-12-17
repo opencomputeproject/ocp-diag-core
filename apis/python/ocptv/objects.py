@@ -57,11 +57,11 @@ class Metadata(dict):
 
 
 class LogSeverity(Enum):
-    INFO = 1
-    DEBUG = 2
-    WARNING = 3
-    ERROR = 4
-    FATAL = 5
+    INFO = "INFO"
+    DEBUG = "DEBUG"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    FATAL = "FATAL"
 
 
 @dc.dataclass
@@ -125,9 +125,9 @@ class File:
 
 
 class DiagnosisType(Enum):
-    PASS = 1
-    FAIL = 2
-    UNKNOWN = 3
+    PASS = "PASS"
+    FAIL = "FAIL"
+    UNKNOWN = "UNKNOWN"
 
 
 @dc.dataclass
@@ -158,7 +158,44 @@ class DutInfo:
     pass
 
 
-MeasurementValueType = float | int | bool | str | list["MeasurementValueType"]
+MeasurementValueType = float | int | bool | str
+
+ValidatorValueType = list["ValidatorValueType"] | MeasurementValueType
+
+
+class ValidatorType(Enum):
+    EQUAL = "EQUAL"
+    NOT_EQUAL = "NOT_EQUAL"
+    LESS_THAN = "LESS_THAN"
+    LESS_THAN_OR_EQUAL = "LESS_THAN_OR_EQUAL"
+    GREATER_THAN = "GREATER_THAN"
+    GREATER_THAN_OR_EQUAL = "GREATER_THAN_OR_EQUAL"
+    REGEX_MATCH = "REGEX_MATCH"
+    REGEX_NO_MATCH = "REGEX_NO_MATCH"
+    IN_SET = "IN_SET"
+    NOT_IN_SET = "NOT_IN_SET"
+
+
+@dc.dataclass
+class Validator:
+    SPEC_OBJECT: ty.ClassVar[str] = "validator"
+
+    name: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    type: ValidatorType = dc.field(
+        metadata={
+            "spec_field": "type",
+            "formatter": format_enum,
+        },
+    )
+
+    value: ValidatorValueType = dc.field(
+        metadata={"spec_field": "value"},
+    )
+
+    metadata: ty.Optional[Metadata]
 
 
 @dc.dataclass
@@ -177,19 +214,16 @@ class Measurement:
         metadata={"spec_field": "unit"},
     )
 
-    # validators: list[Validator] = dc.field(
-    #     metadata={"spec_field": "validators"},
-    # )
+    validators: list[Validator] = dc.field(
+        metadata={"spec_field": "validators"},
+    )
 
     # TODO: make an obj here and formatter?
     # hardware_info_id: ty.Optional[str] = dc.field(
     #     metadata={"spec_field": "hardwareInfoId"},
     # )
 
-    # subcomponent: ty.Optional[Subcomponent] = dc.field(
-    #     metadata={"spec_field": "subcomponent"},
-    # )
-
+    # subcomponent: ty.Optional[Subcomponent]
     metadata: ty.Optional[Metadata]
 
 
@@ -209,19 +243,16 @@ class MeasurementSeriesStart:
         metadata={"spec_field": "measurementSeriesId"},
     )
 
-    # validators: list[Validator] = dc.field(
-    #     metadata={"spec_field": "validators"},
-    # )
+    validators: list[Validator] = dc.field(
+        metadata={"spec_field": "validators"},
+    )
 
     # TODO: make an obj here and formatter?
     # hardware_info_id: ty.Optional[str] = dc.field(
     #     metadata={"spec_field": "hardwareInfoId"},
     # )
 
-    # subcomponent: ty.Optional[Subcomponent] = dc.field(
-    #     metadata={"spec_field": "subcomponent"},
-    # )
-
+    # subcomponent: ty.Optional[Subcomponent]
     metadata: ty.Optional[Metadata]
 
 
@@ -282,32 +313,35 @@ class RunStart:
     )
 
     command_line: str = dc.field(
+        # TODO: remove default
         default="",
         metadata={"spec_field": "commandLine"},
     )
 
     parameters: dict[str, ty.Any] = dc.field(
+        # TODO: remove default
         default_factory=dict,
         metadata={"spec_field": "parameters"},
     )
 
     # TODO: is still a list?
     dut_info: list[DutInfo] = dc.field(
+        # TODO: remove default
         default_factory=list,
         metadata={"spec_field": "dutInfo"},
     )
 
 
 class TestStatus(Enum):
-    COMPLETE = 1
-    ERROR = 2
-    SKIP = 3
+    COMPLETE = "COMPLETE"
+    ERROR = "ERROR"
+    SKIP = "SKIP"
 
 
 class TestResult(Enum):
-    PASS = 1
-    FAIL = 2
-    NOT_APPLICABLE = 3
+    PASS = "PASS"
+    FAIL = "FAIL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
 @dc.dataclass

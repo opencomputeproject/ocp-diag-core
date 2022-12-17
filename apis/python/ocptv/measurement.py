@@ -9,6 +9,9 @@ from .objects import (
     MeasurementSeriesEnd,
     MeasurementSeriesElement,
     MeasurementSeriesType,
+    Validator as ValidatorSpec,
+    ValidatorType,
+    ValidatorValueType,
     Metadata,
 )
 from .output import ArtifactEmitter
@@ -23,6 +26,28 @@ class MeasurementSeriesEmitter(ArtifactEmitter):
         self._emitter.emit(StepArtifact(id=self._step_id, impl=impl))
 
 
+# Following object is a proxy type so we get future flexibility, avoiding the usage
+# of the low-level models.
+class Validator:
+    def __init__(
+        self,
+        *,
+        type: ValidatorType,
+        value: ValidatorValueType,
+        name: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        self._spec_object = ValidatorSpec(
+            name=name,
+            type=type,
+            value=value,
+            metadata=metadata,
+        )
+
+    def to_spec(self) -> ValidatorSpec:
+        return self._spec_object
+
+
 class MeasurementSeries:
     """
     TODO: not for user code instantiation
@@ -35,6 +60,7 @@ class MeasurementSeries:
         *,
         name: str,
         unit: ty.Optional[str] = None,
+        validators: ty.Optional[list[Validator]] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
         self._emitter = emitter
@@ -43,7 +69,7 @@ class MeasurementSeries:
         # TODO: threadsafety?
         self._index: int = 0
 
-        self._start(name, unit, metadata)
+        self._start(name, unit, validators, metadata)
 
     def add_measurement(
         self,
@@ -70,12 +96,17 @@ class MeasurementSeries:
         self,
         name: str,
         unit: ty.Optional[str] = None,
+        validators: ty.Optional[list[Validator]] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
+        if validators is None:
+            validators = []
+
         start = MeasurementSeriesStart(
             name=name,
             unit=unit,
             series_id=self._id,
+            validators=[v.to_spec() for v in validators],
             metadata=metadata,
         )
         self._emitter.emit_impl(start)

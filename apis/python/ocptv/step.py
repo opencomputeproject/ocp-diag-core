@@ -10,7 +10,6 @@ from .objects import (
     StepEnd,
     Measurement,
     MeasurementValueType,
-    MeasurementSeriesType,
     Log,
     Error,
     File,
@@ -20,7 +19,7 @@ from .objects import (
     LogSeverity,
     DiagnosisType,
 )
-from .measurement import MeasurementSeries, MeasurementSeriesEmitter
+from .measurement import MeasurementSeries, MeasurementSeriesEmitter, Validator
 from .output import ArtifactEmitter
 
 
@@ -70,12 +69,17 @@ class TestStep:
         name: str,
         value: MeasurementValueType,
         unit: ty.Optional[str] = None,
+        validators: ty.Optional[list[Validator]] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
+        if validators is None:
+            validators = []
+
         measurement = Measurement(
             name=name,
             value=value,
             unit=unit,
+            validators=[v.to_spec() for v in validators],
             metadata=metadata,
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=measurement))
@@ -85,6 +89,7 @@ class TestStep:
         *,
         name: str,
         unit: ty.Optional[str] = None,
+        validators: ty.Optional[list[Validator]] = None,
         metadata: ty.Optional[Metadata] = None,
     ) -> MeasurementSeries:
         # TODO: arbitrary derivation for measurement id here, but unique for run scope
@@ -93,6 +98,7 @@ class TestStep:
             "{}_{}".format(self._id, self._measurement_series_id),
             name=name,
             unit=unit,
+            validators=validators,
             metadata=metadata,
         )
         self._measurement_series_id += 1

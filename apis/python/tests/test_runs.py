@@ -3,7 +3,7 @@ import time
 import typing as ty
 
 import ocptv
-from ocptv import LogSeverity, TestStatus, TestResult, DiagnosisType
+from ocptv import LogSeverity, TestStatus, TestResult, DiagnosisType, ValidatorType
 from ocptv.formatter import format_timestamp
 from ocptv.output import JSON
 
@@ -305,9 +305,8 @@ def test_step_produces_simple_measurements(writer: MockWriter):
         with step.scope():
             step.add_measurement(name="fan_speed", value="1200", unit="rpm")
             step.add_measurement(name="temperature", value=42.5)
-            step.add_measurement(name="fan_spinning", value=["yes", "no"])
 
-    assert len(writer.lines) == 8
+    assert len(writer.lines) == 7
     assert_json(
         writer.lines[3],
         {
@@ -316,6 +315,7 @@ def test_step_produces_simple_measurements(writer: MockWriter):
                     "name": "fan_speed",
                     "value": "1200",
                     "unit": "rpm",
+                    "validators": [],
                 },
                 "testStepId": "0",
             },
@@ -330,24 +330,11 @@ def test_step_produces_simple_measurements(writer: MockWriter):
                 "measurement": {
                     "name": "temperature",
                     "value": 42.5,
+                    "validators": [],
                 },
                 "testStepId": "0",
             },
             "sequenceNumber": 4,
-        },
-    )
-
-    assert_json(
-        writer.lines[5],
-        {
-            "testStepArtifact": {
-                "measurement": {
-                    "name": "fan_spinning",
-                    "value": ["yes", "no"],
-                },
-                "testStepId": "0",
-            },
-            "sequenceNumber": 5,
         },
     )
 
@@ -373,6 +360,7 @@ def test_step_produces_measurement_series(writer: MockWriter):
                     "name": "fan_speed",
                     "unit": "rpm",
                     "measurementSeriesId": "0_0",
+                    "validators": [],
                 },
                 "testStepId": "0",
             },
@@ -492,3 +480,87 @@ def test_step_produces_concurrent_measurement_series(writer: MockWriter):
     assert "testStepArtifact" in writer.decoded_obj(9)
     artifact = ty.cast(dict[str, JSON], writer.decoded_obj(9)["testStepArtifact"])
     assert "measurementSeriesEnd" in artifact
+
+
+def test_step_produces_measurements_with_validators(writer: MockWriter):
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step0 = run.add_step("step0")
+        with step0.scope():
+            step0.add_measurement(
+                name="temp",
+                value=40,
+                validators=[
+                    ocptv.Validator(
+                        type=ValidatorType.GREATER_THAN,
+                        value=30,
+                        name="gt_30",
+                    )
+                ],
+            )
+
+        step1 = run.add_step("step1")
+        with step1.scope():
+            fan_speed = step1.start_measurement_series(
+                name="fan_speed",
+                unit="rpm",
+                validators=[
+                    ocptv.Validator(
+                        type=ValidatorType.GREATER_THAN,
+                        value=500,
+                    ),
+                    ocptv.Validator(
+                        type=ValidatorType.LESS_THAN_OR_EQUAL,
+                        value=3000,
+                    ),
+                ],
+            )
+            with fan_speed.scope():
+                fan_speed.add_measurement(value=1000)
+
+    assert len(writer.lines) == 11
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "measurement": {
+                    "name": "temp",
+                    "value": 40,
+                    "validators": [
+                        {
+                            "name": "gt_30",
+                            "type": "GREATER_THAN",
+                            "value": 30,
+                        }
+                    ],
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )
+
+    assert_json(
+        writer.lines[6],
+        {
+            "testStepArtifact": {
+                "measurementSeriesStart": {
+                    "name": "fan_speed",
+                    "unit": "rpm",
+                    "measurementSeriesId": "1_0",
+                    "validators": [
+                        {
+                            "type": "GREATER_THAN",
+                            "value": 500,
+                        },
+                        {
+                            "type": "LESS_THAN_OR_EQUAL",
+                            "value": 3000,
+                        },
+                    ],
+                },
+                "testStepId": "1",
+            },
+            "sequenceNumber": 6,
+        },
+    )

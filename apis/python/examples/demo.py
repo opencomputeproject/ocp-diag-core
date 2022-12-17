@@ -9,7 +9,13 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import ocptv
-from ocptv import DiagnosisType, LogSeverity, TestResult, TestStatus
+from ocptv import (
+    DiagnosisType,
+    LogSeverity,
+    TestResult,
+    TestStatus,
+    ValidatorType,
+)
 from ocptv.output import Writer, StdoutWriter
 
 
@@ -232,7 +238,6 @@ def demo_create_measurement_simple():
         with step.scope():
             step.add_measurement(name="fan_speed", value="1200", unit="rpm")
             step.add_measurement(name="temperature", value=42.5)
-            step.add_measurement(name="set_item", value=[2, 4])
 
 
 @banner
@@ -272,6 +277,38 @@ def demo_create_measurement_series():
             s1.end()
 
 
+@banner
+def demo_create_measurements_with_validators():
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_measurement(
+                name="temp",
+                value=40,
+                validators=[
+                    ocptv.Validator(
+                        type=ValidatorType.GREATER_THAN,
+                        value=30,
+                        name="gt_30",
+                    )
+                ],
+            )
+
+            fan_speed = step.start_measurement_series(
+                name="fan_speed",
+                unit="rpm",
+                validators=[
+                    ocptv.Validator(
+                        type=ValidatorType.LESS_THAN_OR_EQUAL,
+                        value=3000,
+                    )
+                ],
+            )
+            with fan_speed.scope():
+                fan_speed.add_measurement(value=1000)
+
+
 if __name__ == "__main__":
     demo_no_contexts()
     demo_context_run_skip()
@@ -283,3 +320,4 @@ if __name__ == "__main__":
     demo_create_file_during_step()
     demo_create_measurement_simple()
     demo_create_measurement_series()
+    demo_create_measurements_with_validators()
