@@ -224,6 +224,17 @@ def demo_create_file_during_step():
             )
 
 
+@banner
+def demo_create_measurement_simple():
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_measurement(name="fan_speed", value="1200", unit="rpm")
+            step.add_measurement(name="temperature", value=42.5)
+            step.add_measurement(name="set_item", value=[2, 4])
+
+
 if __name__ == "__main__":
     demo_no_contexts()
     demo_context_run_skip()
@@ -233,3 +244,4 @@ if __name__ == "__main__":
     demo_python_logging_io()
     demo_error_while_gathering_duts()
     demo_create_file_during_step()
+    demo_create_measurement_simple()

@@ -294,3 +294,57 @@ def test_step_produces_files(writer: MockWriter):
             "sequenceNumber": 6,
         },
     )
+
+
+def test_step_produces_simple_measurements(writer: MockWriter):
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_measurement(name="fan_speed", value="1200", unit="rpm")
+            step.add_measurement(name="temperature", value=42.5)
+            step.add_measurement(name="fan_spinning", value=["yes", "no"])
+
+    assert len(writer.lines) == 8
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "measurement": {
+                    "name": "fan_speed",
+                    "value": "1200",
+                    "unit": "rpm",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )
+
+    assert_json(
+        writer.lines[4],
+        {
+            "testStepArtifact": {
+                "measurement": {
+                    "name": "temperature",
+                    "value": 42.5,
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 4,
+        },
+    )
+
+    assert_json(
+        writer.lines[5],
+        {
+            "testStepArtifact": {
+                "measurement": {
+                    "name": "fan_spinning",
+                    "value": ["yes", "no"],
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 5,
+        },
+    )

@@ -8,6 +8,8 @@ from .objects import (
     StepArtifact,
     StepStart,
     StepEnd,
+    Measurement,
+    MeasurementValueType,
     Log,
     Error,
     File,
@@ -56,8 +58,21 @@ class TestStep:
         else:
             self.end(status=TestStatus.COMPLETE)
 
-    # def add_measurement(self) -> Measurement:
-    #     return Measuremet()
+    def add_measurement(
+        self,
+        *,
+        name: str,
+        value: MeasurementValueType,
+        unit: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        measurement = Measurement(
+            name=name,
+            value=value,
+            unit=unit,
+            metadata=metadata,
+        )
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=measurement))
 
     # def add_measurement_series(self) -> MeasurementSeries:
     #     return MeasurementSeries()

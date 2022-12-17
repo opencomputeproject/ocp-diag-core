@@ -158,6 +158,41 @@ class DutInfo:
     pass
 
 
+MeasurementValueType = float | int | bool | str | list["MeasurementValueType"]
+
+
+@dc.dataclass
+class Measurement:
+    SPEC_OBJECT: ty.ClassVar[str] = "measurement"
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    value: MeasurementValueType = dc.field(
+        metadata={"spec_field": "value"},
+    )
+
+    unit: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "unit"},
+    )
+
+    # validators: list[Validator] = dc.field(
+    #     metadata={"spec_field": "validators"},
+    # )
+
+    # TODO: make an obj here and formatter?
+    # hardware_info_id: ty.Optional[str] = dc.field(
+    #     metadata={"spec_field": "hardwareInfoId"},
+    # )
+
+    # subcomponent: ty.Optional[Subcomponent] = dc.field(
+    #     metadata={"spec_field": "subcomponent"},
+    # )
+
+    metadata: ty.Optional[Metadata]
+
+
 @dc.dataclass
 class RunStart:
     SPEC_OBJECT: ty.ClassVar[str] = "testRunStart"
@@ -258,7 +293,7 @@ class StepArtifact:
     # TODO: measurementSeriesEnd
     # TODO: measurementSeriesElement
     # TODO: extension
-    impl: StepStart | StepEnd | Diagnosis | Log | Error | File
+    impl: StepStart | StepEnd | Diagnosis | Measurement | Log | Error | File
 
 
 RootArtifactType = SchemaVersion | RunArtifact | StepArtifact
