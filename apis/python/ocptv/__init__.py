@@ -9,4 +9,11 @@ from .output import configOutput
 from .step import TestStep, TestStepError
 from .run import TestRun, TestRunError
 
-from .objects import OCPVersion, TestStatus, TestResult, LogSeverity, DiagnosisType
+from .objects import (
+    OCPVersion,
+    TestStatus,
+    TestResult,
+    LogSeverity,
+    DiagnosisType,
+    Metadata,
+)

@@ -239,3 +239,58 @@ def test_step_can_error(writer: MockWriter):
             "sequenceNumber": 3,
         },
     )
+
+
+def test_step_produces_files(writer: MockWriter):
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_file(
+                name="device_info.csv",
+                uri="file:///root/device_info.csv",
+            )
+
+        step = run.add_step("step1")
+        with step.scope():
+            meta = ocptv.Metadata()
+            meta["k"] = "v"
+
+            step.add_file(
+                name="file_with_meta.txt",
+                uri="ftp://file",
+                metadata=meta,
+            )
+
+    assert len(writer.lines) == 9
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "file": {
+                    "displayName": "device_info.csv",
+                    "uri": "file:///root/device_info.csv",
+                    "isSnapshot": True,
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )
+    assert_json(
+        writer.lines[6],
+        {
+            "testStepArtifact": {
+                "file": {
+                    "displayName": "file_with_meta.txt",
+                    "uri": "ftp://file",
+                    "isSnapshot": True,
+                    "metadata": {
+                        "k": "v",
+                    },
+                },
+                "testStepId": "1",
+            },
+            "sequenceNumber": 6,
+        },
+    )

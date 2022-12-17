@@ -10,6 +10,8 @@ from .objects import (
     StepEnd,
     Log,
     Error,
+    File,
+    Metadata,
     Diagnosis,
     TestStatus,
     LogSeverity,
@@ -54,8 +56,8 @@ class TestStep:
         else:
             self.end(status=TestStatus.COMPLETE)
 
-    # def add_measurement(self):
-    #     pass
+    # def add_measurement(self) -> Measurement:
+    #     return Measuremet()
 
     # def add_measurement_series(self) -> MeasurementSeries:
     #     return MeasurementSeries()
@@ -77,6 +79,13 @@ class TestStep:
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=diag))
 
+    def add_log(self, severity: LogSeverity, message: str):
+        log = Log(
+            severity=severity,
+            message=message,
+        )
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=log))
+
     # TODO: fix software_info_ids when duts are done
     def add_error(
         self,
@@ -92,15 +101,25 @@ class TestStep:
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=error))
 
-    # def add_file():
-    #     pass
-
-    def add_log(self, severity: LogSeverity, message: str):
-        log = Log(
-            severity=severity,
-            message=message,
+    def add_file(
+        self,
+        *,
+        name: str,
+        uri: str,
+        is_snapshot: bool = True,
+        description: ty.Optional[str] = None,
+        content_type: ty.Optional[str] = None,
+        metadata: ty.Optional[Metadata] = None,
+    ):
+        file = File(
+            name=name,
+            uri=uri,
+            is_snapshot=is_snapshot,
+            description=description,
+            content_type=content_type,
+            metadata=metadata,
         )
-        self._emitter.emit(StepArtifact(id=self._idstr, impl=log))
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=file))
 
     @property
     def name(self) -> str:

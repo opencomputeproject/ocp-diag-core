@@ -30,9 +30,7 @@ def demo_no_contexts():
     Show that a run/step can be manually started and ended
     (but it's safer with context)
     """
-    run = ocptv.TestRun(
-        name="no with", version="1.0", parameters={"param1": "dog", "param2": "cat"}
-    )
+    run = ocptv.TestRun(name="no with", version="1.0", parameters={"param": "test"})
     run.start()
 
     step = run.add_step("step0")
@@ -49,9 +47,7 @@ def demo_context_run_skip():
     Show a context-scoped run that automatically exits the whole func
     because of the marker exception that triggers SKIP outcome.
     """
-    run = ocptv.TestRun(
-        name="run_skip", version="1.0", parameters={"param1": "dog", "param2": "cat"}
-    )
+    run = ocptv.TestRun(name="run_skip", version="1.0", parameters={"param": "test"})
     with run.scope():
         raise ocptv.TestRunError(
             status=TestStatus.SKIP, result=TestResult.NOT_APPLICABLE
@@ -201,10 +197,31 @@ def demo_error_while_gathering_duts():
         # str consts for error classifier
         NO_DUT = "no-dut"
 
-    run = ocptv.TestRun(
-        name="no with", version="1.0", parameters={"param1": "dog", "param2": "cat"}
+    run = ocptv.TestRun(name="test", version="1.0")
+    run.add_error(
+        symptom=Symptom.NO_DUT,
+        message="could not find any valid DUTs",
     )
-    run.add_error(symptom=Symptom.NO_DUT, message="could not find any valid DUTs")
+
+
+@banner
+def demo_create_file_during_step():
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope():
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_file(
+                name="device_info.csv",
+                uri="file:///root/device_info.csv",
+            )
+
+            meta = ocptv.Metadata()
+            meta["k"] = "v"
+            step.add_file(
+                name="file_with_meta.txt",
+                uri="ftp://file",
+                metadata=meta,
+            )
 
 
 if __name__ == "__main__":
@@ -215,3 +232,4 @@ if __name__ == "__main__":
     demo_diagnosis()
     demo_python_logging_io()
     demo_error_while_gathering_duts()
+    demo_create_file_during_step()

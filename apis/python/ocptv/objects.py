@@ -46,6 +46,16 @@ class SchemaVersion:
     )
 
 
+# NOTE: This is intentionally not a dataclass
+class Metadata(dict):
+    """
+    Metadata container, is a type dict in order to accomodate
+    any arbitrary data put into it.
+    """
+
+    SPEC_OBJECT: ty.ClassVar[str] = "metadata"
+
+
 class LogSeverity(Enum):
     INFO = 1
     DEBUG = 2
@@ -85,6 +95,33 @@ class Error:
     software_info_ids: list[str] = dc.field(
         metadata={"spec_field": "softwareInfoIds"},
     )
+
+
+@dc.dataclass
+class File:
+    SPEC_OBJECT: ty.ClassVar[str] = "file"
+
+    name: str = dc.field(
+        metadata={"spec_field": "displayName"},
+    )
+
+    uri: str = dc.field(
+        metadata={"spec_field": "uri"},
+    )
+
+    is_snapshot: bool = dc.field(
+        metadata={"spec_field": "isSnapshot"},
+    )
+
+    description: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "description"},
+    )
+
+    content_type: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "contentType"},
+    )
+
+    metadata: ty.Optional[Metadata]
 
 
 class DiagnosisType(Enum):
@@ -217,14 +254,11 @@ class StepArtifact:
         metadata={"spec_field": "testStepId"},
     )
 
-    # TODO: measurement
     # TODO: measurementSeriesStart
     # TODO: measurementSeriesEnd
     # TODO: measurementSeriesElement
-    # TODO: error
-    # TODO: file
     # TODO: extension
-    impl: StepStart | StepEnd | Diagnosis | Log | Error
+    impl: StepStart | StepEnd | Diagnosis | Log | Error | File
 
 
 RootArtifactType = SchemaVersion | RunArtifact | StepArtifact

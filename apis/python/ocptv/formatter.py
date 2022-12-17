@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-import typing as ty
 
 
 def format_enum(variant: Enum) -> str:
