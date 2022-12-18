@@ -14,6 +14,7 @@ from .objects import (
     ValidatorValueType,
     Metadata,
 )
+from .dut import Subcomponent, HardwareInfo
 from .output import ArtifactEmitter
 
 
@@ -61,6 +62,8 @@ class MeasurementSeries:
         name: str,
         unit: ty.Optional[str] = None,
         validators: ty.Optional[list[Validator]] = None,
+        hardware_info: ty.Optional[HardwareInfo] = None,
+        subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
         self._emitter = emitter
@@ -69,7 +72,7 @@ class MeasurementSeries:
         # TODO: threadsafety?
         self._index: int = 0
 
-        self._start(name, unit, validators, metadata)
+        self._start(name, unit, validators, hardware_info, subcomponent, metadata)
 
     def add_measurement(
         self,
@@ -97,6 +100,8 @@ class MeasurementSeries:
         name: str,
         unit: ty.Optional[str] = None,
         validators: ty.Optional[list[Validator]] = None,
+        hardware_info: ty.Optional[HardwareInfo] = None,
+        subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
         if validators is None:
@@ -107,6 +112,8 @@ class MeasurementSeries:
             unit=unit,
             series_id=self._id,
             validators=[v.to_spec() for v in validators],
+            hardware_info=hardware_info.to_spec() if hardware_info else None,
+            subcomponent=subcomponent.to_spec() if subcomponent else None,
             metadata=metadata,
         )
         self._emitter.emit_impl(start)

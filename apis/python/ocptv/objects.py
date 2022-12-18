@@ -81,23 +81,6 @@ class Log:
 
 
 @dc.dataclass
-class Error:
-    SPEC_OBJECT: ty.ClassVar[str] = "error"
-
-    symptom: str = dc.field(
-        metadata={"spec_field": "symptom"},
-    )
-
-    message: ty.Optional[str] = dc.field(
-        metadata={"spec_field": "message"},
-    )
-
-    software_info_ids: list[str] = dc.field(
-        metadata={"spec_field": "softwareInfoIds"},
-    )
-
-
-@dc.dataclass
 class File:
     SPEC_OBJECT: ty.ClassVar[str] = "file"
 
@@ -124,10 +107,179 @@ class File:
     metadata: ty.Optional[Metadata]
 
 
+class SubcomponentType(Enum):
+    UNSPECIFIED = "UNSPECIFIED"
+    ASIC = "ASIC"
+    ASIC_SUBSYSTEM = "ASIC-SUBSYSTEM"
+    BUS = "BUS"
+    FUNCTION = "FUNCTION"
+    CONNECTOR = "CONNECTOR"
+
+
+@dc.dataclass
+class Subcomponent:
+    SPEC_OBJECT: ty.ClassVar[str] = "subcomponent"
+
+    type: ty.Optional[SubcomponentType] = dc.field(
+        metadata={
+            "spec_field": "type",
+            "formatter": format_enum,
+        },
+    )
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    location: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "location"},
+    )
+
+    version: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "version"},
+    )
+
+    revision: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "revision"},
+    )
+
+
 class DiagnosisType(Enum):
     PASS = "PASS"
     FAIL = "FAIL"
     UNKNOWN = "UNKNOWN"
+
+
+@dc.dataclass
+class PlatformInfo:
+    SPEC_OBJECT: ty.ClassVar[str] = "platformInfo"
+
+    info: str = dc.field(
+        metadata={"spec_field": "info"},
+    )
+
+
+class SoftwareType(Enum):
+    UNSPECIFIED = "UNSPECIFIED"
+    FIRMWARE = "FIRMWARE"
+    SYSTEM = "SYSTEM"
+    APPLICATION = "APPLICATION"
+
+
+@dc.dataclass
+class SoftwareInfo:
+    SPEC_OBJECT: ty.ClassVar[str] = "softwareInfo"
+
+    id: str = dc.field(
+        metadata={"spec_field": "softwareInfoId"},
+    )
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    version: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "version"},
+    )
+
+    revision: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "revision"},
+    )
+
+    type: ty.Optional[SoftwareType] = dc.field(
+        metadata={
+            "spec_field": "softwareType",
+            "formatter": format_enum,
+        },
+    )
+
+    computer_system: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "computerSystem"},
+    )
+
+
+@dc.dataclass
+class HardwareInfo:
+    SPEC_OBJECT: ty.ClassVar[str] = "hardwareInfo"
+
+    id: str = dc.field(
+        metadata={"spec_field": "hardwareInfoId"},
+    )
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    version: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "version"},
+    )
+
+    revision: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "revision"},
+    )
+
+    location: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "location"},
+    )
+
+    serial_no: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "serialNumber"},
+    )
+
+    part_no: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "partNumber"},
+    )
+
+    manufacturer: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "manufacturer"},
+    )
+
+    manufacturer_part_no: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "manufacturerPartNumber"},
+    )
+
+    odata_id: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "odataId"},
+    )
+
+    computer_system: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "computerSystem"},
+    )
+
+    manager: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "manager"},
+    )
+
+
+def format_hardware_info(obj: HardwareInfo) -> str:
+    return obj.id
+
+
+@dc.dataclass
+class DutInfo:
+    SPEC_OBJECT: ty.ClassVar[str] = "dutInfo"
+
+    id: str = dc.field(
+        metadata={"spec_field": "dutInfoId"},
+    )
+
+    name: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    platform_infos: list[PlatformInfo] = dc.field(
+        metadata={"spec_field": "platformInfos"},
+    )
+
+    software_infos: list[SoftwareInfo] = dc.field(
+        metadata={"spec_field": "softwareInfos"},
+    )
+
+    hardware_infos: list[HardwareInfo] = dc.field(
+        metadata={"spec_field": "hardwareInfos"},
+    )
+
+    metadata: ty.Optional[Metadata]
 
 
 @dc.dataclass
@@ -149,13 +301,34 @@ class Diagnosis:
         metadata={"spec_field": "message"},
     )
 
-    # TODO: hardwareInfoId
-    # TODO: subcomponent
+    hardware_info: ty.Optional[HardwareInfo] = dc.field(
+        metadata={
+            "spec_field": "hardwareInfoId",
+            "formatter": format_hardware_info,
+        }
+    )
+
+    subcomponent: ty.Optional[Subcomponent]
 
 
 @dc.dataclass
-class DutInfo:
-    pass
+class Error:
+    SPEC_OBJECT: ty.ClassVar[str] = "error"
+
+    symptom: str = dc.field(
+        metadata={"spec_field": "symptom"},
+    )
+
+    message: ty.Optional[str] = dc.field(
+        metadata={"spec_field": "message"},
+    )
+
+    software_infos: list[SoftwareInfo] = dc.field(
+        metadata={
+            "spec_field": "softwareInfoIds",
+            "formatter": lambda objs: [o.id for o in objs],
+        },
+    )
 
 
 MeasurementValueType = float | int | bool | str
@@ -218,12 +391,14 @@ class Measurement:
         metadata={"spec_field": "validators"},
     )
 
-    # TODO: make an obj here and formatter?
-    # hardware_info_id: ty.Optional[str] = dc.field(
-    #     metadata={"spec_field": "hardwareInfoId"},
-    # )
+    hardware_info: ty.Optional[HardwareInfo] = dc.field(
+        metadata={
+            "spec_field": "hardwareInfoId",
+            "formatter": format_hardware_info,
+        }
+    )
 
-    # subcomponent: ty.Optional[Subcomponent]
+    subcomponent: ty.Optional[Subcomponent]
     metadata: ty.Optional[Metadata]
 
 
@@ -247,12 +422,14 @@ class MeasurementSeriesStart:
         metadata={"spec_field": "validators"},
     )
 
-    # TODO: make an obj here and formatter?
-    # hardware_info_id: ty.Optional[str] = dc.field(
-    #     metadata={"spec_field": "hardwareInfoId"},
-    # )
+    hardware_info: ty.Optional[HardwareInfo] = dc.field(
+        metadata={
+            "spec_field": "hardwareInfoId",
+            "formatter": format_hardware_info,
+        }
+    )
 
-    # subcomponent: ty.Optional[Subcomponent]
+    subcomponent: ty.Optional[Subcomponent]
     metadata: ty.Optional[Metadata]
 
 
@@ -313,23 +490,15 @@ class RunStart:
     )
 
     command_line: str = dc.field(
-        # TODO: remove default
-        default="",
         metadata={"spec_field": "commandLine"},
     )
 
     parameters: dict[str, ty.Any] = dc.field(
-        # TODO: remove default
-        default_factory=dict,
         metadata={"spec_field": "parameters"},
     )
 
     # TODO: is still a list?
-    dut_info: list[DutInfo] = dc.field(
-        # TODO: remove default
-        default_factory=list,
-        metadata={"spec_field": "dutInfo"},
-    )
+    dut_info: DutInfo
 
 
 class TestStatus(Enum):

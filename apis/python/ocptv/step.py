@@ -20,6 +20,7 @@ from .objects import (
     DiagnosisType,
 )
 from .measurement import MeasurementSeries, MeasurementSeriesEmitter, Validator
+from .dut import Subcomponent, SoftwareInfo, HardwareInfo
 from .output import ArtifactEmitter
 
 
@@ -70,6 +71,8 @@ class TestStep:
         value: MeasurementValueType,
         unit: ty.Optional[str] = None,
         validators: ty.Optional[list[Validator]] = None,
+        hardware_info: ty.Optional[HardwareInfo] = None,
+        subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
     ):
         if validators is None:
@@ -80,6 +83,8 @@ class TestStep:
             value=value,
             unit=unit,
             validators=[v.to_spec() for v in validators],
+            hardware_info=hardware_info.to_spec() if hardware_info else None,
+            subcomponent=subcomponent.to_spec() if subcomponent else None,
             metadata=metadata,
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=measurement))
@@ -90,6 +95,8 @@ class TestStep:
         name: str,
         unit: ty.Optional[str] = None,
         validators: ty.Optional[list[Validator]] = None,
+        hardware_info: ty.Optional[HardwareInfo] = None,
+        subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
     ) -> MeasurementSeries:
         # TODO: arbitrary derivation for measurement id here, but unique for run scope
@@ -99,25 +106,28 @@ class TestStep:
             name=name,
             unit=unit,
             validators=validators,
+            hardware_info=hardware_info,
+            subcomponent=subcomponent,
             metadata=metadata,
         )
         self._measurement_series_id += 1
         return series
 
-    # TODO: fix signature
     def add_diagnosis(
         self,
         diagnosis_type: DiagnosisType,
         *,
         verdict: str,
         message: ty.Optional[str] = None,
-        hardware_info_id: ty.Optional[str] = None,
-        subcomponent=None,
+        hardware_info: ty.Optional[HardwareInfo] = None,
+        subcomponent: ty.Optional[Subcomponent] = None,
     ):
         diag = Diagnosis(
             verdict=verdict,
             type=diagnosis_type,
             message=message,
+            hardware_info=hardware_info.to_spec() if hardware_info else None,
+            subcomponent=subcomponent.to_spec() if subcomponent else None,
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=diag))
 
@@ -128,18 +138,20 @@ class TestStep:
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=log))
 
-    # TODO: fix software_info_ids when duts are done
     def add_error(
         self,
         *,
         symptom: str,
         message: ty.Optional[str] = None,
-        software_info_ids: ty.Optional[list[str]] = None,
+        software_infos: ty.Optional[list[SoftwareInfo]] = None,
     ):
+        if software_infos is None:
+            software_infos = []
+
         error = Error(
             symptom=symptom,
             message=message,
-            software_info_ids=[],
+            software_infos=[o.to_spec() for o in software_infos],
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=error))
 

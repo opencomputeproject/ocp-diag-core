@@ -3,10 +3,18 @@ import time
 import typing as ty
 
 import ocptv
-from ocptv import LogSeverity, TestStatus, TestResult, DiagnosisType, ValidatorType
+from ocptv import (
+    LogSeverity,
+    TestStatus,
+    TestResult,
+    DiagnosisType,
+    ValidatorType,
+    SoftwareType,
+)
 from ocptv.formatter import format_timestamp
 from ocptv.output import JSON
 
+# pytest incorrectly identifies these as pytest related
 TestStatus.__test__ = False  # type: ignore
 TestResult.__test__ = False  # type: ignore
 
@@ -27,7 +35,7 @@ def test_simple_run(writer: MockWriter):
         command_line="cl",
         parameters={"param": "test"},
     )
-    run.start()
+    run.start(dut=ocptv.Dut(id="test_dut"))
     run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
 
     assert len(writer.lines) == 3
@@ -42,7 +50,12 @@ def test_simple_run(writer: MockWriter):
                     "parameters": {
                         "param": "test",
                     },
-                    "dutInfo": [],
+                    "dutInfo": {
+                        "dutInfoId": "test_dut",
+                        "platformInfos": [],
+                        "softwareInfos": [],
+                        "hardwareInfos": [],
+                    },
                 },
             },
             "sequenceNumber": 1,
@@ -65,7 +78,7 @@ def test_simple_run(writer: MockWriter):
 
 def test_run_scope(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         pass
 
     assert len(writer.lines) == 3
@@ -85,7 +98,7 @@ def test_run_scope(writer: MockWriter):
 
 def test_run_skip_by_exception(writer: MockWriter):
     run = ocptv.TestRun(name="run_skip", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         raise ocptv.TestRunError(
             status=TestStatus.SKIP, result=TestResult.NOT_APPLICABLE
         )
@@ -109,12 +122,29 @@ def test_run_with_diagnosis(writer: MockWriter):
     class Verdict:
         PASS = "pass-default"
 
+    dut = ocptv.Dut(id="test_dut")
+    ram0_hardware = dut.add_hardware_info(
+        name="ram0",
+        version="1",
+        revision="2",
+        location="MB/DIMM_A1",
+        serial_no="HMA2022029281901",
+        part_no="P03052-091",
+        manufacturer="hynix",
+        manufacturer_part_no="HMA84GR7AFR4N-VK",
+        odata_id="/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+        computer_system="primary_node",
+        manager="bmc0",
+    )
+
     run = ocptv.TestRun(name="run_with_diagnosis", version="1.0")
-    with run.scope():
+    with run.scope(dut=dut):
         run.add_log(LogSeverity.INFO, "run info")
         step = run.add_step("step0")
         with step.scope():
-            step.add_diagnosis(DiagnosisType.PASS, verdict=Verdict.PASS)
+            step.add_diagnosis(
+                DiagnosisType.PASS, verdict=Verdict.PASS, hardware_info=ram0_hardware
+            )
 
     assert len(writer.lines) == 7
     assert "schemaVersion" in writer.decoded_obj(0)
@@ -147,6 +177,7 @@ def test_run_with_diagnosis(writer: MockWriter):
                 "diagnosis": {
                     "type": "PASS",
                     "verdict": Verdict.PASS,
+                    "hardwareInfoId": "test_dut_0",
                 },
                 "testStepId": "0",
             },
@@ -198,9 +229,16 @@ def test_run_can_error(writer: MockWriter):
     class Symptom:
         TEST_SYMPTOM = "test-symptom"
 
+    dut = ocptv.Dut(id="test_dut")
+    bmc_software = dut.add_software_info(
+        name="bmc",
+        type=SoftwareType.FIRMWARE,
+        version="1.2",
+    )
+
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
-        run.add_error(symptom=Symptom.TEST_SYMPTOM)
+    with run.scope(dut=dut):
+        run.add_error(symptom=Symptom.TEST_SYMPTOM, software_infos=[bmc_software])
 
     assert len(writer.lines), 4
     assert_json(
@@ -209,7 +247,7 @@ def test_run_can_error(writer: MockWriter):
             "testRunArtifact": {
                 "error": {
                     "symptom": Symptom.TEST_SYMPTOM,
-                    "softwareInfoIds": [],
+                    "softwareInfoIds": ["test_dut_0"],
                 },
             },
             "sequenceNumber": 2,
@@ -221,11 +259,18 @@ def test_step_can_error(writer: MockWriter):
     class Symptom:
         TEST_SYMPTOM = "test-symptom"
 
+    dut = ocptv.Dut(id="test_dut")
+    bmc_software = dut.add_software_info(
+        name="bmc",
+        type=SoftwareType.FIRMWARE,
+        version="1.2",
+    )
+
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=dut):
         step = run.add_step("step0")
         with step.scope():
-            step.add_error(symptom=Symptom.TEST_SYMPTOM)
+            step.add_error(symptom=Symptom.TEST_SYMPTOM, software_infos=[bmc_software])
 
     assert len(writer.lines), 7
     assert_json(
@@ -234,7 +279,7 @@ def test_step_can_error(writer: MockWriter):
             "testStepArtifact": {
                 "error": {
                     "symptom": Symptom.TEST_SYMPTOM,
-                    "softwareInfoIds": [],
+                    "softwareInfoIds": ["test_dut_0"],
                 },
                 "testStepId": "0",
             },
@@ -245,7 +290,7 @@ def test_step_can_error(writer: MockWriter):
 
 def test_step_produces_files(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         step = run.add_step("step0")
         with step.scope():
             step.add_file(
@@ -300,7 +345,7 @@ def test_step_produces_files(writer: MockWriter):
 
 def test_step_produces_simple_measurements(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         step = run.add_step("step0")
         with step.scope():
             step.add_measurement(name="fan_speed", value="1200", unit="rpm")
@@ -343,7 +388,7 @@ def test_step_produces_measurement_series(writer: MockWriter):
     ts = time.time()
 
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         step = run.add_step("step0")
         with step.scope():
             fan_speed = step.start_measurement_series(name="fan_speed", unit="rpm")
@@ -416,7 +461,7 @@ def test_step_produces_concurrent_measurement_series(writer: MockWriter):
     ts = time.time()
 
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         step = run.add_step("step0")
         with step.scope():
             fan_speed = step.start_measurement_series(name="fan_speed", unit="rpm")
@@ -484,7 +529,7 @@ def test_step_produces_concurrent_measurement_series(writer: MockWriter):
 
 def test_step_produces_measurements_with_validators(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="test_dut")):
         step0 = run.add_step("step0")
         with step0.scope():
             step0.add_measurement(
@@ -562,5 +607,112 @@ def test_step_produces_measurements_with_validators(writer: MockWriter):
                 "testStepId": "1",
             },
             "sequenceNumber": 6,
+        },
+    )
+
+
+def test_step_produces_measurements_with_dut_subcomponent(writer: MockWriter):
+    dut = ocptv.Dut(id="test_dut", name="test.server.net")
+    dut.add_platform_info("memory-optimized")
+    dut.add_software_info(
+        name="bmc0",
+        type=SoftwareType.FIRMWARE,
+        version="10",
+        revision="11",
+        computer_system="primary_node",
+    )
+    ram0_hardware = dut.add_hardware_info(
+        name="ram0",
+        version="1",
+        revision="2",
+        location="MB/DIMM_A1",
+        serial_no="HMA2022029281901",
+        part_no="P03052-091",
+        manufacturer="hynix",
+        manufacturer_part_no="HMA84GR7AFR4N-VK",
+        odata_id="/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+        computer_system="primary_node",
+        manager="bmc0",
+    )
+
+    run = ocptv.TestRun(name="test", version="1.0", command_line="cl")
+    with run.scope(dut=dut):
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_measurement(
+                name="temp0",
+                value=40.2,
+                unit="C",
+                hardware_info=ram0_hardware,
+                subcomponent=ocptv.Subcomponent(name="chip0", location="U1"),
+            )
+
+    assert len(writer.lines) == 6
+    assert_json(
+        writer.lines[1],
+        {
+            "testRunArtifact": {
+                "testRunStart": {
+                    "name": "test",
+                    "version": "1.0",
+                    "commandLine": "cl",
+                    "parameters": {},
+                    "dutInfo": {
+                        "dutInfoId": "test_dut",
+                        "name": "test.server.net",
+                        "platformInfos": [{"info": "memory-optimized"}],
+                        "softwareInfos": [
+                            {
+                                "softwareInfoId": "test_dut_0",
+                                "name": "bmc0",
+                                "softwareType": "FIRMWARE",
+                                "version": "10",
+                                "revision": "11",
+                                "computerSystem": "primary_node",
+                            }
+                        ],
+                        "hardwareInfos": [
+                            {
+                                "hardwareInfoId": "test_dut_0",
+                                "name": "ram0",
+                                "version": "1",
+                                "revision": "2",
+                                "location": "MB/DIMM_A1",
+                                "serialNumber": "HMA2022029281901",
+                                "partNumber": "P03052-091",
+                                "manufacturer": "hynix",
+                                "manufacturerPartNumber": "HMA84GR7AFR4N-VK",
+                                "odataId": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+                                "computerSystem": "primary_node",
+                                "manager": "bmc0",
+                            }
+                        ],
+                    },
+                },
+            },
+            "sequenceNumber": 1,
+            "timestamp": "<ignored>",
+        },
+    )
+
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "measurement": {
+                    "name": "temp0",
+                    "value": 40.2,
+                    "unit": "C",
+                    "validators": [],
+                    "hardwareInfoId": "test_dut_0",
+                    "subcomponent": {
+                        "name": "chip0",
+                        "location": "U1",
+                    },
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+            "timestamp": "<ignored>",
         },
     )

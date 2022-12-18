@@ -15,6 +15,8 @@ from ocptv import (
     TestResult,
     TestStatus,
     ValidatorType,
+    SubcomponentType,
+    SoftwareType,
 )
 from ocptv.output import Writer, StdoutWriter
 
@@ -37,7 +39,7 @@ def demo_no_contexts():
     (but it's safer with context)
     """
     run = ocptv.TestRun(name="no with", version="1.0", parameters={"param": "test"})
-    run.start()
+    run.start(dut=ocptv.Dut(id="dut0"))
 
     step = run.add_step("step0")
     step.start()
@@ -54,7 +56,7 @@ def demo_context_run_skip():
     because of the marker exception that triggers SKIP outcome.
     """
     run = ocptv.TestRun(name="run_skip", version="1.0", parameters={"param": "test"})
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         raise ocptv.TestRunError(
             status=TestStatus.SKIP, result=TestResult.NOT_APPLICABLE
         )
@@ -67,7 +69,7 @@ def demo_context_step_fail():
     ends automatically when the block ends (regardless of unhandled exceptions).
     """
     run = ocptv.TestRun(name="step_fail", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step = run.add_step("step0")
         with step.scope():
             step.add_log(LogSeverity.INFO, "info log")
@@ -107,7 +109,7 @@ def demo_custom_writer():
 
     try:
         run = ocptv.TestRun(name="custom writer", version="1.0")
-        with run.scope():
+        with run.scope(dut=ocptv.Dut(id="dut0")):
             threads: list[threading.Thread] = []
             for id in range(4):
                 step = run.add_step(f"parallel_step_{id}")
@@ -134,7 +136,7 @@ def demo_diagnosis():
         PASS = "pass-default"
 
     run = ocptv.TestRun(name="run_with_diagnosis", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step = run.add_step("step0")
         with step.scope():
             step.add_diagnosis(DiagnosisType.PASS, verdict=Verdict.PASS)
@@ -188,7 +190,7 @@ def demo_python_logging_io():
     log.propagate = False
 
     try:
-        with run.scope():
+        with run.scope(dut=ocptv.Dut(id="dut0")):
             log.info("ocp log thru python logger")
             log.debug("debug log sample")
             log.warning("warn level here")
@@ -213,7 +215,7 @@ def demo_error_while_gathering_duts():
 @banner
 def demo_create_file_during_step():
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step = run.add_step("step0")
         with step.scope():
             step.add_file(
@@ -233,7 +235,7 @@ def demo_create_file_during_step():
 @banner
 def demo_create_measurement_simple():
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step = run.add_step("step0")
         with step.scope():
             step.add_measurement(name="fan_speed", value="1200", unit="rpm")
@@ -249,7 +251,7 @@ def demo_create_measurement_series():
     Step2 shows multiple measurement interspersed series, they can be concurrent.
     """
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step0 = run.add_step("step0")
         with step0.scope():
             fan_speed = step0.start_measurement_series(name="fan_speed", unit="rpm")
@@ -280,7 +282,7 @@ def demo_create_measurement_series():
 @banner
 def demo_create_measurements_with_validators():
     run = ocptv.TestRun(name="test", version="1.0")
-    with run.scope():
+    with run.scope(dut=ocptv.Dut(id="dut0")):
         step = run.add_step("step0")
         with step.scope():
             step.add_measurement(
@@ -309,6 +311,76 @@ def demo_create_measurements_with_validators():
                 fan_speed.add_measurement(value=1000)
 
 
+@banner
+def demo_run_error_with_dut():
+    dut = ocptv.Dut(id="dut0", name="dut0.server.net")
+    bmc_software = dut.add_software_info(
+        name="bmc",
+        type=SoftwareType.FIRMWARE,
+        version="2.5",
+    )
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope(dut=dut):
+        run.add_error(
+            symptom="power-fail",
+            software_infos=[bmc_software],
+        )
+
+
+@banner
+def demo_create_measurements_with_subcomponent():
+    dut = ocptv.Dut(id="dut0", name="dut0.server.net")
+    dut.add_platform_info("memory-optimized")
+    dut.add_software_info(
+        name="bmc0",
+        type=SoftwareType.FIRMWARE,
+        version="10",
+        revision="11",
+        computer_system="primary_node",
+    )
+    ram0_hardware = dut.add_hardware_info(
+        name="ram0",
+        version="1",
+        revision="2",
+        location="MB/DIMM_A1",
+        serial_no="HMA2022029281901",
+        part_no="P03052-091",
+        manufacturer="hynix",
+        manufacturer_part_no="HMA84GR7AFR4N-VK",
+        odata_id="/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+        computer_system="primary_node",
+        manager="bmc0",
+    )
+
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope(dut=dut):
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_measurement(
+                name="temp0",
+                value=100.5,
+                unit="F",
+                hardware_info=ram0_hardware,
+                subcomponent=ocptv.Subcomponent(name="chip0"),
+            )
+
+            chip1_temp = step.start_measurement_series(
+                name="temp1",
+                unit="C",
+                hardware_info=ram0_hardware,
+                subcomponent=ocptv.Subcomponent(
+                    name="chip1",
+                    location="U11",
+                    version="1",
+                    revision="1",
+                    type=SubcomponentType.UNSPECIFIED,
+                ),
+            )
+            with chip1_temp.scope():
+                chip1_temp.add_measurement(value=79)
+
+
 if __name__ == "__main__":
     demo_no_contexts()
     demo_context_run_skip()
@@ -321,3 +393,5 @@ if __name__ == "__main__":
     demo_create_measurement_simple()
     demo_create_measurement_series()
     demo_create_measurements_with_validators()
+    demo_run_error_with_dut()
+    demo_create_measurements_with_subcomponent()

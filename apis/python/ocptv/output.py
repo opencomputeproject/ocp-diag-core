@@ -59,6 +59,10 @@ class ArtifactEmitter:
             value: ArtifactType | dict | list | Primitive,
             formatter: ty.Optional[ty.Callable[[ty.Any], str]] = None,
         ) -> JSON:
+            # if present, formatter takes precedence over serialization
+            if formatter is not None:
+                return formatter(value)
+
             if dc.is_dataclass(value):
                 obj: dict[str, JSON] = {}
                 for field in dc.fields(value):
@@ -70,21 +74,22 @@ class ArtifactEmitter:
                             raise RuntimeError("unacceptable none where not optional")
                         continue
 
+                    # spec_field takes precedence over spec_object
                     spec_field: ty.Optional[str] = field.metadata.get(
                         "spec_field", None
                     )
                     spec_object: ty.Optional[str] = getattr(val, "SPEC_OBJECT", None)
 
-                    if spec_field is not None and spec_object is not None:
-                        # TODO: fix error type
-                        raise RuntimeError("internal error, bad object decl")
-
                     if spec_field is None and spec_object is None:
                         # TODO: fix error type
-                        raise RuntimeError("internal error, bad object decl")
+                        raise RuntimeError(
+                            "internal error, bad object decl: neither spec_field nor spec_object present for {}".format(
+                                field.name
+                            )
+                        )
 
-                    # "<invalid>" will never be reached, but keeps linter happy
-                    name = spec_field or spec_object or "<invalid>"
+                    # safety: at least one is not None
+                    name: str = ty.cast(str, spec_field or spec_object)
                     formatter = field.metadata.get("formatter", None)
                     obj[name] = visit(val, formatter)
                 return obj
@@ -93,9 +98,6 @@ class ArtifactEmitter:
             elif isinstance(value, dict):
                 return {k: visit(v) for k, v in value.items()}
             elif isinstance(value, (str, float, int, bool, Enum)):
-                # primitive types get here
-                if formatter is not None:
-                    return formatter(value)
                 return value
 
             raise RuntimeError("dont know how to serialize {}", value)

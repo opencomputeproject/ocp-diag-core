@@ -14,7 +14,7 @@ def writer():
 
 def test_schema_version_is_emitted(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
-    run.start()
+    run.start(dut=ocptv.Dut(id="test_dut"))
 
     assert len(writer.lines) == 2
     assert_json(

@@ -16,7 +16,7 @@ from .objects import (
     LogSeverity,
 )
 from .step import TestStep
-from .dut import Dut
+from .dut import Dut, SoftwareInfo
 from .output import ArtifactEmitter
 
 
@@ -58,22 +58,19 @@ class TestRun:
         self._step_id: int = 0
 
     # by this point, user code has identified complete dut info or error'd out
-    def start(self, *, duts: ty.Optional[list[Dut]] = None):
+    def start(self, *, dut: Dut):
         """
         Signal the test run start and emit a json `testRunStart` artifact.
 
         The device-under-test information is considered known at this point, and can
         be specified using the `dut_info` parameter.
         """
-        if duts is None:
-            duts = []
-
         start = RunStart(
             name=self.name,
             version=self._version,
             command_line=self.command_line,
             parameters=self._params,
-            dut_info=[x.info for x in duts],
+            dut_info=dut.to_spec(),
         )
         self._emitter.emit(RunArtifact(impl=start))
 
@@ -85,9 +82,9 @@ class TestRun:
         self._emitter.emit(RunArtifact(impl=end))
 
     @contextmanager
-    def scope(self, *, duts: ty.Optional[list[Dut]] = None):
+    def scope(self, *, dut: Dut):
         try:
-            yield self.start(duts=duts)
+            yield self.start(dut=dut)
         except TestRunError as re:
             self.end(status=re.status, result=re.result)
         else:
@@ -105,18 +102,20 @@ class TestRun:
         )
         self._emitter.emit(RunArtifact(impl=log))
 
-    # TODO: fix software_info_ids when duts are done
     def add_error(
         self,
         *,
         symptom: str,
         message: ty.Optional[str] = None,
-        software_info_ids: ty.Optional[list[str]] = None,
+        software_infos: ty.Optional[list[SoftwareInfo]] = None,
     ):
+        if software_infos is None:
+            software_infos = []
+
         error = Error(
             symptom=symptom,
             message=message,
-            software_info_ids=[],
+            software_infos=[o.to_spec() for o in software_infos],
         )
         self._emitter.emit(RunArtifact(impl=error))
 

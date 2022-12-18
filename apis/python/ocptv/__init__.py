@@ -8,6 +8,7 @@ __author__ = "OCP Test & Validation"
 from .step import TestStep, TestStepError
 from .run import TestRun, TestRunError
 from .measurement import Validator
+from .dut import Dut, Subcomponent
 from .output import configOutput
 
 from .objects import (
@@ -17,5 +18,7 @@ from .objects import (
     LogSeverity,
     DiagnosisType,
     ValidatorType,
+    SubcomponentType,
+    SoftwareType,
     Metadata,
 )
