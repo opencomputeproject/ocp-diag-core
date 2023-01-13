@@ -1,12 +1,8 @@
 # OCP Test and Validation Output Specification
 
----
-
-# TODO: revision below? (Siamak)
-
----
-
 ### Version 2.0
+
+---
 
 ## Introduction
 
@@ -17,7 +13,7 @@ This [**specification**](#def-spec) aims to be extensible, while still providing
 
 ### <a name="objectives">Objectives of the OCP Test and Validation Specification</a>
 
-The high level goals of the [**specification**](#def-spec) are to document the [_schema_](#outputartifacts) and the format for the transfer of information from a [**diagnostic**](#def-diagnostic) to a [**test executive**](#def-testexecutive), persistent data store, or analysis/statistical process control system.
+The high level goals of the [**specification**](#def-spec) are to document the [_schema_](#outputartifacts) and the format for the transfer of information from a [**diagnostic**](#def-diagnostic) to a [**test executive**](#def-testexecutive), a persistent data store, or an analysis/statistical process control system.
 
 The [_schema_](#outputartifacts) covers the organization and contents of the data being emitted from the [**diagnostic**](#def-diagnostic), whereas the format defines the way that the data is represented.
 
@@ -226,7 +222,7 @@ This [**specification**](#def-spec) attempts to allow the use of common JSON par
 
 ### String Escape Sequences
 
-The following escape sequences are supported in the diagnostic output, which are the standard JSON escape sequences. There is no expansion of the JSON specification for escaping.
+The following escape sequences are supported in the diagnostic output, which are the standard JSON escape sequences.
 
 <table>
     <tr>
@@ -430,7 +426,7 @@ The [_SubcomponentType_](#subcomponenttype) enumeration provides additional cont
 
 #### TestResult
 
-The final determination of the execution outcome of a [**diagnostic test**](#def-diagnostic). This is a final determination of the overall status of the [**system under test**](#def-dut) being assessed.
+The final determination of the execution outcome of a [**diagnostic test**](#def-diagnostic). This is a final determination of the overall status of the [**device under test**](#def-dut) being assessed.
 
 <table>
     <tr>
@@ -570,13 +566,13 @@ For example a [LESS_THAN](#validatortype-lessthan) validator will validate that 
 
 ### Identifiers
 
-Due to the streaming nature of the [**specification**](#def-spec), a common implementation pattern is the adoption of an identifier to indicate a relationship between an emitted artifact and a feature of the [**system under test**](#def-dut). Examples include identifiers for hardware components and software elements of the [**device under test**](#def-dut).
+Due to the streaming nature of the [**specification**](#def-spec), a common implementation pattern is the adoption of an identifier to indicate a relationship between an emitted artifact and a feature of the [**device under test**](#def-dut). Examples include identifiers for hardware components and software elements of the [**DUT**](#def-dut).
 
 In both cases, these hardware/software related identifiers are emitted at the beginning of the test output so that they can be referenced from subsequent artifacts.
 
-In addition, each [_Test Step_](#test-step-artifacts), [_measurement_](#measurement) and time series [_measurement element_](#measurementserieselement) also have an id attribute to allow other [**artifacts**](#def-artifact) to reference them by association, such as an [_error_](#error) being associated to a particular software element, or a [_diagnosis_](#diagnosis) being associated to one or more [hardware components](#hardwareinfo).
+In addition, each [_test step_](#test-step-artifacts), [_measurement_](#measurement) and time series [_measurement element_](#measurementserieselement) also have an id attribute to allow other [**artifacts**](#def-artifact) to reference them by association, such as an [_error_](#error) being associated to a particular software element, or a [_diagnosis_](#diagnosis) being associated to one or more [hardware components](#hardwareinfo).
 
-The [**specification**] provides guidance that implementations _should_ use [**unique**](#def-uniqueidentifier) increasing zero based integers for identifiers, but only specifies that they _shall_ be [**unique**](#def-uniqueidentifier) within the context of the overall [_Test Run_](#test-run-artifacts) execution [**artifact**](#def-artifact). Although GUID's are an acceptable implementation, there is no expectation of any global uniqueness across multiple [**test runs**](#def-testrun).
+The [**specification**](#def-spec) provides guidance that implementations _should_ use [**unique**](#def-uniqueidentifier) increasing zero based integers for identifiers, but only specifies that they _shall_ be [**unique**](#def-uniqueidentifier) within the context of the overall [_Test Run_](#test-run-artifacts) execution [**artifact**](#def-artifact). Although GUID's are an acceptable implementation, there is no expectation of any global uniqueness across multiple [**test runs**](#def-testrun).
 
 
 ### Optional Values
@@ -662,17 +658,6 @@ All top level [_OutputArtifacts_](#outputartifacts) contain the following attrib
         <td>A <a href="#schemaversion"><em>SchemaVersionArtifact</em></a>, <a href="#test-run-artifacts"><em>TestRunArtifact</em></a>, or <a href="#test-step-artifacts"><em>TestStepArtifact</em></a> message.</td>
     </tr>
 </table>
-
-A diagram of the complete result structure of this [**specification**](#def-spec) for data messages is shown below.
-
----
-
-# TODO:
-
-![schema_diagram](images/schema_diagram.png "Full schema diagram")
-
----
-
 
 ### OutputArtifact Descendents
 
@@ -2054,7 +2039,7 @@ Provides information about software that was discovered or exercised during the 
 
 Provides information about a sub-system or functional block of a [_hardware device_](#hardwareinfo). This can be used to complement and provide additional coverage/isolation information for [_Measurement_](#measurement) and [_Diagnosis_](#diagnosis) messages to provide additional optional detail about the device to which the data applies.
 
-Typically a [_subcomponent_](#subcomponent) may refer to a device or subsection of a device under the FRU-able component for a [**system under test**](#def-dut).
+Typically a [_subcomponent_](#subcomponent) may refer to a device or subsection of a device under the FRU-able component for a [**device under test**](#def-dut).
 
 The [_subcomponent_](#subcomponent) is very loosely defined and may refer to a physical device, logical function, or collection of related devices that are related to the corresponding [_hardware device_](#hardwareinfo) which is referenced by the [_hardwareInfoId_](#hardwareinfo) on the parent message.
 
@@ -2231,7 +2216,7 @@ The [_TestRunStart_](#testrunstart) [**artifact**](#def-artifact) establishes th
         <td><em>dutInfo</em></td>
         <td>JSON: object<br/>Message: <a href="#dutinfo"><em>DutInfo</em></a></td>
         <td><strong>Yes</strong></td>
-        <td>Collection of structured information obtained by the <a href="#def-diagnostic"><strong>diagnostic</strong></a> concerning the <a href="#def-dut"><strong>system under test</strong></a>.</td>
+        <td>Collection of structured information obtained by the <a href="#def-diagnostic"><strong>diagnostic</strong></a> concerning the <a href="#def-dut"><strong>device under test</strong></a>.</td>
     </tr>
 </table>
 
@@ -2414,10 +2399,6 @@ A [_validator_](#validator) is the description of a comparison or evaluation of 
     </tr>
 </table>
 
----
-# TODO: duplicated with section on enums (this one is left uncorrected for links)
----
-
 The following table indicates the value types that are supported for each _validator_.
 
 <table>
@@ -2525,65 +2506,3 @@ The following table indicates the value types that are supported for each _valid
   "timestamp": "2022-07-26T02:16:10.393209Z"
 }
 ```
-
-
-## <a name="contributors">Specification Contributors</a>
-
-<table>
-    <tr>
-        <td><strong>Contributor</strong></td>
-        <td><strong>Organization</strong></td>
-    </tr>
-    <tr>
-        <td><strong>Adrian Enache</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Arun Darlie Koshy</strong></td>
-        <td>HPE</td>
-    </tr>
-    <tr>
-        <td><strong>Dan Frame</strong></td>
-        <td>Google</td>
-    </tr>
-    <tr>
-        <td><strong>Daniel Alvarez Wise</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Dylan Hawkes</strong></td>
-        <td>Google</td>
-    </tr>
-    <tr>
-        <td><strong>Giovanni Colapinto</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Karen Murphy</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Brennen Direnzo</strong></td>
-        <td>Keysight</td>
-    </tr>
-    <tr>
-        <td><strong>Marcos Pearson</strong></td>
-        <td>Google</td>
-    </tr>
-    <tr>
-        <td><strong>Paul Ng</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Thomas Minor</strong></td>
-        <td>Google</td>
-    </tr>
-    <tr>
-        <td><strong>Vincent Matossian</strong></td>
-        <td>Meta</td>
-    </tr>
-    <tr>
-        <td><strong>Yuanlin Wen</strong></td>
-        <td>Google</td>
-    </tr>
-</table>
