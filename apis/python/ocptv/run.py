@@ -18,9 +18,17 @@ from .objects import (
 from .step import TestStep
 from .dut import Dut, SoftwareInfo
 from .output import ArtifactEmitter
+from .api import export_api
 
 
+@export_api
 class TestRunError(RuntimeError):
+    """
+    The `TestRunError` can be raised with a context scope started by `TestRun.scope()`.
+    Any instance will be caught and handled by the context and will result in ending the
+    whole run with an error outcome.
+    """
+
     __slots__ = ("status", "result")
 
     # this may be further restricted re. params
@@ -29,7 +37,22 @@ class TestRunError(RuntimeError):
         self.result = result
 
 
+@export_api
 class TestRun:
+    """
+    The `TestRun` object should be used as a stateful interface for the diagnosis run.
+    It presents various methods to interact with the run itself or to make child artifacts.
+
+    Usage:
+    >>> run = ocptv.TestRun(name="test", version="1.0")
+    >>> with run.scope(dut=ocptv.Dut(id="dut0")):
+    >>>     pass
+
+    For other usages, see the the `examples` folder in the root of the project.
+
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#test-run-artifacts
+    """
+
     def __init__(
         self,
         name: str,

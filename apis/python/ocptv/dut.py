@@ -10,17 +10,29 @@ from .objects import (
     SubcomponentType,
     Metadata,
 )
+from .api import export_api
 
 
 class PlatformInfo:
+    """
+    Platform information for the DUT.
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#platforminfo
+    """
+
     def __init__(self, info_tag: str):
         self._spec_object = PlatformInfoSpec(info=info_tag)
 
     def to_spec(self) -> PlatformInfoSpec:
+        """internal usage"""
         return self._spec_object
 
 
 class SoftwareInfo:
+    """
+    Software information for a component of the DUT.
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#softwareinfo
+    """
+
     def __init__(
         self,
         id: str,
@@ -40,10 +52,16 @@ class SoftwareInfo:
         )
 
     def to_spec(self) -> SoftwareInfoSpec:
+        """internal usage"""
         return self._spec_object
 
 
 class HardwareInfo:
+    """
+    Hardware information for a component of the DUT.
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#hardwareinfo
+    """
+
     def __init__(
         self,
         id: str,
@@ -74,13 +92,21 @@ class HardwareInfo:
             manager=manager,
         )
 
-    # TODO: properties?
+    # TODO(mimir-d): properties?
 
     def to_spec(self) -> HardwareInfoSpec:
+        """internal usage"""
         return self._spec_object
 
 
+@export_api
 class Dut:
+    """
+    The `Dut` instances model the specific device under test that the output is relative to.
+
+    ref: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#dutinfo
+    """
+
     def __init__(
         self,
         id: str,
@@ -108,7 +134,7 @@ class Dut:
         revision: ty.Optional[str] = None,
         computer_system: ty.Optional[str] = None,
     ) -> SoftwareInfo:
-        # TODO: arbitrary id derivation
+        # TODO(mimir-d): arbitrary id derivation; does this need to be more readable?
         info = SoftwareInfo(
             id="{}_{}".format(self._id, len(self._software_infos)),
             name=name,
@@ -152,6 +178,7 @@ class Dut:
         return info
 
     def to_spec(self) -> DutInfo:
+        """internal usage"""
         return DutInfo(
             id=self._id,
             name=self._name,
@@ -164,7 +191,13 @@ class Dut:
 
 # Following object is a proxy type so we get future flexibility, avoiding the usage
 # of the low-level models.
+@export_api
 class Subcomponent:
+    """
+    A lower-than-FRU (field replaceable unit) for the DUT hardware.
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#platforminfo
+    """
+
     def __init__(
         self,
         *,
@@ -183,4 +216,5 @@ class Subcomponent:
         )
 
     def to_spec(self) -> SubcomponentSpec:
+        """internal usage"""
         return self._spec_object

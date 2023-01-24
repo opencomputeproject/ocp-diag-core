@@ -22,9 +22,17 @@ from .objects import (
 from .measurement import MeasurementSeries, MeasurementSeriesEmitter, Validator
 from .dut import Subcomponent, SoftwareInfo, HardwareInfo
 from .output import ArtifactEmitter
+from .api import export_api
 
 
+@export_api
 class TestStepError(RuntimeError):
+    """
+    The `TestStepError` can be raised within a context scope started by `TestStep.scope()`.
+    Any instance will be caught and handled by the context and will result in ending the
+    step with an error.
+    """
+
     __slots__ = "status"
 
     def __init__(self, *, status: TestStatus):
@@ -33,8 +41,19 @@ class TestStepError(RuntimeError):
 
 class TestStep:
     """
-    TODO:
-    Should not be used directly by user code, but through TestRun.add_step().
+    The `TestStep` instances are the stateful interface to diagnostic steps inside a run.
+    They present methods to interact with the steps themselves or to make child artifacts.
+
+    Should not be used directly by user code, but created through `TestRun.add_step()`.
+
+    Usage:
+    >>> step0 = run.add_step("step0") # run: TestRun
+    >>> with step0.scope():
+    >>>     pass
+
+    For other usages, see the the `examples` folder in the root of the project.
+
+    See spec: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#test-step-artifacts
     """
 
     def __init__(self, name: str, *, step_id: int, emitter: ArtifactEmitter):

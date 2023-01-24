@@ -16,6 +16,7 @@ from .objects import (
 )
 from .dut import Subcomponent, HardwareInfo
 from .output import ArtifactEmitter
+from .api import export_api
 
 
 class MeasurementSeriesEmitter(ArtifactEmitter):
@@ -29,7 +30,15 @@ class MeasurementSeriesEmitter(ArtifactEmitter):
 
 # Following object is a proxy type so we get future flexibility, avoiding the usage
 # of the low-level models.
+@export_api
 class Validator:
+    """
+    The `Validator` object represent a named validation that is relevant to a measurement or
+    measurement series.
+
+    ref: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#validator
+    """
+
     def __init__(
         self,
         *,
@@ -51,7 +60,13 @@ class Validator:
 
 class MeasurementSeries:
     """
-    TODO: not for user code instantiation
+    The `MeasurementSeries` instances model a specific time-based list of values relevant to the diagnostic.
+    A series is started by default on instantiation and must be ended manually with the `.end()` method or
+    by using a `.scope()` context manager.
+
+    Instances of this type must only be created by calls to `TestStep.start_measurement_series()`.
+
+    ref: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#measurementseriesstart
     """
 
     def __init__(

@@ -10,6 +10,7 @@ import typing as ty
 from enum import Enum
 
 from .objects import ArtifactType, Root, SchemaVersion, RootArtifactType
+from .api import export_api
 
 
 class Writer(ABC):
@@ -23,7 +24,12 @@ class Writer(ABC):
         pass
 
 
+@export_api
 class StdoutWriter(Writer):
+    """
+    A simple writer that prints the json to stdout.
+    """
+
     def write(self, buffer: str):
         print(buffer)
 
@@ -32,7 +38,11 @@ class StdoutWriter(Writer):
 _writer: Writer = StdoutWriter()
 
 
+@export_api
 def configOutput(writer: Writer):
+    """
+    Configure the output channel for this library.
+    """
     global _writer
     _writer = writer
 
@@ -42,6 +52,11 @@ JSON = ty.Union[ty.Dict[str, "JSON"], ty.List["JSON"], Primitive]
 
 
 class ArtifactEmitter:
+    """
+    Serializes and emits the data on the configured output channel for the lib.
+    Uses the low level dataclass models for the spec, but should not be used in user code.
+    """
+
     def __init__(self):
         self._seq = 0
         self._lock = threading.Lock()
