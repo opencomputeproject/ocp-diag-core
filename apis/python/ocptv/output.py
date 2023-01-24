@@ -37,8 +37,8 @@ def configOutput(writer: Writer):
     _writer = writer
 
 
-Primitive = float | int | bool | str | None
-JSON = dict[str, "JSON"] | list["JSON"] | Primitive
+Primitive = ty.Union[float, int, bool, str, None]
+JSON = ty.Union[ty.Dict[str, "JSON"], ty.List["JSON"], Primitive]
 
 
 class ArtifactEmitter:
@@ -56,7 +56,7 @@ class ArtifactEmitter:
             return field == ty.Optional[field]
 
         def visit(
-            value: ArtifactType | dict | list | Primitive,
+            value: ty.Union[ArtifactType, ty.Dict, ty.List, Primitive],
             formatter: ty.Optional[ty.Callable[[ty.Any], str]] = None,
         ) -> JSON:
             # if present, formatter takes precedence over serialization
@@ -64,7 +64,7 @@ class ArtifactEmitter:
                 return formatter(value)
 
             if dc.is_dataclass(value):
-                obj: dict[str, JSON] = {}
+                obj: ty.Dict[str, JSON] = {}
                 for field in dc.fields(value):
                     val = getattr(value, field.name)
 

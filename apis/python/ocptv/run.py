@@ -36,7 +36,7 @@ class TestRun:
         version: str,
         *,
         command_line: ty.Optional[str] = None,
-        parameters: ty.Optional[dict[str, str | int]] = None,
+        parameters: ty.Optional[ty.Dict[str, ty.Union[str, int]]] = None,
     ):
         """
         Make a new stateful test run model object. Parameters given to init
@@ -107,7 +107,7 @@ class TestRun:
         *,
         symptom: str,
         message: ty.Optional[str] = None,
-        software_infos: ty.Optional[list[SoftwareInfo]] = None,
+        software_infos: ty.Optional[ty.List[SoftwareInfo]] = None,
     ):
         if software_infos is None:
             software_infos = []
@@ -136,5 +136,5 @@ class TestRun:
         return self._cmdline
 
     @property
-    def parameters(self) -> ty.Optional[dict[str, str | int]]:
+    def parameters(self) -> ty.Optional[ty.Dict[str, ty.Union[str, int]]]:
         return self._params

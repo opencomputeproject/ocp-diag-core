@@ -1,4 +1,4 @@
-### Items left to do for initial version
+### Items left to do for initial stable version
 
 - alternate api? disallows making multiple runs
 ```
@@ -17,6 +17,10 @@ with run:
 - docstrings for everything after spec markdown PR is merged
 
 - add a lot of tests covering all aspects of the schema objects; git actions
-  Also a linter on push/PR
+  Also a linter on push/PR; reach 100% coverage
 
-- add pypi publish git action
+- add pypi publish git action (after move to ocp-diag-python repo)
+
+- formalize config block api with options for lib:
+  - timezone formatting override (UTC/local or some other logic)
+  - output channel (currently uses `configOutput` method call)

@@ -8,6 +8,14 @@ def format_enum(variant: Enum) -> str:
 
 
 def format_timestamp(ts: float) -> str:
-    """Format an unix timestamp per spec"""
+    """
+    Format an unix timestamp in local tz.
+    If the timezone coincides with UTC, returns zulu time format.
+    """
     dt = datetime.fromtimestamp(ts)
-    return dt.astimezone().isoformat()
+    isostr = dt.astimezone().isoformat()
+
+    utcsuffix = "+00:00"
+    if isostr.endswith(utcsuffix):
+        return isostr[: -len(utcsuffix)] + "Z"
+    return isostr

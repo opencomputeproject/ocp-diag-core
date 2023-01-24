@@ -70,7 +70,7 @@ class TestStep:
         name: str,
         value: MeasurementValueType,
         unit: ty.Optional[str] = None,
-        validators: ty.Optional[list[Validator]] = None,
+        validators: ty.Optional[ty.List[Validator]] = None,
         hardware_info: ty.Optional[HardwareInfo] = None,
         subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
@@ -94,7 +94,7 @@ class TestStep:
         *,
         name: str,
         unit: ty.Optional[str] = None,
-        validators: ty.Optional[list[Validator]] = None,
+        validators: ty.Optional[ty.List[Validator]] = None,
         hardware_info: ty.Optional[HardwareInfo] = None,
         subcomponent: ty.Optional[Subcomponent] = None,
         metadata: ty.Optional[Metadata] = None,
@@ -143,7 +143,7 @@ class TestStep:
         *,
         symptom: str,
         message: ty.Optional[str] = None,
-        software_infos: ty.Optional[list[SoftwareInfo]] = None,
+        software_infos: ty.Optional[ty.List[SoftwareInfo]] = None,
     ):
         if software_infos is None:
             software_infos = []

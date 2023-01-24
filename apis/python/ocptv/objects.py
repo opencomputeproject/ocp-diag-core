@@ -18,8 +18,14 @@ from .formatter import format_enum, format_timestamp
 
 # TODO: waiting on spec md PR to add all docstrings for objects and fields.
 
+if ty.TYPE_CHECKING:
+    # mypy extension for py37
+    from typing_extensions import Protocol
+else:
+    Protocol = object
 
-class ArtifactType(ty.Protocol):
+
+class ArtifactType(Protocol):
     """
     Protocol type to describe all low level serializable objects in this file.
     """
@@ -267,15 +273,15 @@ class DutInfo:
         metadata={"spec_field": "name"},
     )
 
-    platform_infos: list[PlatformInfo] = dc.field(
+    platform_infos: ty.List[PlatformInfo] = dc.field(
         metadata={"spec_field": "platformInfos"},
     )
 
-    software_infos: list[SoftwareInfo] = dc.field(
+    software_infos: ty.List[SoftwareInfo] = dc.field(
         metadata={"spec_field": "softwareInfos"},
     )
 
-    hardware_infos: list[HardwareInfo] = dc.field(
+    hardware_infos: ty.List[HardwareInfo] = dc.field(
         metadata={"spec_field": "hardwareInfos"},
     )
 
@@ -323,7 +329,7 @@ class Error:
         metadata={"spec_field": "message"},
     )
 
-    software_infos: list[SoftwareInfo] = dc.field(
+    software_infos: ty.List[SoftwareInfo] = dc.field(
         metadata={
             "spec_field": "softwareInfoIds",
             "formatter": lambda objs: [o.id for o in objs],
@@ -331,9 +337,9 @@ class Error:
     )
 
 
-MeasurementValueType = float | int | bool | str
+MeasurementValueType = ty.Union[float, int, bool, str]
 
-ValidatorValueType = list["ValidatorValueType"] | MeasurementValueType
+ValidatorValueType = ty.Union[ty.List["ValidatorValueType"], MeasurementValueType]
 
 
 class ValidatorType(Enum):
@@ -387,7 +393,7 @@ class Measurement:
         metadata={"spec_field": "unit"},
     )
 
-    validators: list[Validator] = dc.field(
+    validators: ty.List[Validator] = dc.field(
         metadata={"spec_field": "validators"},
     )
 
@@ -418,7 +424,7 @@ class MeasurementSeriesStart:
         metadata={"spec_field": "measurementSeriesId"},
     )
 
-    validators: list[Validator] = dc.field(
+    validators: ty.List[Validator] = dc.field(
         metadata={"spec_field": "validators"},
     )
 
@@ -472,9 +478,9 @@ class MeasurementSeriesElement:
     metadata: ty.Optional[Metadata]
 
 
-MeasurementSeriesType = (
-    MeasurementSeriesStart | MeasurementSeriesEnd | MeasurementSeriesElement
-)
+MeasurementSeriesType = ty.Union[
+    MeasurementSeriesStart, MeasurementSeriesEnd, MeasurementSeriesElement
+]
 
 
 @dc.dataclass
@@ -493,11 +499,10 @@ class RunStart:
         metadata={"spec_field": "commandLine"},
     )
 
-    parameters: dict[str, ty.Any] = dc.field(
+    parameters: ty.Dict[str, ty.Any] = dc.field(
         metadata={"spec_field": "parameters"},
     )
 
-    # TODO: is still a list?
     dut_info: DutInfo
 
 
@@ -536,7 +541,7 @@ class RunEnd:
 class RunArtifact:
     SPEC_OBJECT: ty.ClassVar[str] = "testRunArtifact"
 
-    impl: RunStart | RunEnd | Log | Error
+    impl: ty.Union[RunStart, RunEnd, Log, Error]
 
 
 @dc.dataclass
@@ -569,10 +574,19 @@ class StepArtifact:
     )
 
     # TODO: extension
-    impl: StepStart | StepEnd | Measurement | MeasurementSeriesType | Diagnosis | Log | Error | File
+    impl: ty.Union[
+        StepStart,
+        StepEnd,
+        Measurement,
+        MeasurementSeriesType,
+        Diagnosis,
+        Log,
+        Error,
+        File,
+    ]
 
 
-RootArtifactType = SchemaVersion | RunArtifact | StepArtifact
+RootArtifactType = ty.Union[SchemaVersion, RunArtifact, StepArtifact]
 
 
 @dc.dataclass
