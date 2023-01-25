@@ -343,6 +343,58 @@ def test_step_produces_files(writer: MockWriter):
     )
 
 
+def test_step_produces_extensions(writer: MockWriter):
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope(dut=ocptv.Dut(id="dut0")):
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_extension(
+                name="simple",
+                content="extension_identifier",
+            )
+
+            step.add_extension(
+                name="complex",
+                content={
+                    "@type": "DemoExtension",
+                    "field": "demo",
+                    "subtypes": [1, 42],
+                },
+            )
+
+    assert len(writer.lines) == 7
+    assert_json(
+        writer.lines[3],
+        {
+            "testStepArtifact": {
+                "extension": {
+                    "name": "simple",
+                    "content": "extension_identifier",
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 3,
+        },
+    )
+    assert_json(
+        writer.lines[4],
+        {
+            "testStepArtifact": {
+                "extension": {
+                    "name": "complex",
+                    "content": {
+                        "@type": "DemoExtension",
+                        "field": "demo",
+                        "subtypes": [1, 42],
+                    },
+                },
+                "testStepId": "0",
+            },
+            "sequenceNumber": 4,
+        },
+    )
+
+
 def test_step_produces_simple_measurements(writer: MockWriter):
     run = ocptv.TestRun(name="test", version="1.0")
     with run.scope(dut=ocptv.Dut(id="test_dut")):

@@ -670,6 +670,37 @@ MeasurementSeriesType = ty.Union[
     MeasurementSeriesStart, MeasurementSeriesEnd, MeasurementSeriesElement
 ]
 
+# note: these must specify some bounds for the extension content in python, despite
+# the spec saying that it can be anything. This is necessary for the json serializer
+# to actually know how to output the data.
+ExtensionContentType = ty.Union[
+    ty.Dict[str, "ExtensionContentType"],
+    ty.List["ExtensionContentType"],
+    ty.Union[float, int, bool, str, None],
+]
+
+
+@dc.dataclass
+class Extension:
+    """
+    Low-level model for the `extension` spec object.
+    Left as an implementation detail, the `Extension` just has a name and arbitrary data.
+
+    ref: https://github.com/opencomputeproject/ocp-diag-core/tree/main/json_spec#extension
+    schema url: https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/output/test_step_artifact.json
+    schema ref: https://github.com/opencomputeproject/ocp-diag-core/testStepArtifact/$defs/extension
+    """
+
+    SPEC_OBJECT: ty.ClassVar[str] = "extension"
+
+    name: str = dc.field(
+        metadata={"spec_field": "name"},
+    )
+
+    content: ExtensionContentType = dc.field(
+        metadata={"spec_field": "content"},
+    )
+
 
 @dc.dataclass
 class RunStart:
@@ -831,7 +862,6 @@ class StepArtifact:
         metadata={"spec_field": "testStepId"},
     )
 
-    # TODO: extension
     impl: ty.Union[
         StepStart,
         StepEnd,
@@ -841,6 +871,7 @@ class StepArtifact:
         Log,
         Error,
         File,
+        Extension,
     ]
 
 

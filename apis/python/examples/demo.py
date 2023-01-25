@@ -381,6 +381,27 @@ def demo_create_measurements_with_subcomponent():
                 chip1_temp.add_measurement(value=79)
 
 
+@banner
+def demo_step_extension():
+    run = ocptv.TestRun(name="test", version="1.0")
+    with run.scope(dut=ocptv.Dut(id="dut0")):
+        step = run.add_step("step0")
+        with step.scope():
+            step.add_extension(
+                name="simple",
+                content="extension_identifier",
+            )
+
+            step.add_extension(
+                name="complex",
+                content={
+                    "@type": "DemoExtension",
+                    "field": "demo",
+                    "subtypes": [1, 42],
+                },
+            )
+
+
 if __name__ == "__main__":
     demo_no_contexts()
     demo_context_run_skip()
@@ -395,3 +416,4 @@ if __name__ == "__main__":
     demo_create_measurements_with_validators()
     demo_run_error_with_dut()
     demo_create_measurements_with_subcomponent()
+    demo_step_extension()

@@ -13,6 +13,8 @@ from .objects import (
     Log,
     Error,
     File,
+    Extension,
+    ExtensionContentType,
     Metadata,
     Diagnosis,
     TestStatus,
@@ -193,6 +195,15 @@ class TestStep:
             metadata=metadata,
         )
         self._emitter.emit(StepArtifact(id=self._idstr, impl=file))
+
+    def add_extension(
+        self,
+        *,
+        name: str,
+        content: ExtensionContentType,
+    ):
+        ext = Extension(name=name, content=content)
+        self._emitter.emit(StepArtifact(id=self._idstr, impl=ext))
 
     @property
     def name(self) -> str:
