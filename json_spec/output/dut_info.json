@@ -39,7 +39,7 @@
         }
     },
     "required": [
-        "id"
+        "dutInfoId"
     ],
     "additionalProperties": false,
     "$defs": {

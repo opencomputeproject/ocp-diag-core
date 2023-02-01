@@ -1,6 +1,6 @@
 #!/bin/bash
 
 set -eu
-
-pushd apis/ocpdiag
-bazel test ocpdiag/...
+cd apis/c++
+bazel build ...
+bazel test ... --test_output=errors
