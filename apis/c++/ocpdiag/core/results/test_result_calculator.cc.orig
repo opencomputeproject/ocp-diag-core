@@ -1,0 +1,72 @@
+#include "third_party/ocpdiag/core/results/ocp/test_result_calculator.h"
+
+#include "third_party/absl/base/thread_annotations.h"
+#include "third_party/absl/log/check.h"
+#include "third_party/absl/synchronization/mutex.h"
+
+namespace ocpdiag::results {
+
+TestResult TestResultCalculator::result() const {
+  absl::MutexLock lock(&mutex_);
+  return result_;
+}
+
+TestStatus TestResultCalculator::status() const {
+  absl::MutexLock lock(&mutex_);
+  return status_;
+}
+
+void TestResultCalculator::NotifyStartRun() {
+  absl::MutexLock lock(&mutex_);
+  CheckFinalized();
+  run_started_ = true;
+}
+
+void TestResultCalculator::NotifySkip() {
+  absl::MutexLock lock(&mutex_);
+  CheckFinalized();
+  if (status_ == TestStatus::kUnknown) {
+    result_ = TestResult::kNotApplicable;
+    status_ = TestStatus::kSkip;
+  }
+}
+
+void TestResultCalculator::NotifyError() {
+  absl::MutexLock lock(&mutex_);
+  CheckFinalized();
+  if (status_ == TestStatus::kUnknown) {
+    result_ = TestResult::kNotApplicable;
+    status_ = TestStatus::kError;
+  }
+}
+
+void TestResultCalculator::NotifyFailureDiagnosis() {
+  absl::MutexLock lock(&mutex_);
+  CheckFinalized();
+  if (result_ == TestResult::kNotApplicable && status_ == TestStatus::kUnknown)
+    result_ = TestResult::kFail;
+}
+
+void TestResultCalculator::Finalize() {
+  absl::MutexLock lock(&mutex_);
+  CheckFinalized();
+  finalized_ = true;
+
+  if (run_started_) {
+    if (status_ == TestStatus::kUnknown) {
+      status_ = TestStatus::kComplete;
+      if (result_ == TestResult::kNotApplicable) result_ = TestResult::kPass;
+    }
+  } else if (status_ != TestStatus::kError) {
+    // Error status takes highest priority and so should not be overridden
+    status_ = TestStatus::kSkip;
+    result_ = TestResult::kNotApplicable;
+  }
+}
+
+void TestResultCalculator::CheckFinalized() const
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(&mutex_) {
+  CHECK(!finalized_) << "Test run already finalized";
+}
+
+}  // namespace ocpdiag::results
