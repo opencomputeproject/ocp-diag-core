@@ -1,190 +1,59 @@
-# OCPDiag
+# Open Compute Project Hardware Diagnostics Project
 
+## What is this project?
 
+The OCP hardware diagnostics project is a collaboration between data center hyperscalers participating in the OCP to provide a diagnostic framework.  This framework aims to provide a portable solution for execution of hardware diagnostics, and a rich output model which can be cleanly integrated with various test executives, manufacturing execution systems, or lab data collection systems.
 
-<!--*
-freshness: { owner: 'yuanlinw' reviewed: '2022-03-22' }
-*-->
+The project was motivated by the common desire of being able to execute the same diagnostics across all phases of an NPI hardware projects life cycle including.
 
-OCPDiag is an open and multi-node friendly hardware diagnostics framework. The
-framework provides a set of core libraries with a multi-language solution for
-creating portable diagnostics that can integrate into a number of different test
-platforms.
+* Hardware design and validation phases
+  * Hardware bringup
+  * System integration testing
+  * Reliability testing
+  * Third party lab validation
+* Mass producton and deployment
+  * Manufacturing
+  * Data center operations
+  * RMA and reverse logistics
 
-OCPDiag is *not* a
-[test executive](https://en.wikipedia.org/wiki/Test_execution_engine). The
-framework provides test executives with a single integration point for all
-OCPDiag compatible diagnostics. The goal is to eliminate the wrapping effort
-required in porting other diagnostics to different execution environments and
-result schemas.
+## What problems does it address?
 
-For diagnostics that run on multi-node systems, OCPDiag offers configuration
-options for targeting different endpoints and backends.
+* Acceleration/re-use of diagnostic development and integration efforts at all stages of the product life-cycle.
+* Diagnostic portability across multiple products, environments, and use-cases.
+* Reproduction of test and validation issues across multiple hardware and software partners.
+* Simple sharing of component vendor tests to accelerate RMA and root-cause analysis.
 
-## Overview
+## What does this project provide?
 
-OCPDiag diagnostics can run on a device under test (DUT) or off the DUT. After a
-OCPDiag diag is built and installed, a test executive or a human needs to start
-the test and collect its results.
+* Proven thoroughly documented data model for diagnostic output
+* API’s to easily produce that output.
+* Streaming results for long running tests
+* Simple but capable parameter management
+* An optional device communication library
+* An optional hardware interface layer
 
-![OCPDiag workflow](/ocpdiag/g3doc/ocpdiag_workflow.png)
+## What are the different repos making up this effort?
 
-OCPDiag focuses on three main topics: Parameter Model, Results Model, and
-Hardware Interface.
+This repo contains the diagnostic core libraries that are compatible with C++ and Python. These libraries provide the framework to reliably generated diagnostics that are compatible with clients designed to consume the OCP diagnostic output format.  It also contains the detailed specification covering the schema of the diagnostic output and guidance on how it should be leveraged.  This schema has been designed from the ground up to provide the necessary meta data and structure to be used effectively in heuristic and ML based systems for hardware troubleshooting and repair activities.  It has been proven to be a key enabler of diagnosability and repair at scale for large fleets of data center hardware when combined with downstream repair automation systems.
 
-This documentation provides schema specificaton, reference implementation, and
-example usage for each of these topics. Each set of the core libraries can be
-imported individually without affecting the usages of other subdomains.
+In this repo you will find:
 
-The following paragraphs use a [simple example](ocpdiag/core/examples/simple/)
-to introduce the build rules, the models, and hardware interface.
+* *apis* - These are implementations of the OCP diagnostic framework in c++ with python bindings, as well as a pure python implementation.
+* *ci_scripts* - repo automation for pre-submit testing for this repository.
+* *docs* - Documentation
+* *json_spec* - A complete overview of the OCP output specification in markdown for easy reference.
+* *validators* - A json output validator for the OCP output specification.
 
-## Running OCPDiag
+### Related repositories
 
-A OCPDiag executable is a package that wraps a bash script with runfiles,
-including:
+In addition, you will also find the following repositories which provide hardware diagnostics that are compliant with the OCP diagnostic specification which have been implemented in this library.
 
-*   OCPDiag parameter launcher
-*   default parameters
-*   parameter descriptor
-*   test main binary and their dependencies
+These include:
+* *ocp-diag-sat* - An OCP compliant version of Google's popular Stressful Application Test for server and storage burnin testing.
+* *ocp-memtester* - A comprehensive DIMM and embedded memory pattern test application.
+* *ocp-diag-pcicrawler* - A portable PCIe bus health checker with support for the advanced error reporting standard.
 
-The GitHub repo contains a
-`ocpdiag_test_pkg` Bazel rule for building the OCPDiag target and a simple example
-you can use to explore the build rules.
-
-### Prerequisites
-
-This workflow uses Bazel to build and test OCPDiag diagnostics. You must have
-Bazel v4.0.0 or greater installed. See also Installing Bazel [instructions](https://docs.bazel.build/versions/main/install.html).
-
-
-### Configuring the Bazel WORKSPACE
-
-Add a WORKSPACE configuration file in the top-level repository where Bazel runs.
-This enables Bazel to load OCPDiag core libraries.
-
-```WORKSPACE
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
-    name = "ocpdiag",
-    commit = <pick a commit hash, put here in quotes>,
-    remote = "https://github.com/opencomputeproject/ocp-diag-core",
-)
-
-load("@ocpdiag//ocpdiag:build_deps.bzl", "load_deps")
-load_deps()
-
-load("@ocpdiag//ocpdiag:secondary_build_deps.bzl", "load_secondary_deps")
-load_secondary_deps()
-
-load("@ocpdiag//ocpdiag:tertiary_build_deps.bzl", "load_tertiary_deps")
-load_tertiary_deps()
-```
-
-
-
-### Create a test BUILD file
-
-In the BUILD file, define a binary, a parameter proto, and a default parameter
-JSON file as the receipes to build the OCPDiag executable.
-
-The following is an skeleton of the build receipts. For context, see the full
-[BUILD file](/ocpdiag/core/examples/simple/BUILD):
-
-```BUILD
-load("@ocpdiag//ocpdiag/core:ocpdiag.bzl", "ocpdiag_test_pkg")
-
-# Proto parameter library.
-proto_library(
-    name = "params_proto",
-    srcs = ["params.proto"],
-)
-
-cc_proto_library(
-    name = "params_cc_proto",
-    deps = [":params_proto"],
-)
-
-# Test binary
-cc_binary(
-    name = "simple_bin",
-    srcs = ["simple_main.cc"],
-    deps = [
-        ":params_cc_proto",
-        # Other dependencies.
-    ],
-)
-
-# OCPDiag executable.
-ocpdiag_test_pkg(
-    name = "simple",
-    binary = ":simple_bin",
-    json_defaults = "params.json",
-    params_proto = ":params_proto",
-)
-```
-### C++ Version Requirements
-
-The OCPDiag project must be built with C++17. This can be accomplished by
-adding `--cxxopt='-std=c++17'` to any bazel build command. It may be more
-convenient to add a [`.bazelrc` file](https://docs.bazel.build/versions/main/guide.html#bazelrc-the-bazel-configuration-file) to the top level directory of your
-project, with the following line:
-
-```
-build --cxxopt='-std=c++17'
-```
-
-which will apply the option to all build commands.
-
-### Build the OCPDiag target.
-
-The following command line builds the OCPDiag executable.
-
-```shell
-<your_terminal>$ bazel build ocpdiag/core/examples/simple:simple --cxxopt='-std=c++17'
-INFO: Build option --cxxopt has changed, discarding analysis cache.
-INFO: Analyzed target //ocpdiag/core/examples/simple:simple (62 packages loaded, 3568 targets configured).
-INFO: Found 1 target...
-Target //ocpdiag/core/examples/simple:simple up-to-date:
-  bazel-bin/ocpdiag/core/examples/simple/simple
-INFO: Elapsed time: 62.867s, Critical Path: 9.28s
-INFO: 545 processes: 1 internal, 544 linux-sandbox.
-INFO: Build completed successfully, 545 total actions
-```
-
-The executable appears under `./bazel-bin/ocpdiag/core/examples/simple/simple` as indicated by bazel logs.
-
-**NOTE**: OCPDiag executable is an compressed tarball embedded in a shell script.
-During runtime, the tarball will be extracted to `TMPDIR`. If `TMPDIR` is not
-defined, a default `/tmp` folder will be used. If you are sensitive to temp
-memory usage, please override `TMPDIR` to another folder which allows execution.
-The following is an example where the tarball is extracted to `/data/` rather
-than the default `/tmp/`:
-
-```
-$ TMPDIR=/data ./simple --dry_run | head -n1
-This test was started with --dry_run.If it was actually run, the raw arguments would have been
-/data/simple.MaN/_ocpdiag_test_pkg_simple_launcher.runfiles/google3/third_party/ocpdiag/core/examples/simple/simple_bin --dry_run
-It would be passed the parameters via stdin.
-{
-```
-
-## Parameter model
-
-The [OCPDiag Parameter](/ocpdiag/g3doc/parameter.md) document defines
-and describes how to use the OCPDiag parameter model.
-
-## Results model
-
-The [OCPDiag Results](/ocpdiag/g3doc/results.md) document describes
-the result objects, data schema, reference APIs, and best practices.
-
-## Hardware interface
-
-The [OCPDiag Hardware Interface](/ocpdiag/g3doc/hardware_interface.md)
-document describes how to define and use the OCPDiag Hardware Interface.
+Overtime additional *non-differentiating* diagnostics will be added for storage and hardware accelerators.
 
 ## Contact information
 
