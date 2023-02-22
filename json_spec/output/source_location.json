@@ -2,14 +2,14 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://github.com/opencomputeproject/ocp-diag-core/sourceLocation",
     "title": "Source Location",
-    "description": "TODO: link to md doc",
+    "description": "Provides information about which file/line of the source code in the diagnostic package generates the output. See more details: https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#sourcelocation",
     "properties": {
         "file": {
-            "description": "TODO: link to md doc",
+            "description": "A part of the full path of the code generates the output. See file field in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#sourcelocation",
 	    "type": "string"
         },
         "line": {
-            "description": "TODO: link to md doc",
+            "description": "The line number in the file generates the output. See line field in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#sourcelocation",
             "type": "number"
         }
     },

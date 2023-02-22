@@ -25,7 +25,7 @@
             "$ref": "/opencomputeproject/ocp-diag-core/subcomponent"
         },
 	"sourceLocation": {
-            "description": "TODO: link to md doc",
+	    "description": "SourceLocation information for debugging or tracing program execution. See sourceLocation field in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#diagnosis",
 	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
 	}
     },

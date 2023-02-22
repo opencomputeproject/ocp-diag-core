@@ -2067,7 +2067,7 @@ Provides information about software that was discovered or exercised during the 
 
 ##### Description
 
-Provides information about source location for the purpose of debugging or tracing program execution.
+Provides information about which file/line of the source code in the diagnostic package generates the output for the purpose of debugging or tracing program execution.
 
 ##### Attributes
 
@@ -2081,14 +2081,14 @@ Provides information about source location for the purpose of debugging or traci
     <tr>
         <td><em>file</em></td>
         <td>string</td>
-        <td>No</td>
-        <td>A string indicates a part or the full path in the source code.</td>
+        <td>Yes</td>
+        <td>A string indicates a part or the full path of the source code in the diagnostic package generates the output.</td>
     </tr>
     <tr>
         <td><em>line</em></td>
         <td>number(Integer)</td>
-        <td>No</td>
-        <td>An integer indicates the line number in the file path.</td>
+        <td>Yes</td>
+        <td>An integer indicates the line number in the <em>file</em> generates the output.</td>
     </tr>
 </table>
 
