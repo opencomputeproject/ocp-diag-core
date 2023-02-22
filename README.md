@@ -40,8 +40,7 @@ In this repo you will find:
 
 * *apis* - These are implementations of the OCP diagnostic framework in c++ with python bindings, as well as a pure python implementation.
 * *ci_scripts* - repo automation for pre-submit testing for this repository.
-* *docs* - Documentation
-* *json_spec* - A complete overview of the OCP output specification in markdown for easy reference.
+* *json_spec* - A complete overview of the OCP output specification in markdown for easy reference, as well as a json schema document.
 * *validators* - A json output validator for the OCP output specification.
 
 ### Related repositories
