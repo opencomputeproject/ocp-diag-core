@@ -23,7 +23,11 @@
         "subcomponent": {
             "description": "TODO: link to md",
             "$ref": "/opencomputeproject/ocp-diag-core/subcomponent"
-        }
+        },
+	"sourceLocation": {
+            "description": "TODO: link to md doc",
+	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
+	}
     },
     "required": [
         "verdict",

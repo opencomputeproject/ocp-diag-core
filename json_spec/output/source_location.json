@@ -1,0 +1,21 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/sourceLocation",
+    "title": "Source Location",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "file": {
+            "description": "TODO: link to md doc",
+	    "type": "string"
+        },
+        "line": {
+            "description": "TODO: link to md doc",
+            "type": "number"
+        }
+    },
+    "required": [
+        "file",
+        "line"
+    ],
+    "additionalProperties": false
+}

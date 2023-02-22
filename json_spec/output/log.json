@@ -11,7 +11,11 @@
         "message": {
             "description": "TODO: link to md doc",
             "type": "string"
-        }
+        },
+	"sourceLocation": {
+            "description": "TODO: link to md doc",
+	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
+	}
     },
     "required": [
         "severity",

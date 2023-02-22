@@ -885,6 +885,12 @@ A [_diagnosis_](#diagnosis) gives the verdict of the health status for hardware 
         <td>No</td>
         <td>Provides additional information about a specific functional <a href="#subcomponent"><em>subcomponent</em></a> of the hardware referenced by ID. If present, the <a href="#diagnosis"><em>diagnosis</em></a> applies to this <a href="#subcomponent"><em>subcomponent</em></a> instead of the parent hardware component.</td>
     </tr>
+    <tr>
+        <td><em>sourceLocation</em></td>
+        <td>JSON: object<br/>Message: <a href="#sourcelocation"><em>SourceLocation</em></a></td>
+        <td>No</td>
+        <td>A <a href="#sourcelocation"><strong>SourceLocation</strong></a> information for debugging or tracing program execution.</td>
+    </tr>
 </table>
 
 
@@ -904,6 +910,10 @@ A [_diagnosis_](#diagnosis) gives the verdict of the health status for hardware 
         "location": "CPU-3-2-3",
         "version": "1",
         "revision": "0"
+      },
+      "sourceLocation": {
+        "file": "examples/simple/simple_main.cc",
+        "line": 90
       }
     },
     "testStepId": "1"
@@ -1061,6 +1071,12 @@ An [_error_](#error) is an output [**artifact**](#def-artifact) that reports a s
         <td>No</td>
         <td>A list of <a href="#def-uniqueidentifier"><strong>unique IDs</strong></a> of <a href="#softwareinfo"><em>software components</em></a> or <a href="#softwareinfo"><em>firmware components</em></a> to which the <a href="#error"><em>Error</em></a> is associated. The software ID information can be found in the <a href="#dutinfo"><em>DutInfo</em></a> field of <a href="#testrunstart"><em>TestRunStart</em></a>.</td>
     </tr>
+    <tr>
+        <td><em>sourceLocation</em></td>
+        <td>JSON: object<br/>Message: <a href="#sourcelocation"><em>SourceLocation</em></a></td>
+        <td>No</td>
+        <td>A <a href="#sourcelocation"><strong>SourceLocation</strong></a> information for debugging or tracing program execution.</td>
+    </tr>
 </table>
 
 
@@ -1075,7 +1091,11 @@ An [_error_](#error) is an output [**artifact**](#def-artifact) that reports a s
       "softwareInfoIds": [
         "3",
         "4"
-      ]
+      ],
+      "sourceLocation": {
+        "file": "examples/simple/simple_main.cc",
+        "line": 90
+      }
     },
     "testStepId": "1"
   },
@@ -1439,6 +1459,12 @@ A log is an entry of free-form text documenting the output of a [**diagnostic**]
         <td><strong>Yes</strong></td>
         <td>Text string intended to aid in debugging or tracing of <a href="#def-diagnostic"><strong>diagnostic</strong></a> execution.</td>
     </tr>
+    <tr>
+        <td><em>sourceLocation</em></td>
+        <td>JSON: object<br/>Message: <a href="#sourcelocation"><em>SourceLocation</em></a></td>
+        <td>No</td>
+        <td>A <a href="#sourcelocation"><strong>SourceLocation</strong></a> information for debugging or tracing program execution.</td>
+    </tr>
 </table>
 
 ##### Example
@@ -1448,7 +1474,11 @@ A log is an entry of free-form text documenting the output of a [**diagnostic**]
   "testStepArtifact": {
     "log": {
       "message": "file operation completed successfully.",
-      "severity": "INFO"
+      "severity": "INFO",
+      "sourceLocation": {
+        "file": "examples/simple/simple_main.cc",
+        "line": 90
+      }
     },
     "testStepId": "1"
   },
@@ -2030,6 +2060,57 @@ Provides information about software that was discovered or exercised during the 
   "sequenceNumber": 1,
   "timestamp": "2022-07-25T04:28:12.903943Z"
 }
+```
+
+
+#### SourceLocation
+
+##### Description
+
+Provides information about source location for the purpose of debugging or tracing program execution.
+
+##### Attributes
+
+<table>
+    <tr>
+        <td><strong>Attribute</strong></td>
+        <td><strong>Type</strong></td>
+        <td><strong>Required</strong></td>
+        <td><strong>Description</strong></td>
+    </tr>
+    <tr>
+        <td><em>file</em></td>
+        <td>string</td>
+        <td>No</td>
+        <td>A string indicates a part or the full path in the source code.</td>
+    </tr>
+    <tr>
+        <td><em>line</em></td>
+        <td>number(Integer)</td>
+        <td>No</td>
+        <td>An integer indicates the line number in the file path.</td>
+    </tr>
+</table>
+
+##### Example
+
+```json
+{
+  "testStepArtifact": {
+    "log": {
+      "message": "file operation completed successfully.",
+      "severity": "INFO",
+      "sourceLocation": {
+        "file": "examples/simple/simple_main.cc",
+        "line": 90
+      }
+    },
+    "testStepId": "1"
+  },
+  "sequenceNumber": 1,
+  "timestamp": "2022-07-25T03:19:01.274584Z"
+}
+
 ```
 
 
