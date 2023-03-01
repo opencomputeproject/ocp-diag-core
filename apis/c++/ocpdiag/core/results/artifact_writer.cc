@@ -12,7 +12,6 @@
 #include <string>
 #include <thread>  //
 
-#include "google/protobuf/timestamp.pb.h"
 #include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "google/protobuf/util/json_util.h"
@@ -33,8 +32,11 @@ namespace ocpdiag::results::internal {
 constexpr absl::Duration kFlushFreq = absl::Minutes(1);
 
 ArtifactWriter::ArtifactWriter(absl::string_view output_filepath,
-                               std::ostream* output_stream)
-    : output_filepath_(output_filepath), output_stream_(output_stream) {
+                               std::ostream* output_stream,
+                               bool flush_each_minute)
+    : output_filepath_(output_filepath),
+      output_stream_(output_stream),
+      flush_each_minute_(flush_each_minute) {
   CHECK(!output_filepath.empty() || output_stream_ != nullptr)
       << "Must specify a valid filepath or output stream (or both) when "
          "creating an artifact writer.";
@@ -57,7 +59,7 @@ void ArtifactWriter::SetupRecordWriter() {
 }
 
 void ArtifactWriter::SetupPeriodicFlush() {
-  if (output_filepath_.empty()) return;
+  if (output_filepath_.empty() || !flush_each_minute_) return;
   flush_thread_ = std::thread(&ArtifactWriter::FlushEveryMinute, this);
 }
 
@@ -151,9 +153,10 @@ ArtifactWriter::~ArtifactWriter() {
   absl::ReleasableMutexLock releasable_lock(&mutex_);
   stop_flush_routine_ = true;
   if (output_filepath_.empty()) return;
+  output_file_writer_.Close();
+  if (!flush_each_minute_) return;
   releasable_lock.Release();
   flush_thread_.join();
-  output_file_writer_.Close();
 }
 
 }  // namespace ocpdiag::results::internal

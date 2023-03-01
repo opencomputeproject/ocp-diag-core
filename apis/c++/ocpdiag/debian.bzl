@@ -65,22 +65,52 @@ def _get_version_file_template_command():
 
     This is done by using get_change_number_command() to extract the variable
     $change_number and get the link of the corresponding change and then writing
-    the version variable and the link to a debian version file template.
+    the version variable and the source link to a debian version file template.
 
     Returns:
         A bash script that create the version file template as a string to be included
         in a genrule.
     """
     if is_bazel():
+        #
         url = "https://ocpdiag-review.git.corp.google.com/c/ocpdiag/+/$${change_number}"
     else:
         url = "https://critique.corp.google.com/cl/$${change_number}"
 
     change_number_cmd = get_change_number_command()
     build_version_file_cmd = """
-    echo "Version: {version_var}\nLink: {url}" >> $@
+    echo "Version: {version_var}\nSource: {url}" >> $@
     """.format(
         version_var = _VERSION_VAR,
+        url = url,
+    )
+    return change_number_cmd + build_version_file_cmd
+
+def _get_description_file_template_command(description):
+    """Generates a command that creates the OCPDiag debian description file template.
+
+    This is done by using get_change_number_command() to extract the variable
+    $change_number and get the link of the corresponding change and then writing
+    the description and the source link to a debian description file template.
+
+    Args:
+      description: The description for the debian package.
+
+    Returns:
+        A bash script that create the description file template as a string to be included
+        in a genrule.
+    """
+    if is_bazel():
+        #
+        url = "https://ocpdiag-review.git.corp.google.com/c/ocpdiag/+/$${change_number}"
+    else:
+        url = "https://critique.corp.google.com/cl/$${change_number}"
+
+    change_number_cmd = get_change_number_command()
+    build_version_file_cmd = """
+    echo "{description} Source: {url}" >> $@
+    """.format(
+        description = description,
         url = url,
     )
     return change_number_cmd + build_version_file_cmd
@@ -134,6 +164,26 @@ def create_version_file(name):
         name = template,
         outs = ["_%s_template.tpl" % name],
         cmd = _get_version_file_template_command(),
+        stamp = 1,
+        visibility = ["//visibility:private"],
+    )
+    _expand_template(
+        name = name,
+        input = ":" + template,
+    )
+
+def create_description_file(name, description):
+    """Create the description file which contains the description and the link.
+
+    Args:
+      name: Name of the version file build rule.
+      description: The description for the debian package.
+    """
+    template = "_%s_template" % name
+    native.genrule(
+        name = template,
+        outs = ["_%s_template.tpl" % name],
+        cmd = _get_description_file_template_command(description),
         stamp = 1,
         visibility = ["//visibility:private"],
     )
@@ -254,7 +304,7 @@ def _gen_deb_impl(ctx, name, data, package, version, depends = None):
     args.add("--maintainer", ctx.attr.maintainer)
     args.add("--distribution", ctx.attr.distribution)
     args.add("--urgency", ctx.attr.urgency)
-    args.add("--description", ctx.attr.description)
+    args.add("--description=@" + ctx.file.description_file.path)
 
     if depends:
         args.add("--depends", depends)
@@ -263,7 +313,7 @@ def _gen_deb_impl(ctx, name, data, package, version, depends = None):
         mnemonic = "MakeDeb",
         executable = ctx.executable._make_deb,
         arguments = [args],
-        inputs = [data],
+        inputs = [data, ctx.file.description_file],
         outputs = [output_file, changes_file],
         env = {
             "LANG": "en_US.UTF-8",
@@ -349,8 +399,9 @@ pkg_deb_ocpdiag = rule(
             doc = "The maintainer of the package.",
             mandatory = True,
         ),
-        "description": attr.string(
-            doc = "The package description.",
+        "description_file": attr.label(
+            doc = "The package description file.",
+            allow_single_file = True,
             mandatory = True,
         ),
         "distribution": attr.string(

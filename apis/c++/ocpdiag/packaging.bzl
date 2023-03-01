@@ -9,7 +9,13 @@
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@rules_pkg//:providers.bzl", "PackageFilegroupInfo", "PackageFilesInfo", "PackageSymlinkInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("//ocpdiag:debian.bzl", "create_version_file", "pkg_deb_ocpdiag", "pkg_tar_payload")
+load(
+    "//ocpdiag:debian.bzl",
+    "create_description_file",
+    "create_version_file",
+    "pkg_deb_ocpdiag",
+    "pkg_tar_payload",
+)
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 _OCPDIAG_WORKSPACE = "ocpdiag"
@@ -183,6 +189,10 @@ def ocpdiag_ovss_debian(
     version_file = "_%s_version_file" % name
     create_version_file(name = version_file)
 
+    # Create description file
+    description_file = "_%s_description_file" % name
+    create_description_file(name = description_file, description = description)
+
     # Create symlink
     binary_path = "%s" % (debian_test_name)
     version_file_path = "version_file.txt"
@@ -205,7 +215,7 @@ def ocpdiag_ovss_debian(
             test_name = debian_test_name,
             srcs = [":" + launcher, ":" + version_file],
             symlinks = symlinks,
-            description = description,
+            description_file = description_file,
             architecture = deb_arch,
         )
 
@@ -223,7 +233,7 @@ def create_ocpdiag_deb(
         test_name,
         srcs,
         symlinks,
-        description,
+        description_file,
         architecture):
     """Create pointer and payload tar archive files and build the debian package.
 
@@ -232,7 +242,7 @@ def create_ocpdiag_deb(
       test_name: The name of the OCPDiag test.
       srcs: Target to include in the debian package.
       symlinks: Symlinks to include in the debian package.
-      description: The description for the debian package.
+      description_file: The package description file.
       architecture: Target architectures for the package.
     """
 
@@ -262,7 +272,7 @@ def create_ocpdiag_deb(
         payload_data = payload,
         architecture = architecture,
         maintainer = "ocpdiag-core-team@google.com",
-        description = description,
+        description_file = description_file,
     )
 
 def join_paths(path, *others):

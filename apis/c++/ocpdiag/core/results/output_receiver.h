@@ -31,7 +31,9 @@ class OutputReceiver {
   OutputReceiver();
 
   // Creates an artifact writer that will write to this receiver instance. This
-  // should only be called once per OutputReceiver instance.
+  // should only be called once per OutputReceiver instance. Note that this
+  // artifact writer will be set to not spin up additional threads (for periodic
+  // file flushing) as this can disrupt unit tests.
   std::unique_ptr<internal::ArtifactWriter> MakeArtifactWriter();
 
   // Returns an iterable container of the raw output artifacts. It can be

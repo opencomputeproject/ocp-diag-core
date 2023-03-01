@@ -26,7 +26,8 @@ namespace ocpdiag::results::internal {
 class ArtifactWriter {
  public:
   ArtifactWriter(absl::string_view output_filepath,
-                 std::ostream* output_stream = nullptr);
+                 std::ostream* output_stream = nullptr,
+                 bool flush_each_minute = true);
   ~ArtifactWriter();
 
   // Flushes the file buffer, if any
@@ -54,6 +55,7 @@ class ArtifactWriter {
   absl::Mutex mutex_;
   absl::string_view output_filepath_;
   std::ostream* output_stream_ ABSL_GUARDED_BY(mutex_);
+  bool flush_each_minute_ = true;
   riegeli::RecordWriter<riegeli::FdWriter<>> output_file_writer_
       ABSL_GUARDED_BY(mutex_){riegeli::kClosed};
   bool stop_flush_routine_ ABSL_GUARDED_BY(mutex_) = false;

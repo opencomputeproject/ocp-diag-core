@@ -40,8 +40,8 @@ std::unique_ptr<internal::ArtifactWriter> OutputReceiver::MakeArtifactWriter() {
   // easier examination during unit tests.
   std::ostream* out_stream = nullptr;
 
-  return std::make_unique<internal::ArtifactWriter>(container_.file_path(),
-                                                    out_stream);
+  return std::make_unique<internal::ArtifactWriter>(
+      container_.file_path(), out_stream, /*flush_each_minute=*/false);
 }
 
 const OutputContainer& OutputReceiver::GetOutputContainer() const {
