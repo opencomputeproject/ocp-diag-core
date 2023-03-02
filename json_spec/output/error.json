@@ -19,7 +19,11 @@
             "items": {
                 "type": "string"
             }
-        }
+        },
+	"sourceLocation": {
+	    "description": "SourceLocation information for debugging or tracing program execution. See sourceLocation in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#error",
+	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
+	}
     },
     "required": [
         "symptom"

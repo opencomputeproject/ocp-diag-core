@@ -11,7 +11,11 @@
         "message": {
             "description": "TODO: link to md doc",
             "type": "string"
-        }
+        },
+	"sourceLocation": {
+	    "description": "SourceLocation information for debugging or tracing program execution. See sourceLocation field in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#sourcelocation",
+	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
+	}
     },
     "required": [
         "severity",
