@@ -15,8 +15,8 @@ cc_library(
         "//ocpdiag/core/results:measurement_series",
         "//ocpdiag/core/results:test_run",
         "//ocpdiag/core/results:test_step",
-        "//ocpdiag/core/results/ocp/data_model:dut_info",
-        "//ocpdiag/core/results/ocp/data_model:input_model",
+        "//ocpdiag/core/results/data_model:dut_info",
+        "//ocpdiag/core/results/data_model:input_model",
     ],
 )
 
