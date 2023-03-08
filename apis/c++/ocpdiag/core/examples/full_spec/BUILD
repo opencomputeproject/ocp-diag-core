@@ -12,11 +12,11 @@ cc_library(
     hdrs = ["full_spec.h"],
     deps = [
         "//ocpdiag/core/results:artifact_writer",
-        "//ocpdiag/core/results:dut_info",
         "//ocpdiag/core/results:measurement_series",
-        "//ocpdiag/core/results:structs",
         "//ocpdiag/core/results:test_run",
         "//ocpdiag/core/results:test_step",
+        "//ocpdiag/core/results/ocp/data_model:dut_info",
+        "//ocpdiag/core/results/ocp/data_model:input_model",
     ],
 )
 

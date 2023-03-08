@@ -12,9 +12,9 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/artifact_writer.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/results/int_incrementer.h"
-#include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/results/structs.h"
 #include "ocpdiag/core/results/test_step.h"
 
 namespace ocpdiag::results {

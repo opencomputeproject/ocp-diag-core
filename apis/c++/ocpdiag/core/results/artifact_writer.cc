@@ -22,7 +22,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ocpdiag/core/compat/status_converters.h"
-#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "google/protobuf/util/time_util.h"
 #include "riegeli/bytes/fd_writer.h"
 #include "riegeli/records/records_metadata.pb.h"

@@ -1,13 +1,18 @@
+// Copyright 2022 Google LLC
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 #ifndef OCPDIAG_CORE_RESULTS_OCP_DUT_INFO_H_
 #define OCPDIAG_CORE_RESULTS_OCP_DUT_INFO_H_
 
 #include <string>
 #include <vector>
 
-#include "third_party/absl/strings/string_view.h"
-#include "third_party/ocpdiag/core/results/internal/int_incrementer.h"
-
-#include "third_party/ocpdiag/core/results/ocp/structs.h"
+#include "absl/strings/string_view.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/int_incrementer.h"
 
 namespace ocpdiag::results {
 

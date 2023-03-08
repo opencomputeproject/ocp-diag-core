@@ -10,7 +10,9 @@ Contains build rules for ocpdiag hardware diagnostic tests. (go/ocpdiag-intro)
 
 licenses(["notice"])
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+)
 
 exports_files(["LICENSE"])
 

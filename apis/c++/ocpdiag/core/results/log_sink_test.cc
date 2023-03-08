@@ -12,8 +12,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/log/log.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
 #include "ocpdiag/core/results/output_receiver.h"
-#include "ocpdiag/core/results/structs.h"
 
 namespace ocpdiag::results::internal {
 

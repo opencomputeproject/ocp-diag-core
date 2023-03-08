@@ -10,9 +10,9 @@
 
 #include "gtest/gtest.h"
 #include "ocpdiag/core/results/artifact_writer.h"
-#include "ocpdiag/core/results/dut_info.h"
+#include "ocpdiag/core/results/data_model/dut_info.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
 #include "ocpdiag/core/results/output_receiver.h"
-#include "ocpdiag/core/results/structs.h"
 
 namespace ocpdiag::results {
 

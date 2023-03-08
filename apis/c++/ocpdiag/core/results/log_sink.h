@@ -10,7 +10,7 @@
 #include "absl/log/log_entry.h"
 #include "absl/log/log_sink.h"
 #include "ocpdiag/core/results/artifact_writer.h"
-#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 
 namespace ocpdiag::results::internal {
 

@@ -13,8 +13,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/artifact_writer.h"
-#include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/results/structs.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/results/test_run.h"
 
 namespace ocpdiag::results {

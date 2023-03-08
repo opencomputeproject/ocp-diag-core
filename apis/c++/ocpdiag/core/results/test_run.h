@@ -14,10 +14,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/artifact_writer.h"
-#include "ocpdiag/core/results/dut_info.h"
+#include "ocpdiag/core/results/data_model/dut_info.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
 #include "ocpdiag/core/results/int_incrementer.h"
 #include "ocpdiag/core/results/log_sink.h"
-#include "ocpdiag/core/results/structs.h"
 #include "ocpdiag/core/results/test_result_calculator.h"
 
 ABSL_DECLARE_FLAG(bool, ocpdiag_copy_results_to_stdout);

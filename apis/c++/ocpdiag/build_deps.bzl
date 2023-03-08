@@ -20,7 +20,7 @@ load_tertiary_deps()
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-def load_deps(ocpdiag_package_name = "ocpdiag/"):
+def load_deps(ocpdiag_package_name = "ocpdiag"):
     """Loads common dependencies needed to compile the protobuf library.
 
     Normally, users will pull in the OCPDiag package via
@@ -68,7 +68,7 @@ def load_deps(ocpdiag_package_name = "ocpdiag/"):
     )
 
     # Six is named six_archive to match what absl_py expects.
-    build_path = "@{}/external:six.BUILD".format(ocpdiag_package_name)
+    build_path = "@{}//external:six.BUILD".format(ocpdiag_package_name)
     maybe(
         http_archive,
         "six_archive",
@@ -97,7 +97,7 @@ def load_deps(ocpdiag_package_name = "ocpdiag/"):
         sha256 = "9b1f348b15a7637f5191e4e673194549384f2eccf01fcef7cc1515864d71b424",
     )
 
-    patch_path = "@{}/external:pybind11_python_config.patch".format(ocpdiag_package_name)
+    patch_path = "@{}//external:pybind11_python_config.patch".format(ocpdiag_package_name)
     maybe(
         http_archive,
         "pybind11_bazel",

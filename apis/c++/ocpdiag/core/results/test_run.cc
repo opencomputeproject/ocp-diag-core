@@ -17,12 +17,12 @@
 #include "absl/log/log_sink_registry.h"
 #include "absl/synchronization/mutex.h"
 #include "ocpdiag/core/results/artifact_writer.h"
-#include "ocpdiag/core/results/dut_info.h"
+#include "ocpdiag/core/results/data_model/dut_info.h"
+#include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
+#include "ocpdiag/core/results/data_model/struct_to_proto.h"
+#include "ocpdiag/core/results/data_model/struct_validators.h"
 #include "ocpdiag/core/results/log_sink.h"
-#include "ocpdiag/core/results/proto_converters.h"
-#include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/results/struct_validators.h"
-#include "ocpdiag/core/results/structs.h"
 #include "ocpdiag/core/results/test_result_calculator.h"
 
 ABSL_FLAG(bool, ocpdiag_copy_results_to_stdout, true,

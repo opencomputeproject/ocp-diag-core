@@ -13,9 +13,9 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "ocpdiag/core/results/artifact_writer.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/results/output_iterator.h"
-#include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/results/structs.h"
 
 namespace ocpdiag::results {
 

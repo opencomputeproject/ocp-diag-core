@@ -7,7 +7,7 @@
 #include "ocpdiag/core/results/test_result_calculator.h"
 
 #include "gtest/gtest.h"
-#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 
 namespace ocpdiag::results {
 namespace {

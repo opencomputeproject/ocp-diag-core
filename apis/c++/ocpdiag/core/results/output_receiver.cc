@@ -16,8 +16,8 @@
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
 #include "ocpdiag/core/results/output_iterator.h"
-#include "ocpdiag/core/results/structs.h"
 #include "ocpdiag/core/testing/file_utils.h"
 
 namespace ocpdiag::results {

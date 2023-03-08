@@ -9,7 +9,7 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/testing/file_utils.h"
 #include "ocpdiag/core/testing/parse_text_proto.h"
 #include "riegeli/bytes/fd_writer.h"

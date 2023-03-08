@@ -12,9 +12,9 @@
 #include <string>
 
 #include "absl/log/check.h"
-#include "ocpdiag/core/results/proto_converters.h"
-#include "ocpdiag/core/results/results.pb.h"
-#include "ocpdiag/core/results/structs.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
+#include "ocpdiag/core/results/data_model/proto_to_struct.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "riegeli/bytes/fd_reader.h"
 #include "riegeli/records/record_reader.h"
 

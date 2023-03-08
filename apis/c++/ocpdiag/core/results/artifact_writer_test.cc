@@ -20,7 +20,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "ocpdiag/core/results/results.pb.h"
+#include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/testing/file_utils.h"
 #include "ocpdiag/core/testing/proto_matchers.h"
 #include "ocpdiag/core/testing/status_matchers.h"

@@ -9,7 +9,7 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
-#include "ocpdiag/core/results/structs.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
 
 namespace ocpdiag::results {
 
