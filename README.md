@@ -16,6 +16,10 @@ The project was motivated by the common desire of being able to execute the same
   * Data center operations
   * RMA and reverse logistics
 
+### Just getting started and want to know more?
+
+Please checkout our [OCP Keynote presentations](./docs/ocp_presentations.md) for more information about the Test and Validation track's common diagnostic framework initiative.
+
 ## What problems does it address?
 
 * Acceleration/re-use of diagnostic development and integration efforts at all stages of the product life-cycle.
