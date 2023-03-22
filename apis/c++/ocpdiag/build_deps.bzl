@@ -153,9 +153,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_ecclesia",
-        url = "https://github.com/google/ecclesia-machine-management/archive/3935e252c375e27925a3202b100a4325de4cc50d.zip",  # 2022-12-23
-        strip_prefix = "ecclesia-machine-management-3935e252c375e27925a3202b100a4325de4cc50d",
-        sha256 = "825523233eae2b23552e89d0badfe7ac37c45da967c29e6cd55c9478af293f52",
+        url = "https://github.com/google/ecclesia-machine-management/archive/4246edd878b1aeba85b7b1c1e2c022702919c423.zip",  # 2023-03-15
+        strip_prefix = "ecclesia-machine-management-4246edd878b1aeba85b7b1c1e2c022702919c423",
+        sha256 = "40b95315f303d2599e23784eb1d4a4652ca1b84d42214f24358d9e9dc81c4269",
     )
 
     maybe(
@@ -164,4 +164,32 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
         url = "https://github.com/google/riegeli/archive/2dafef562cbeab6d2a2b8fee6d605422ee71a30b.tar.gz",  # 2022-11-21
         strip_prefix = "riegeli-2dafef562cbeab6d2a2b8fee6d605422ee71a30b",
         sha256 = "8142f7538e271160ad968e251e1afed933a6a10b9499f0ef46acb8c7ba7c81c1",
+    )
+
+    maybe(
+        http_archive,
+        "json",
+        url = "https://github.com/nlohmann/json/archive/bbe337c3a30d5f6eea418b4aee399525536de37a.tar.gz",  # 2022-08-12
+        strip_prefix = "json-bbe337c3a30d5f6eea418b4aee399525536de37a",
+        sha256 = "144d7dca51a96b292706033002e0f8adca1c943b0cf9bd9f37c8aa442321e38e",
+    )
+
+    build_path = "@{}//external:s2geometry.BUILD".format(ocpdiag_package_name)
+    maybe(
+        http_archive,
+        "s2geometry_archive",
+        url = "https://github.com/google/s2geometry/archive/refs/tags/v0.10.0.tar.gz",  # 2022-04-1
+        strip_prefix = "s2geometry-0.10.0/src",
+        sha256 = "1c17b04f1ea20ed09a67a83151ddd5d8529716f509dde49a8190618d70532a3d",
+        build_file = build_path,
+    )
+
+    build_path = "@{}//external:zlib.BUILD".format(ocpdiag_package_name)
+    maybe(
+        http_archive,
+        "com_github_madler_zlib",
+        url = "https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz",  # 2022-10-14
+        strip_prefix = "zlib-1.2.13",
+        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
+        build_file = build_path,
     )

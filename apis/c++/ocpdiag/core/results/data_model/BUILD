@@ -61,6 +61,8 @@ cc_library(
     srcs = ["input_model_helpers.cc"],
     hdrs = ["input_model_helpers.h"],
     deps = [
+        ":input_model",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
     ],
@@ -70,6 +72,7 @@ cc_test(
     name = "input_model_helpers_test",
     srcs = ["input_model_helpers_test.cc"],
     deps = [
+        ":input_model",
         ":input_model_helpers",
         "@com_google_googletest//:gtest_main",
     ],
