@@ -42,7 +42,7 @@ This repo contains the diagnostic core libraries that are compatible with C++ an
 
 In this repo you will find:
 
-* *apis* - These are implementations of the OCP diagnostic framework in c++ with python bindings, as well as a pure python implementation.
+* *apis* - These are implementations of the OCP diagnostic framework in c++ with python bindings. A pure python implementation is [available here](https://github.com/opencomputeproject/ocp-diag-python).
 * *ci_scripts* - repo automation for pre-submit testing for this repository.
 * *json_spec* - A complete overview of the OCP output specification in markdown for easy reference, as well as a json schema document.
 * *validators* - A json output validator for the OCP output specification.
