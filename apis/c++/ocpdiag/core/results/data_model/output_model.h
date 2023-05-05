@@ -145,20 +145,11 @@ struct ErrorOutput {
   bool operator==(const ErrorOutput& rhs) const { return tie() == rhs.tie(); }
 };
 
-struct HardwareInfoOutput {
+struct HardwareInfoOutput : HardwareInfo {
   std::string hardware_info_id;
-  std::string name;
-  std::string computer_system;
-  std::string location;
-  std::string odata_id;
-  std::string part_number;
-  std::string serial_number;
-  std::string manager;
-  std::string manufacturer;
-  std::string manufacturer_part_number;
-  std::string part_type;
-  std::string version;
-  std::string revision;
+
+  HardwareInfoOutput(const HardwareInfo& hw_info, absl::string_view id)
+      : HardwareInfo(hw_info), hardware_info_id(id) {}
 
   auto tie() const {
     return std::tie(hardware_info_id, name, computer_system, location, odata_id,
@@ -171,13 +162,11 @@ struct HardwareInfoOutput {
   }
 };
 
-struct SoftwareInfoOutput {
+struct SoftwareInfoOutput : SoftwareInfo {
   std::string software_info_id;
-  std::string name;
-  std::string computer_system;
-  std::string version;
-  std::string revision;
-  SoftwareType software_type;
+
+  SoftwareInfoOutput(const SoftwareInfo& sw_info, absl::string_view id)
+      : SoftwareInfo(sw_info), software_info_id(id) {}
 
   auto tie() const {
     return std::tie(software_info_id, name, computer_system, version, revision,
@@ -205,13 +194,14 @@ struct DutInfoOutput {
   bool operator==(const DutInfoOutput& rhs) const { return tie() == rhs.tie(); }
 };
 
-struct TestRunStartOutput {
-  std::string name;
-  std::string version;
-  std::string command_line;
-  std::string parameters_json;
+struct TestRunStartOutput : TestRunStart {
   DutInfoOutput dut_info;
-  std::string metadata_json;
+
+  TestRunStartOutput() = default;
+
+  TestRunStartOutput(const TestRunStart& test_run_start,
+                     const DutInfoOutput& dut_info)
+      : TestRunStart(test_run_start), dut_info(dut_info) {}
 
   auto tie() const {
     return std::tie(name, version, command_line, parameters_json, dut_info,

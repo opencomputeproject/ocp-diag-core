@@ -104,6 +104,7 @@ def ocpdiag_test_pkg(
         binary,
         params_proto = _DEFAULT_PROTO,
         json_defaults = None,
+        tags = [],
         **kwargs):
     """Packages a ocpdiag binary into a self-extracting launcher.
 
@@ -112,6 +113,7 @@ def ocpdiag_test_pkg(
       binary: Executable program for the ocpdiag test; must include all data deps.
       params_proto: proto_library rule for the input parameters.
       json_defaults: Optional JSON file with default values for the params.
+      tags: Tags that will be applied to generated build targets.
       **kwargs: Additional args to pass to the shell binary rule.
     """
     descriptors = "_ocpdiag_test_pkg_%s_descriptors" % name
@@ -128,11 +130,16 @@ def ocpdiag_test_pkg(
         descriptors = ":%s" % descriptors,
         defaults = json_defaults,
         visibility = ["//visibility:private"],
+        tags = tags,
     )
 
     ocpdiag_sar_name = name
 
-    create_ocpdiag_sar(ocpdiag_sar_name, ":" + launcher)
+    create_ocpdiag_sar(
+        name = ocpdiag_sar_name,
+        launcher = ":" + launcher,
+        tags = tags,
+    )
 
 def ocpdiag_ovss_tar(name, ocpdiag_test, **kwargs):
     """Packages a OCPDiag tarball from a OCPDiag package.
@@ -153,14 +160,11 @@ def ocpdiag_ovss_tar(name, ocpdiag_test, **kwargs):
         **kwargs
     )
 
-_all_deb_arches = ["k8"]
-_deb_cpu_names = {"k8": "amd64"}
-
 def ocpdiag_ovss_debian(
         name,
         description,
         ocpdiag_test,
-        architectures = _all_deb_arches,
+        is_ocpdiag = False,
         json_defaults = None):
     """Packages a ocpdiag binary into debian packages for release in OVSS.
 
@@ -175,15 +179,21 @@ def ocpdiag_ovss_debian(
       name: Name of debian package build rule.
       description: The description for the debian package.
       ocpdiag_test: OCPDiag package.
-      architectures: Target architectures for the package.
       json_defaults: Optional JSON file with default values for the params.
+      is_ocpdiag: Whether the diagnostic is a ocpdiag.
     """
+
+    # arch_constraints contains the mapping of acceptable architecture and its cpu constraints.
+    arch_constraints = {
+        "amd64": ["@platforms//cpu:x86_64"],
+        "arm64": ["@platforms//cpu:aarch64"],
+    }
+
     _, ocpdiag_test_name = _parse_label(ocpdiag_test)
     debian_test_name = ocpdiag_test_name.replace("_", "-")
-    package_name = native.package_name()
 
-    # Reuse ocpdiag launcher
-    launcher = "_ocpdiag_test_pkg_%s_launcher" % ocpdiag_test_name
+    # Select ocpdiag binary
+    binary = ocpdiag_test_name if is_ocpdiag else "_ocpdiag_test_pkg_%s_launcher" % ocpdiag_test_name
 
     # Create version file
     version_file = "_%s_version_file" % name
@@ -196,36 +206,42 @@ def ocpdiag_ovss_debian(
     # Create symlink
     binary_path = "%s" % (debian_test_name)
     version_file_path = "version_file.txt"
+    package_dir = "%s/" % (native.package_name()) if native.package_name() else ""
     symlinks = {
-        binary_path: "%s/%s" % (package_name, launcher),
-        version_file_path: "%s/%s" % (package_name, version_file),
+        binary_path: "%s%s" % (package_dir, binary),
+        version_file_path: "%s%s" % (package_dir, version_file),
     }
     if json_defaults:
         json_path = "%s.json" % (debian_test_name)
-        symlinks[json_path] = "%s/%s" % (package_name, json_defaults)
+        symlinks[json_path] = "%s%s" % (package_dir, json_defaults)
 
     # Build the debian package of different architecture
-    config = {"//conditions:default": ":_%s_amd64" % name}
-    for arch in architectures:
-        deb_arch = _deb_cpu_names[arch]
-        deb_name = "%s_%s" % (name, deb_arch)
+    config = {}
+    for arch in arch_constraints:
+        deb_name = "%s_%s" % (name, arch)
 
         create_ocpdiag_deb(
             name = deb_name,
             test_name = debian_test_name,
-            srcs = [":" + launcher, ":" + version_file],
+            srcs = [":" + binary, ":" + version_file],
             symlinks = symlinks,
             description_file = description_file,
-            architecture = deb_arch,
+            architecture = arch,
         )
 
-        arch_name = "_%s_%s" % (name, arch)
-        native.config_setting(name = arch_name, values = {"cpu": arch})
-        config[arch_name] = ":%s" % deb_name
+        config_name = "_is_%s_%s" % (name, arch)
+        native.config_setting(
+            name = config_name,
+            constraint_values = arch_constraints[arch],
+        )
+        config[config_name] = ":%s" % deb_name
 
     native.alias(
         name = name,
-        actual = select(config),
+        actual = select(
+            config,
+            no_match_error = "Please build on x86_64, aarch64 platforms.",
+        ),
     )
 
 def create_ocpdiag_deb(

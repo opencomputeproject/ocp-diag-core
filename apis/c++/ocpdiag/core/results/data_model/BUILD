@@ -118,6 +118,7 @@ cc_library(
     hdrs = ["dut_info.h"],
     deps = [
         ":input_model",
+        ":output_model",
         ":struct_validators",
         "//ocpdiag/core/results:int_incrementer",
         "@com_google_absl//absl/base:core_headers",
@@ -146,6 +147,7 @@ cc_library(
     deps = [
         ":dut_info",
         ":input_model",
+        ":output_model",
         ":results_cc_proto",
         ":variant",
         "//ocpdiag/core/compat:status_converters",

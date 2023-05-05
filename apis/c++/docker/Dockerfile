@@ -44,14 +44,14 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.c
     && apt-get install google-cloud-sdk -y
 
 ################################################################################
-# Install gcc-9
+# Install gcc-11
 ################################################################################
 RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-RUN apt-get update && apt-get install -y gcc-9 g++-9
+RUN apt-get update && apt-get install -y gcc-11 g++-11
 RUN update-alternatives \
-        --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 \
-        --slave /usr/bin/g++  g++  /usr/bin/g++-9 \
-        --slave /usr/bin/gcov gcov /usr/bin/gcov-9
+        --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 \
+        --slave /usr/bin/g++  g++  /usr/bin/g++-11 \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-11
 RUN if [ "$TARGETARCH" = "amd64" ]; then cp /lib64/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2; fi
 
 ################################################################################
@@ -79,13 +79,13 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev
 
 ################################################################################
-# Install bazel-4.0.0
+# Install bazelisk
 ################################################################################
 WORKDIR /bin
-RUN if [ "$TARGETARCH" = "amd64" ]; then BAZELARCH="x86_64"; else BAZELARCH=$TARGETARCH; fi && \
-    wget "https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-linux-${BAZELARCH}" && \
-    mv "bazel-4.0.0-linux-${BAZELARCH}" bazel
-RUN chmod +x bazel
+RUN wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-${TARGETARCH}" && \
+  mv "bazelisk-linux-${TARGETARCH}" bazelisk && \
+  chmod +x bazelisk && \
+  cp bazelisk bazel
 
 ################################################################################
 # Install python-3.10.4
@@ -97,9 +97,8 @@ RUN git clone https://github.com/pyenv/pyenv-virtualenv.git \
     "$(pyenv root)/plugins/pyenv-virtualenv"
 RUN pyenv install 3.10.4
 RUN pyenv global 3.10.4
-RUN pip install --upgrade pip
-RUN pip install --upgrade setuptools virtualenv wheel
-RUN pip install -r /install/python-requirements.txt
+RUN python -m ensurepip --upgrade
+RUN pip install --require-hashes -r /install/python-requirements.txt
 
 ################################################################################
 # Cleanup

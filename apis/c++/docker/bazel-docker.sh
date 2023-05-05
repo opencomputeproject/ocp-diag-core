@@ -21,6 +21,9 @@ dir_name=${PWD##*/}
 dir_name=${dir_name:-/}
 internal_dir="/workspace/git/${dir_name}"
 
+# Update the latest image before running
+docker pull "gcr.io/ocpdiag-kokoro/ocpdiag-build:latest"
+
 # Take ownership of the bazel cache, execute bazel, and then release ownership
 docker run --rm -it \
   --volume ~/.gitcookies:/root/.gitcookies \

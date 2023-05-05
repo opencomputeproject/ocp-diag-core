@@ -55,6 +55,9 @@ TEST(DutInfoTest, HardwareInfoStoresCorrectly) {
   EXPECT_EQ(dut_info.AddHardwareInfo(hw_info_1).id(), "0");
   EXPECT_EQ(dut_info.AddHardwareInfo(hw_info_2).id(), "1");
   EXPECT_EQ(dut_info.AddHardwareInfo(hw_info_1).id(), "2");
+  EXPECT_EQ(dut_info.GetHardwareInfos()[0].hardware_info_id, "0");
+  EXPECT_EQ(dut_info.GetHardwareInfos()[1].hardware_info_id, "1");
+  EXPECT_EQ(dut_info.GetHardwareInfos()[2].hardware_info_id, "2");
   EXPECT_EQ(dut_info.GetHardwareInfos()[0].name, hw_info_1.name);
   EXPECT_EQ(dut_info.GetHardwareInfos()[1].name, hw_info_2.name);
   EXPECT_EQ(dut_info.GetHardwareInfos()[2].name, hw_info_1.name);
@@ -77,6 +80,9 @@ TEST(DutInfoTest, SoftwareInfoStoresCorrectly) {
   EXPECT_EQ(dut_info.AddSoftwareInfo(sw_info_1).id(), "0");
   EXPECT_EQ(dut_info.AddSoftwareInfo(sw_info_2).id(), "1");
   EXPECT_EQ(dut_info.AddSoftwareInfo(sw_info_1).id(), "2");
+  EXPECT_EQ(dut_info.GetSoftwareInfos()[0].software_info_id, "0");
+  EXPECT_EQ(dut_info.GetSoftwareInfos()[1].software_info_id, "1");
+  EXPECT_EQ(dut_info.GetSoftwareInfos()[2].software_info_id, "2");
   EXPECT_EQ(dut_info.GetSoftwareInfos()[0].name, sw_info_1.name);
   EXPECT_EQ(dut_info.GetSoftwareInfos()[1].name, sw_info_2.name);
   EXPECT_EQ(dut_info.GetSoftwareInfos()[2].name, sw_info_1.name);

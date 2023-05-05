@@ -17,6 +17,7 @@
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/results/data_model/dut_info.h"
 #include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
 #include "ocpdiag/core/results/data_model/results.pb.h"
 #include "ocpdiag/core/results/data_model/variant.h"
 
@@ -55,8 +56,10 @@ ocpdiag_results_v2_pb::Validator StructToProto(const Validator& validator) {
   return proto;
 }
 
-ocpdiag_results_v2_pb::HardwareInfo StructToProto(const HardwareInfo& info) {
+ocpdiag_results_v2_pb::HardwareInfo StructToProto(
+    const HardwareInfoOutput& info) {
   ocpdiag_results_v2_pb::HardwareInfo proto;
+  proto.set_hardware_info_id(info.hardware_info_id);
   proto.set_name(info.name);
   proto.set_computer_system(info.computer_system);
   proto.set_location(info.location);
@@ -72,8 +75,10 @@ ocpdiag_results_v2_pb::HardwareInfo StructToProto(const HardwareInfo& info) {
   return proto;
 }
 
-ocpdiag_results_v2_pb::SoftwareInfo StructToProto(const SoftwareInfo& info) {
+ocpdiag_results_v2_pb::SoftwareInfo StructToProto(
+    const SoftwareInfoOutput& info) {
   ocpdiag_results_v2_pb::SoftwareInfo proto;
+  proto.set_software_info_id(info.software_info_id);
   proto.set_name(info.name);
   proto.set_computer_system(info.computer_system);
   proto.set_version(info.version);
@@ -219,12 +224,14 @@ ocpdiag_results_v2_pb::DutInfo DutInfoToProto(const DutInfo& dut_info) {
   proto.set_dut_info_id(dut_info.id());
   proto.set_name(dut_info.name());
   *proto.mutable_metadata() = JsonToProtoOrDie(dut_info.GetMetadataJson());
+
   for (const PlatformInfo& platform_info : dut_info.GetPlatformInfos())
     *proto.add_platform_infos() = StructToProto(platform_info);
-  for (const HardwareInfo& hardware_info : dut_info.GetHardwareInfos())
+  for (const HardwareInfoOutput& hardware_info : dut_info.GetHardwareInfos())
     *proto.add_hardware_infos() = StructToProto(hardware_info);
-  for (const SoftwareInfo& software_info : dut_info.GetSoftwareInfos())
+  for (const SoftwareInfoOutput& software_info : dut_info.GetSoftwareInfos())
     *proto.add_software_infos() = StructToProto(software_info);
+
   return proto;
 }
 

@@ -104,7 +104,7 @@ void MeasurementSeries::EmitEnd() {
 
 void MeasurementSeries::AssignStepIdAndEmitArtifact(
     ocpdiag_results_v2_pb::TestStepArtifact& artifact) {
-  artifact.set_test_step_id(series_id_);
+  artifact.set_test_step_id(test_step_.Id());
   GetArtifactWriter().Write(artifact);
 }
 

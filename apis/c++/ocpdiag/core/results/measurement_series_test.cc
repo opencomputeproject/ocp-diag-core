@@ -38,6 +38,9 @@ void StartTestRun(TestRun& test_run) {
 
 TestStep MakeTestStep(TestRun& run) {
   StartTestRun(run);
+  // This step exists to make the test step ID different from the measurement
+  // series ID to improve testing.
+  { TestStep("init", run); }
   return TestStep("fake_name", run);
 }
 
@@ -48,10 +51,10 @@ MeasurementSeries MakeMeasurementSeries(TestStep& step) {
 MeasurementSeriesModel GetMeasurementSeriesModelIfValid(
     OutputReceiver& receiver) {
   OutputModel model = receiver.GetOutputModel();
-  CHECK_EQ(model.test_steps.size(), 1);
-  EXPECT_EQ(model.test_steps[0].test_step_id, "0");
-  CHECK_EQ(model.test_steps[0].measurement_series.size(), 1);
-  return model.test_steps[0].measurement_series[0];
+  CHECK_EQ(model.test_steps.size(), 2);
+  EXPECT_EQ(model.test_steps[1].test_step_id, "1");
+  CHECK_EQ(model.test_steps[1].measurement_series.size(), 1);
+  return model.test_steps[1].measurement_series[0];
 }
 
 TEST(MeasurementSeriesInitializationDeathTest,
@@ -184,9 +187,10 @@ TEST_F(MeasurementSeriesTest, OnlyOneEndArtifactIsEmittedIfEndedIsCalledTwice) {
   int artifact_count = 0;
   for (auto unused : receiver_.GetOutputContainer()) artifact_count++;
 
-  // We expect schema version, test run start, test step start, and measurement
-  // series start and end for a total of 5 artifacts
-  EXPECT_EQ(artifact_count, 5);
+  // We expect schema version, test run start, test step start and end for the
+  // dummy test step, the main test step start, and the measurement series start
+  // and end for a total of 7 artifacts.
+  EXPECT_EQ(artifact_count, 7);
 }
 
 }  // namespace

@@ -15,6 +15,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/clock.h"
 #include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
 #include "ocpdiag/core/results/data_model/struct_validators.h"
 
 namespace ocpdiag::results {
@@ -40,18 +41,18 @@ DutInfo::DutInfo(absl::string_view name, absl::string_view id)
 RegisteredHardwareInfo DutInfo::AddHardwareInfo(
     const HardwareInfo& hardware_info) {
   ValidateStructOrDie(hardware_info);
-  hardware_infos_.push_back(hardware_info);
   RegisteredHardwareInfo reference;
   reference.id_ = absl::StrCat(hardware_info_id_.Next());
+  hardware_infos_.push_back({hardware_info, reference.id_});
   return reference;
 }
 
 RegisteredSoftwareInfo DutInfo::AddSoftwareInfo(
     const SoftwareInfo& software_info) {
   ValidateStructOrDie(software_info);
-  software_infos_.push_back(software_info);
   RegisteredSoftwareInfo reference;
   reference.id_ = absl::StrCat(softare_info_id_.Next());
+  software_infos_.push_back({software_info, reference.id_});
   return reference;
 }
 

@@ -95,51 +95,52 @@ TEST(ProtoToStructTest, TestRunStartProtoConvertsSuccessfully) {
         }
       )pb");
 
-  EXPECT_EQ(
-      ProtoToStruct(proto),
-      OutputArtifact(
-          {.artifact = TestRunArtifact(
-               {.artifact = TestRunStartOutput({
-                    .name = "mlc_test",
-                    .version = "1.0",
-                    .command_line = "mlc/mlc --use_default_thresholds=true "
-                                    "--data_collection_mode=true",
-                    .parameters_json =
-                        R"json({"use_default_thresholds":true})json",
-                    .dut_info =
-                        {
-                            .dut_info_id = "mydut",
-                            .name = "dut",
-                            .metadata_json = R"json({"some":"JSON"})json",
-                            .platform_infos = {{.info = "memory_optimized"}},
-                            .hardware_infos = {{
-                                .hardware_info_id = "1",
-                                .name = "primary node",
-                                .computer_system = "primary_node",
-                                .location = "MB/DIMM_A1",
-                                .odata_id =
-                                    "/redfish/v1/Systems/System.Embedded.1/"
-                                    "Memory/DIMMSLOTA1",
-                                .part_number = "P03052-091",
-                                .serial_number = "HMA2022029281901",
-                                .manager = "bmc0",
-                                .manufacturer = "hynix",
-                                .manufacturer_part_number = "HMA84GR7AFR4N-VK",
-                                .part_type = "DIMM",
-                                .version = "1",
-                                .revision = "2",
-                            }},
-                            .software_infos = {{
-                                .software_info_id = "1",
-                                .name = "bmc_firmware",
-                                .computer_system = "primary_node",
-                                .version = "1",
-                                .revision = "2",
-                                .software_type = SoftwareType::kFirmware,
-                            }},
-                        },
-                    .metadata_json = R"json({"some":"JSON"})json",
-                })})}));
+  TestRunStartOutput test_run_start = {
+      {
+          .name = "mlc_test",
+          .version = "1.0",
+          .command_line = "mlc/mlc --use_default_thresholds=true "
+                          "--data_collection_mode=true",
+          .parameters_json = R"json({"use_default_thresholds":true})json",
+          .metadata_json = R"json({"some":"JSON"})json",
+      },
+      {
+          .dut_info_id = "mydut",
+          .name = "dut",
+          .metadata_json = R"json({"some":"JSON"})json",
+          .platform_infos = {{.info = "memory_optimized"}},
+          .hardware_infos = {{{
+                                  .name = "primary node",
+                                  .computer_system = "primary_node",
+                                  .location = "MB/DIMM_A1",
+                                  .odata_id = "/redfish/v1/Systems/"
+                                              "System.Embedded.1/"
+                                              "Memory/DIMMSLOTA1",
+                                  .part_number = "P03052-091",
+                                  .serial_number = "HMA2022029281901",
+                                  .manager = "bmc0",
+                                  .manufacturer = "hynix",
+                                  .manufacturer_part_number =
+                                      "HMA84GR7AFR4N-VK",
+                                  .part_type = "DIMM",
+                                  .version = "1",
+                                  .revision = "2",
+                              },
+                              "1"}},
+          .software_infos = {{{
+                                  .name = "bmc_firmware",
+                                  .computer_system = "primary_node",
+                                  .version = "1",
+                                  .revision = "2",
+                                  .software_type = SoftwareType::kFirmware,
+                              },
+                              "1"}},
+      },
+  };
+
+  EXPECT_EQ(ProtoToStruct(proto),
+            OutputArtifact{
+                .artifact = {TestRunArtifact{.artifact = test_run_start}}});
 }
 
 TEST(ProtoToStructTest, TestRunEndProtoConvertsSuccessfully) {

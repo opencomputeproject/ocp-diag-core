@@ -422,6 +422,7 @@ TEST(DutInfoToProtoTest, DutInfoConvertsSuccessfully) {
         }
         platform_infos { info: "memory_optimized" }
         hardware_infos {
+          hardware_info_id: "0"
           computer_system: "primary_node"
           name: "primary node"
           location: "MB/DIMM_A1"
@@ -436,6 +437,7 @@ TEST(DutInfoToProtoTest, DutInfoConvertsSuccessfully) {
           revision: "2"
         }
         software_infos {
+          software_info_id: "0"
           computer_system: "primary_node"
           name: "bmc_firmware"
           version: "1"

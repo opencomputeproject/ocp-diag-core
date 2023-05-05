@@ -228,6 +228,17 @@ def _pkg_tar_runfiles_for_deb_impl(ctx):
                 target = join_paths(workspace_prefix, ctx.attr.symlinks[sym]),
             )
             for sym in ctx.attr.symlinks
+        ] + [
+            # Add top-level symlinks to external repos' runfiles.
+            PackageSymlinkInfo(
+                destination = join_paths(package_dir, ctx.attr.runfiles_prefix, name),
+                target = join_paths(ctx.workspace_name, path),
+            )
+            for name, path in {
+                file.owner.workspace_name: file.owner.workspace_root
+                for file in runfiles_files
+                if file.owner.workspace_root
+            }.items()
         ]],
         pkg_dirs = [],  # pkg_* rules do not gracefully handle empty fields.
     )

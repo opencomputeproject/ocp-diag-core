@@ -11,7 +11,6 @@
 #include "google/protobuf/util/time_util.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-#include "absl/strings/string_view.h"
 #include "ocpdiag/core/compat/status_converters.h"
 #include "ocpdiag/core/results/data_model/output_model.h"
 #include "ocpdiag/core/results/data_model/results.pb.h"
@@ -43,32 +42,33 @@ PlatformInfoOutput ProtoToStruct(
 HardwareInfoOutput ProtoToStruct(
     const ocpdiag_results_v2_pb::HardwareInfo& hardware_info) {
   return {
-      .hardware_info_id = hardware_info.hardware_info_id(),
-      .name = hardware_info.name(),
-      .computer_system = hardware_info.computer_system(),
-      .location = hardware_info.location(),
-      .odata_id = hardware_info.odata_id(),
-      .part_number = hardware_info.part_number(),
-      .serial_number = hardware_info.serial_number(),
-      .manager = hardware_info.manager(),
-      .manufacturer = hardware_info.manufacturer(),
-      .manufacturer_part_number = hardware_info.manufacturer_part_number(),
-      .part_type = hardware_info.part_type(),
-      .version = hardware_info.version(),
-      .revision = hardware_info.revision(),
-  };
+      {
+          .name = hardware_info.name(),
+          .computer_system = hardware_info.computer_system(),
+          .location = hardware_info.location(),
+          .odata_id = hardware_info.odata_id(),
+          .part_number = hardware_info.part_number(),
+          .serial_number = hardware_info.serial_number(),
+          .manager = hardware_info.manager(),
+          .manufacturer = hardware_info.manufacturer(),
+          .manufacturer_part_number = hardware_info.manufacturer_part_number(),
+          .part_type = hardware_info.part_type(),
+          .version = hardware_info.version(),
+          .revision = hardware_info.revision(),
+      },
+      hardware_info.hardware_info_id()};
 }
 
 SoftwareInfoOutput ProtoToStruct(
     const ocpdiag_results_v2_pb::SoftwareInfo& software_info) {
-  return {
-      .software_info_id = software_info.software_info_id(),
-      .name = software_info.name(),
-      .computer_system = software_info.computer_system(),
-      .version = software_info.version(),
-      .revision = software_info.revision(),
-      .software_type = SoftwareType(software_info.software_type()),
-  };
+  return {{
+              .name = software_info.name(),
+              .computer_system = software_info.computer_system(),
+              .version = software_info.version(),
+              .revision = software_info.revision(),
+              .software_type = SoftwareType(software_info.software_type()),
+          },
+          software_info.software_info_id()};
 }
 
 DutInfoOutput ProtoToStruct(const ocpdiag_results_v2_pb::DutInfo& dut_info) {
@@ -96,14 +96,14 @@ DutInfoOutput ProtoToStruct(const ocpdiag_results_v2_pb::DutInfo& dut_info) {
 
 TestRunStartOutput ProtoToStruct(
     const ocpdiag_results_v2_pb::TestRunStart& test_run_start) {
-  return {
-      .name = test_run_start.name(),
-      .version = test_run_start.version(),
-      .command_line = test_run_start.command_line(),
-      .parameters_json = ProtoToJsonOrDie(test_run_start.parameters()),
-      .dut_info = ProtoToStruct(test_run_start.dut_info()),
-      .metadata_json = ProtoToJsonOrDie(test_run_start.metadata()),
-  };
+  return {{
+              .name = test_run_start.name(),
+              .version = test_run_start.version(),
+              .command_line = test_run_start.command_line(),
+              .parameters_json = ProtoToJsonOrDie(test_run_start.parameters()),
+              .metadata_json = ProtoToJsonOrDie(test_run_start.metadata()),
+          },
+          ProtoToStruct(test_run_start.dut_info())};
 }
 
 TestRunEndOutput ProtoToStruct(

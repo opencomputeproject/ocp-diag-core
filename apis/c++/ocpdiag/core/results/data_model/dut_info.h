@@ -12,6 +12,7 @@
 
 #include "absl/strings/string_view.h"
 #include "ocpdiag/core/results/data_model/input_model.h"
+#include "ocpdiag/core/results/data_model/output_model.h"
 #include "ocpdiag/core/results/int_incrementer.h"
 
 namespace ocpdiag::results {
@@ -30,16 +31,22 @@ class DutInfo {
 
   [[nodiscard]] RegisteredHardwareInfo AddHardwareInfo(
       const HardwareInfo& hardware_info);
-  const std::vector<HardwareInfo>& GetHardwareInfos() const {
+  const std::vector<HardwareInfoOutput>& GetHardwareInfos()
+      const {
     return hardware_infos_;
   }
 
   [[nodiscard]] RegisteredSoftwareInfo AddSoftwareInfo(
       const SoftwareInfo& software_info);
-  std::vector<SoftwareInfo> GetSoftwareInfos() const { return software_infos_; }
+  const std::vector<SoftwareInfoOutput>& GetSoftwareInfos()
+      const {
+    return software_infos_;
+  }
 
   void AddPlatformInfo(const PlatformInfo& platform_info);
-  std::vector<PlatformInfo> GetPlatformInfos() const { return platform_infos_; }
+  const std::vector<PlatformInfo>& GetPlatformInfos() const {
+    return platform_infos_;
+  }
 
   void SetMetadataJson(absl::string_view json) { metadata_json_ = json; }
   std::string GetMetadataJson() const { return metadata_json_; }
@@ -48,8 +55,8 @@ class DutInfo {
   std::string name_;
   std::string id_;
   std::string metadata_json_;
-  std::vector<HardwareInfo> hardware_infos_;
-  std::vector<SoftwareInfo> software_infos_;
+  std::vector<HardwareInfoOutput> hardware_infos_;
+  std::vector<SoftwareInfoOutput> software_infos_;
   std::vector<PlatformInfo> platform_infos_;
   internal::IntIncrementer hardware_info_id_;
   internal::IntIncrementer softare_info_id_;

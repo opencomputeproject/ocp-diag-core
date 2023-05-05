@@ -92,9 +92,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_github_grpc_grpc",
-        url = "https://github.com/grpc/grpc/archive/v1.48.0.tar.gz",
-        strip_prefix = "grpc-1.48.0",
-        sha256 = "9b1f348b15a7637f5191e4e673194549384f2eccf01fcef7cc1515864d71b424",
+        url = "https://github.com/grpc/grpc/archive/refs/tags/v1.51.3.tar.gz",
+        strip_prefix = "grpc-1.51.3",
+        sha256 = "feaeeb315133ea5e3b046c2c0231f5b86ef9d297e536a14b73e0393335f8b157",
     )
 
     patch_path = "@{}//external:pybind11_python_config.patch".format(ocpdiag_package_name)
@@ -135,9 +135,9 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "rules_python",
-        url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.10.2.tar.gz",
-        strip_prefix = "rules_python-0.10.2",
-        sha256 = "a3a6e99f497be089f81ec082882e40246bfd435f52f4e82f37e89449b04573f6",
+        url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.20.0.tar.gz",  # 2023-03-21
+        strip_prefix = "rules_python-0.20.0",
+        sha256 = "a644da969b6824cc87f8fe7b18101a8a6c57da5db39caa6566ec6109f37d2141",
     )
 
     maybe(
@@ -153,17 +153,17 @@ def load_deps(ocpdiag_package_name = "ocpdiag"):
     maybe(
         http_archive,
         "com_google_ecclesia",
-        url = "https://github.com/google/ecclesia-machine-management/archive/4246edd878b1aeba85b7b1c1e2c022702919c423.zip",  # 2023-03-15
-        strip_prefix = "ecclesia-machine-management-4246edd878b1aeba85b7b1c1e2c022702919c423",
-        sha256 = "40b95315f303d2599e23784eb1d4a4652ca1b84d42214f24358d9e9dc81c4269",
+        url = "https://github.com/google/ecclesia-machine-management/archive/47bd18ae21c019a19b697183c4eb792df8e4344b.zip",  # 2023-04-28
+        strip_prefix = "ecclesia-machine-management-47bd18ae21c019a19b697183c4eb792df8e4344b",
+        sha256 = "ddd4b6f1ab9bd2ce9dc837ceb981617799058af35da02bcbc0629401d52ca638",
     )
 
     maybe(
         http_archive,
         "com_google_riegeli",
-        url = "https://github.com/google/riegeli/archive/2dafef562cbeab6d2a2b8fee6d605422ee71a30b.tar.gz",  # 2022-11-21
-        strip_prefix = "riegeli-2dafef562cbeab6d2a2b8fee6d605422ee71a30b",
-        sha256 = "8142f7538e271160ad968e251e1afed933a6a10b9499f0ef46acb8c7ba7c81c1",
+        url = "https://github.com/google/riegeli/archive/4576da27f043a98f11787a468397ddc3ee1df2d3.tar.gz",  # 2023-03-15
+        strip_prefix = "riegeli-4576da27f043a98f11787a468397ddc3ee1df2d3",
+        sha256 = "9c3bac6be7ffac86b2d055bf006a885a721adea53a45d686ad452a564a86a256",
     )
 
     maybe(
