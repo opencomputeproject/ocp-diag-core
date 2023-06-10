@@ -1,8 +1,8 @@
-# Open Compute Project Hardware Diagnostics Project
+# Open Compute Project - Test & Validation
 
 ## Introduction
 
-The OCP hardware diagnostics project is a collaboration between data center hyperscalers participating in the OCP to provide a diagnostic framework.  This framework aims to provide a portable solution for execution of hardware diagnostics, and a rich output model which can be cleanly integrated with various test executives, manufacturing execution systems, or lab data collection systems.
+The OCP test and validation project is a collaboration between data center hyperscalers participating in the OCP to provide a diagnostic framework. This framework aims to provide a portable solution for execution of hardware diagnostics, and a rich output model which can be cleanly integrated with various test executives, manufacturing execution systems, or lab data collection systems.
 
 The project was motivated by the common desire of being able to execute the same diagnostics across all phases of an NPI hardware projects life cycle including.
 
@@ -38,23 +38,30 @@ Please checkout our [OCP Keynote presentations](./docs/ocp_presentations.md) for
 
 ## What are the different repos making up this effort?
 
-This repo contains the diagnostic core libraries that are compatible with C++ and Python. These libraries provide the framework to reliably generated diagnostics that are compatible with clients designed to consume the OCP diagnostic output format.  It also contains the detailed specification covering the schema of the diagnostic output and guidance on how it should be leveraged.  This schema has been designed from the ground up to provide the necessary meta data and structure to be used effectively in heuristic and ML based systems for hardware troubleshooting and repair activities.  It has been proven to be a key enabler of diagnosability and repair at scale for large fleets of data center hardware when combined with downstream repair automation systems.
+**This core repository is the nexus pointing to all of the other technical artifact repositories related to the OCP T&V project.**  
+**See the next section for a complete list of all the artifacts maintained by the core team.**
+
+Also contained within is the detailed specification covering the schema of the diagnostic output and guidance on how it should be leveraged. This schema has been designed from the ground up to provide the necessary meta data and structure to be used effectively in heuristic and ML based systems for hardware troubleshooting and repair activities. It has been proven to be a key enabler of diagnosability and repair at scale for large fleets of data center hardware when combined with downstream repair automation systems.
 
 In this repo you will find:
 
-* *apis* - These are implementations of the OCP diagnostic framework in c++ with python bindings. A pure python implementation is [available here](https://github.com/opencomputeproject/ocp-diag-python).
-* *ci_scripts* - repo automation for pre-submit testing for this repository.
-* *json_spec* - A complete overview of the OCP output specification in markdown for easy reference, as well as a json schema document.
-* *validators* - A json output validator for the OCP output specification.
+* *docs* - All publicly available materials related to the project. These include OCP Summit presentations, slide decks and other.
+* [*json_spec*](./json_spec/README.md) - A complete overview of the OCP output specification in markdown for easy reference, as well as a json schema document for programmatic consumption.
+* *validators* - JSON output validators for the OCP output specification.
 
 ### Related repositories
 
-In addition, you will also find the following repositories which provide hardware diagnostics that are compliant with the OCP diagnostic specification which have been implemented in this library.
+All technical artifacts supporting the OCP T&V project are maintained in individual git repositories, each with its own lifecycle. Following are the available APIs that interface between usercode and the specification:
+
+* [*ocp-diag-core-cpp*](https://github.com/opencomputeproject/ocp-diag-core-cpp) - A Bazel based C++ api that can be used with C++ based diagnostic packages. It can also support python projects by virtue of providing bindings to the C++ api.
+* [*ocp-diag-core-python*](https://github.com/opencomputeproject/ocp-diag-core-python) - A _pure python_ implementation used to produce specification compliant output.
+
+In addition, you will also find the following repositories which provide hardware diagnostics that are compliant with the OCP diagnostic specification.
 
 These include:
-* *ocp-diag-sat* - An OCP compliant version of Google's popular Stressful Application Test for server and storage burnin testing.
-* *ocp-memtester* - A comprehensive DIMM and embedded memory pattern test application.
-* *ocp-diag-pcicrawler* - A portable PCIe bus health checker with support for the advanced error reporting standard.
+* [*ocp-diag-sat*](https://github.com/opencomputeproject/ocp-diag-sat) - An OCP compliant version of Google's popular Stressful Application Test for server and storage burnin testing.
+* [*ocp-diag-memtester*](https://github.com/opencomputeproject/ocp-diag-memtester) - A comprehensive DIMM and embedded memory pattern test application.
+* [*ocp-diag-pcicrawler*](https://github.com/opencomputeproject/ocp-diag-pcicrawler) - A portable PCIe bus health checker with support for the advanced error reporting standard.
 
 Overtime additional *non-differentiating* diagnostics will be added for storage and hardware accelerators.
 
