@@ -1,0 +1,38 @@
+FROM centos:latest
+
+###############################################################
+# 
+# Sample docker build file to experiment with ocpdiag
+#
+# paste this in ocpdiag.docker
+#
+# docker build --rm ocpdiag.docker centos:ocpdiag
+# 
+# docker run -it --rm centos:ocpdiag
+#
+###############################################################
+
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+RUN dnf install -y dnf-plugins-core
+RUN dnf copr enable -y vbatts/bazel
+RUN dnf install -y gcc
+RUN dnf install -y gcc-c++
+RUN dnf install -y unzip
+RUN dnf install -y bazel4
+RUN dnf install -y python3
+RUN dnf install -y go
+RUN python3 -m pip install dataclasses
+
+COPY ocp-diag-core-main.zip /
+RUN cd / && unzip ocp-diag-core-main.zip
+
+WORKDIR /ocp-diag-core-main
+RUN python3 ./apis/python/examples/demo.py 2>&1 > /ocpdiag_py_demo.log
+RUN echo "exit 0" >> ./ci_scripts/run_ocpdiag_tests.sh
+RUN ./ci_scripts/run_ocpdiag_tests.sh 2>&1 | tee -a /ocpdiag_build.log
+
+WORKDIR /ocp-diag-core-main/validators/spec_validator
+RUN go run . -schema=/ocp-diag-core-main/json_spec/output/validator.json  ./samples/ 2>&1 | tee /ocpdiag_validator.out
+
+ENTRYPOINT /bin/bash
