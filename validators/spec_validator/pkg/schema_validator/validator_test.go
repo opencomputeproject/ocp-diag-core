@@ -269,42 +269,43 @@ func TestRunStartSimple(t *testing.T) {
 					"min_bandwidth": 700.0,
 					"use_default_thresholds": true
 				},
-				"dutInfo": {
-					"id": "1",
-					"hostname": "ocp_lab_0222",
-					"platformInfos": [
-						{
-							"info": "memory_optimized"
-						}
-					],
-					"softwareInfos": [
-						{
-							"softwareInfoId": "1",
-							"computerSystem": "primary_node",
-							"softwareType": "FIRMWARE",
-							"name": "bmc_firmware",
-							"version": "10",
-							"revision": "11"
-						}
-					],
-					"hardwareInfos": [
-						{
-							"hardwareInfoId": "1",
-							"computerSystem": "primary_node",
-							"manager": "bmc0",
-							"name": "primary node",
-							"location": "MB/DIMM_A1",
-							"odataId": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
-							"partNumber": "P03052-091",
-							"serialNumber": "HMA2022029281901",
-							"manufacturer": "hynix",
-							"manufacturerPartNumber": "HMA84GR7AFR4N-VK",
-							"partType": "DIMM",
-							"version": "1",
-							"revision": "2"
-						}
-					]
-				}
+				"dutInfo": [
+					{
+						"hostname": "ocp_lab_0222",
+						"platformInfos": [
+							{
+								"info": "memory_optimized"
+							}
+						],
+						"softwareInfos": [
+							{
+								"softwareInfoId": "1",
+								"computerSystem": "primary_node",
+								"softwareType": "FIRMWARE",
+								"name": "bmc_firmware",
+								"version": "10",
+								"revision": "11"
+							}
+						],
+						"hardwareInfos": [
+							{
+								"hardwareInfoId": "1",
+								"computerSystem": "primary_node",
+								"manager": "bmc0",
+								"name": "primary node",
+								"location": "MB/DIMM_A1",
+								"odataId": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMMSLOTA1",
+								"partNumber": "P03052-091",
+								"serialNumber": "HMA2022029281901",
+								"manufacturer": "hynix",
+								"manufacturerPartNumber": "HMA84GR7AFR4N-VK",
+								"partType": "DIMM",
+								"version": "1",
+								"revision": "2"
+							}
+						]
+					}
+				]
 			}
 		},
 		"sequenceNumber": 1,
